@@ -93,7 +93,7 @@ function AppShellContent() {
   }, []);
 
   return (
-    <div className="flex h-screen w-full overflow-hidden bg-background text-foreground">
+    <div className="flex h-screen w-full bg-background text-foreground">
       {/* Sidebar */}
       <aside
         className={cn(
@@ -187,7 +187,7 @@ function AppShellContent() {
       </aside>
 
       {/* Main */}
-      <div className="flex flex-1 flex-col overflow-hidden">
+      <div className="flex flex-1 flex-col">
         <header className="flex h-12 items-center gap-3 border-b border-border bg-background/80 px-4 backdrop-blur">
           <button
             onClick={() => setCollapsed((v) => !v)}
@@ -229,7 +229,7 @@ function AppShellContent() {
             <ThemeToggle />
           </div>
         </header>
-        <main className="flex-1 overflow-y-auto overflow-x-hidden">
+        <main className="flex-1 overflow-y-auto overflow-x-auto">
           <Outlet />
         </main>
       </div>
