@@ -9,6 +9,7 @@ import { cn } from "@/lib/utils";
 import { CommandPalette } from "./command-palette";
 import ThemeToggle from "./ui/ThemeToggle";
 import { PageMetaProvider, useMeta } from "@/contexts/PageMetaContext";
+import { requestItems } from "@/data/inbox-data";
 
 type NavItem = { to: string; label: string; icon: typeof Inbox; badge?: string };
 
@@ -16,7 +17,7 @@ const sections: { title?: string; items: NavItem[] }[] = [
   {
     items: [
       { to: "/", label: "Dashboard", icon: LayoutDashboard },
-      { to: "/inbox", label: "Inbox", icon: Inbox, badge: "12" },
+      { to: "/inbox", label: "Inbox", icon: Inbox },
     ],
   },
   {
@@ -71,6 +72,8 @@ export function AppShell() {
     </PageMetaProvider>
   );
 }
+
+const pendingRequestCount = requestItems.length;
 
 function AppShellContent() {
   const { meta } = useMeta();
@@ -149,6 +152,11 @@ function AppShellContent() {
                         {!collapsed && item.badge && (
                           <span className="ml-auto rounded bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">
                             {item.badge}
+                          </span>
+                        )}
+                        {!collapsed && item.to === "/inbox" && pendingRequestCount > 0 && (
+                          <span className="ml-auto rounded bg-red-500 px-1.5 py-0.5 text-[10px] font-medium text-white">
+                            {pendingRequestCount}
                           </span>
                         )}
                       </Link>

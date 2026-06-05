@@ -2,9 +2,11 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { Tab, Avatar } from "@/components/ui-bits";
 import { useMeta } from "@/contexts/PageMetaContext";
+import { activityItems, requestItems } from "@/data/inbox-data";
+import type { ActivityCategory, RequestBadgeType } from "@/data/inbox-data";
 import {
   FileText, Receipt, Briefcase, Package, Calendar,
-  CheckCircle2, AlertTriangle, Flag,
+  CheckCircle2, Flag,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -13,17 +15,7 @@ export const Route = createFileRoute("/inbox")({
   component: InboxPage,
 });
 
-// ─── Activity Feed ───────────────────────────────────────────────────────────
-
-type ActivityCategory = "quote" | "invoice" | "project" | "inventory" | "schedule";
-
-type ActivityItem = {
-  id: number;
-  category: ActivityCategory;
-  title: string;
-  description: string;
-  time: string;
-};
+// ─── Display metadata (display-layer only, not shared) ───────────────────────
 
 const categoryMeta: Record<ActivityCategory, { icon: typeof FileText; border: string; iconColor: string }> = {
   quote:     { icon: FileText,  border: "border-l-blue-500",   iconColor: "text-blue-500"   },
@@ -33,87 +25,12 @@ const categoryMeta: Record<ActivityCategory, { icon: typeof FileText; border: st
   schedule:  { icon: Calendar,  border: "border-l-yellow-500", iconColor: "text-yellow-500" },
 };
 
-const activityItems: ActivityItem[] = [
-  { id: 1, category: "quote",     title: "Quote #1042 accepted",                           description: "Harborview Hotel accepted the lobby AV proposal — $76,400.",          time: "12m ago"  },
-  { id: 2, category: "invoice",   title: "Invoice #887 paid",                              description: "$12,400 received from Riverside Medical Center.",                      time: "1h ago"   },
-  { id: 3, category: "schedule",  title: "Site visit scheduled — June 10",                 description: "Riverside Medical: pre-install walkthrough confirmed with Damon Reyes.", time: "2h ago"   },
-  { id: 4, category: "project",   title: "Project moved to In Progress",                   description: "Harborview AV Install (AV-2026-014) phase updated by Marcus Bell.",     time: "3h ago"   },
-  { id: 5, category: "inventory", title: "Low stock alert: Cat6 Cable",                    description: "23 ft remaining. Reorder threshold is 100 ft. Vendor: Anixter.",        time: "5h ago"   },
-  { id: 6, category: "quote",     title: "Quote #1038 viewed by client",                   description: "Helio Health Systems opened Q-2026-0412 ($148,000) — first view.",      time: "Yesterday" },
-  { id: 7, category: "project",   title: "Budget burn-rate alert",                         description: "Downtown Office Retrofit (AV-2026-009) spent 88% of budget at 71% complete.", time: "Yesterday" },
-  { id: 8, category: "invoice",   title: "Invoice #881 overdue",                           description: "Pinecrest Hospitality owes $34,200 — 12 days past due.",                time: "2d ago"   },
-];
-
-// ─── Requests ────────────────────────────────────────────────────────────────
-
-type RequestStatus = "pending" | "complete" | "flagged";
-
-type RequestBadgeType = "Inventory Pull" | "Quote Approval" | "Purchase Order" | "Schedule Change";
-
-type Request = {
-  id: number;
-  badge: RequestBadgeType;
-  title: string;
-  description: string;
-  requester: string;
-  initials: string;
-  time: string;
-};
-
 const badgeStyle: Record<RequestBadgeType, string> = {
   "Inventory Pull":  "bg-orange-500/15 text-orange-600 dark:text-orange-400",
   "Quote Approval":  "bg-blue-500/15 text-blue-600 dark:text-blue-400",
   "Purchase Order":  "bg-purple-500/15 text-purple-600 dark:text-purple-400",
   "Schedule Change": "bg-yellow-500/15 text-yellow-600 dark:text-yellow-400",
 };
-
-const requestItems: Request[] = [
-  {
-    id: 1,
-    badge: "Inventory Pull",
-    title: "Cable & hardware pull — Harborview AV Install",
-    description: "Need 200 ft Cat6, 4x wall plates, and 2x HDMI wall brackets staged by June 9.",
-    requester: "Marcus Bell",
-    initials: "MB",
-    time: "30m ago",
-  },
-  {
-    id: 2,
-    badge: "Quote Approval",
-    title: "Owner approval on Riverside Medical quote",
-    description: "Q-2026-0421 totals $84,200. Margin at 38%. Client deadline is June 12.",
-    requester: "Audrey Chen",
-    initials: "AC",
-    time: "2h ago",
-  },
-  {
-    id: 3,
-    badge: "Purchase Order",
-    title: "Axis camera order — 8 units for Northbeam project",
-    description: "8x Axis P3245-V cameras from Anixter at $610/unit. Total PO: $4,880.",
-    requester: "Damon Reyes",
-    initials: "DR",
-    time: "4h ago",
-  },
-  {
-    id: 4,
-    badge: "Schedule Change",
-    title: "Reschedule June 8 site visit — Riverside Medical",
-    description: "Tech has a van maintenance conflict. Requesting to move to June 10 AM.",
-    requester: "Iris Wang",
-    initials: "IW",
-    time: "Yesterday",
-  },
-  {
-    id: 5,
-    badge: "Inventory Pull",
-    title: "Rack equipment pull — Downtown Office Retrofit",
-    description: "1x Middle Atlantic rack, 2x Crestron MX-150, patch panel, and 1U blank panels.",
-    requester: "Marcus Bell",
-    initials: "MB",
-    time: "2d ago",
-  },
-];
 
 // ─── Page ────────────────────────────────────────────────────────────────────
 
@@ -129,7 +46,6 @@ function InboxPage() {
         <Tab active={activeTab === "activity"} onClick={() => setActiveTab("activity")}>Activity</Tab>
         <Tab active={activeTab === "requests"} onClick={() => setActiveTab("requests")}>Requests</Tab>
       </div>
-
       {activeTab === "activity" ? <ActivityFeed /> : <RequestsPanel />}
     </div>
   );
@@ -166,6 +82,8 @@ function ActivityFeed() {
 }
 
 // ─── Requests panel ───────────────────────────────────────────────────────────
+
+type RequestStatus = "pending" | "complete" | "flagged";
 
 type RequestCardState = {
   status: RequestStatus;
@@ -205,7 +123,6 @@ function RequestsPanel() {
                 <div className="text-[13px] font-medium leading-snug">{req.title}</div>
                 <div className="mt-0.5 text-[11.5px] text-muted-foreground">{req.description}</div>
               </div>
-              {/* Status pill */}
               {s.status === "complete" && (
                 <span className="shrink-0 flex items-center gap-1 rounded bg-green-500/15 px-2 py-0.5 text-[10.5px] font-medium text-green-600 dark:text-green-400">
                   <CheckCircle2 className="h-3 w-3" /> Complete
