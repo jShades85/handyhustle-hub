@@ -18,14 +18,12 @@ type OpportunityStage =
   | "lead" | "site-visit" | "estimating" | "proposal-sent"
   | "negotiation" | "closed-won" | "closed-lost";
 
-type TradeType = "Electrical" | "HVAC" | "Plumbing" | "AV/Security" | "General" | "Other";
-type Source    = "Referral" | "Repeat Client" | "Cold Outreach" | "Bid/RFP";
+type Source = "Referral" | "Repeat Client" | "Cold Outreach" | "Bid/RFP";
 
 type Opportunity = {
   id: number;
   company: string;
   contact: string;
-  tradeType: TradeType;
   value: number;
   stage: OpportunityStage;
   closeDate: string;
@@ -54,23 +52,21 @@ const stageMeta: Record<OpportunityStage, { label: string; badge: string; dim?: 
 
 const priorityOrder: Record<Priority, number> = { urgent: 0, high: 1, med: 2, low: 3 };
 
-const TRADE_TYPES: TradeType[] = ["Electrical", "HVAC", "Plumbing", "AV/Security", "General", "Other"];
-
 // ─── Placeholder data ─────────────────────────────────────────────────────────
 
 const INITIAL: Opportunity[] = [
-  { id:  1, company: "Harborview Hotel",         contact: "Marcus Bell",     tradeType: "AV/Security", value: 76400,  stage: "site-visit",    closeDate: "2026-07-15", rep: "Damon Reyes", repInitials: "DR", source: "Repeat Client", priority: "high" },
-  { id:  2, company: "Riverside Medical Center", contact: "Dr. Lena Park",   tradeType: "AV/Security", value: 84200,  stage: "proposal-sent", closeDate: "2026-06-28", rep: "Audrey Chen", repInitials: "AC", source: "Bid/RFP",       priority: "high" },
-  { id:  3, company: "Downtown Office Retrofit", contact: "Eli Voss",        tradeType: "AV/Security", value: 52000,  stage: "negotiation",   closeDate: "2026-06-20", rep: "Damon Reyes", repInitials: "DR", source: "Repeat Client", priority: "med"  },
-  { id:  4, company: "Northbeam Architects",     contact: "Iris Wang",       tradeType: "AV/Security", value: 38500,  stage: "estimating",    closeDate: "2026-07-30", rep: "Marcus Bell", repInitials: "MB", source: "Referral",      priority: "med"  },
-  { id:  5, company: "Summit Medical Group",     contact: "Dr. A. Okonkwo",  tradeType: "AV/Security", value: 145000, stage: "lead",          closeDate: "2026-09-01", rep: "Damon Reyes", repInitials: "DR", source: "Referral",      priority: "high" },
-  { id:  6, company: "Greenfield Manufacturing", contact: "Tom Birch",       tradeType: "Electrical",  value: 12000,  stage: "lead",          closeDate: "2026-08-10", rep: "Iris Wang",   repInitials: "IW", source: "Cold Outreach", priority: "low"  },
-  { id:  7, company: "Lakeside Comfort Systems", contact: "Carla Ruiz",      tradeType: "HVAC",        value: 18500,  stage: "site-visit",    closeDate: "2026-07-18", rep: "Audrey Chen", repInitials: "AC", source: "Referral",      priority: "med"  },
-  { id:  8, company: "River North Plumbing",     contact: "James Pruitt",    tradeType: "Plumbing",    value: 9800,   stage: "estimating",    closeDate: "2026-07-05", rep: "Iris Wang",   repInitials: "IW", source: "Bid/RFP",       priority: "low"  },
-  { id:  9, company: "Coastal Electric Co",      contact: "Nina Torres",     tradeType: "Electrical",  value: 34000,  stage: "proposal-sent", closeDate: "2026-07-01", rep: "Marcus Bell", repInitials: "MB", source: "Cold Outreach", priority: "med"  },
-  { id: 10, company: "Harbor View Apartments",   contact: "Greg Moss",       tradeType: "General",     value: 67500,  stage: "closed-won",    closeDate: "2026-06-05", rep: "Audrey Chen", repInitials: "AC", source: "Repeat Client", priority: "med"  },
-  { id: 11, company: "Tri-County School Dist.",  contact: "Supt. D. Hale",   tradeType: "AV/Security", value: 180000, stage: "closed-lost",   closeDate: "2026-05-30", rep: "Damon Reyes", repInitials: "DR", source: "Bid/RFP",       priority: "high" },
-  { id: 12, company: "Midwest Plumbing Supply",  contact: "Phil Garza",      tradeType: "Plumbing",    value: 4200,   stage: "negotiation",   closeDate: "2026-06-18", rep: "Iris Wang",   repInitials: "IW", source: "Referral",      priority: "low"  },
+  { id:  1, company: "Harborview Hotel",         contact: "Marcus Bell",    value: 76400,  stage: "site-visit",    closeDate: "2026-07-15", rep: "Damon Reyes", repInitials: "DR", source: "Repeat Client", priority: "high" },
+  { id:  2, company: "Riverside Medical Center", contact: "Dr. Lena Park",  value: 84200,  stage: "proposal-sent", closeDate: "2026-06-28", rep: "Audrey Chen", repInitials: "AC", source: "Bid/RFP",       priority: "high" },
+  { id:  3, company: "Downtown Office Retrofit", contact: "Eli Voss",       value: 52000,  stage: "negotiation",   closeDate: "2026-06-20", rep: "Damon Reyes", repInitials: "DR", source: "Repeat Client", priority: "med"  },
+  { id:  4, company: "Northbeam Architects",     contact: "Iris Wang",      value: 38500,  stage: "estimating",    closeDate: "2026-07-30", rep: "Marcus Bell", repInitials: "MB", source: "Referral",      priority: "med"  },
+  { id:  5, company: "Summit Medical Group",     contact: "Dr. A. Okonkwo", value: 145000, stage: "lead",          closeDate: "2026-09-01", rep: "Damon Reyes", repInitials: "DR", source: "Referral",      priority: "high" },
+  { id:  6, company: "Greenfield Manufacturing", contact: "Tom Birch",      value: 12000,  stage: "lead",          closeDate: "2026-08-10", rep: "Iris Wang",   repInitials: "IW", source: "Cold Outreach", priority: "low"  },
+  { id:  7, company: "Lakeside Comfort Systems", contact: "Carla Ruiz",     value: 18500,  stage: "site-visit",    closeDate: "2026-07-18", rep: "Audrey Chen", repInitials: "AC", source: "Referral",      priority: "med"  },
+  { id:  8, company: "River North Plumbing",     contact: "James Pruitt",   value: 9800,   stage: "estimating",    closeDate: "2026-07-05", rep: "Iris Wang",   repInitials: "IW", source: "Bid/RFP",       priority: "low"  },
+  { id:  9, company: "Coastal Electric Co",      contact: "Nina Torres",    value: 34000,  stage: "proposal-sent", closeDate: "2026-07-01", rep: "Marcus Bell", repInitials: "MB", source: "Cold Outreach", priority: "med"  },
+  { id: 10, company: "Harbor View Apartments",   contact: "Greg Moss",      value: 67500,  stage: "closed-won",    closeDate: "2026-06-05", rep: "Audrey Chen", repInitials: "AC", source: "Repeat Client", priority: "med"  },
+  { id: 11, company: "Tri-County School Dist.",  contact: "Supt. D. Hale",  value: 180000, stage: "closed-lost",   closeDate: "2026-05-30", rep: "Damon Reyes", repInitials: "DR", source: "Bid/RFP",       priority: "high" },
+  { id: 12, company: "Midwest Plumbing Supply",  contact: "Phil Garza",     value: 4200,   stage: "negotiation",   closeDate: "2026-06-18", rep: "Iris Wang",   repInitials: "IW", source: "Referral",      priority: "low"  },
 ];
 
 // ─── Stage badge ─────────────────────────────────────────────────────────────
@@ -107,7 +103,6 @@ function Opportunities() {
 
   return (
     <div>
-      {/* View toggle */}
       <div className="flex items-center gap-1 border-b border-border px-4 py-2">
         <button
           onClick={() => setView("kanban")}
@@ -148,46 +143,48 @@ function KanbanView({
   const [openId, setOpenId] = useState<number | null>(null);
 
   return (
-    <div className="relative flex gap-3 overflow-x-auto p-4">
-      {openId !== null && (
-        <div className="fixed inset-0 z-10" onClick={() => setOpenId(null)} />
-      )}
-      {stageOrder.map((stage) => {
-        const items = opps.filter((o) => o.stage === stage);
-        const total = items.reduce((s, o) => s + o.value, 0);
-        const { dim } = stageMeta[stage];
-        return (
-          <div
-            key={stage}
-            className={cn(
-              "flex w-[272px] shrink-0 flex-col rounded-lg border border-border",
-              dim ? "bg-muted/30 opacity-80" : "bg-surface/40",
-            )}
-          >
-            <div className="flex items-center justify-between border-b border-border px-3 py-2.5">
-              <div className="flex items-center gap-2">
-                <StageBadge stage={stage} />
-                <span className="font-mono text-[10.5px] text-muted-foreground">{items.length}</span>
-              </div>
-              <span className="font-mono text-[10.5px] tabular-nums text-muted-foreground">{currency(total)}</span>
-            </div>
-            <div className="max-h-[calc(100vh-220px)] overflow-y-auto space-y-2 p-2">
-              {items.map((opp) => (
-                <KanbanCard
-                  key={opp.id}
-                  opp={opp}
-                  selectorOpen={openId === opp.id}
-                  onOpenSelector={(e) => { e.stopPropagation(); setOpenId(opp.id); }}
-                  onMove={(stage) => { onMove(opp.id, stage); setOpenId(null); }}
-                />
-              ))}
-              {items.length === 0 && (
-                <div className="py-5 text-center text-[11px] text-muted-foreground">Empty</div>
+    <div className="overflow-x-auto w-full">
+      <div className="relative flex gap-3 p-4" style={{ minWidth: "max-content" }}>
+        {openId !== null && (
+          <div className="fixed inset-0 z-10" onClick={() => setOpenId(null)} />
+        )}
+        {stageOrder.map((stage) => {
+          const items = opps.filter((o) => o.stage === stage);
+          const total = items.reduce((s, o) => s + o.value, 0);
+          const { dim } = stageMeta[stage];
+          return (
+            <div
+              key={stage}
+              className={cn(
+                "flex w-[272px] min-w-[260px] shrink-0 flex-col rounded-lg border border-border",
+                dim ? "bg-muted/30 opacity-80" : "bg-surface/40",
               )}
+            >
+              <div className="flex items-center justify-between border-b border-border px-3 py-2.5">
+                <div className="flex items-center gap-2">
+                  <StageBadge stage={stage} />
+                  <span className="font-mono text-[10.5px] text-muted-foreground">{items.length}</span>
+                </div>
+                <span className="font-mono text-[10.5px] tabular-nums text-muted-foreground">{currency(total)}</span>
+              </div>
+              <div className="max-h-[calc(100vh-220px)] overflow-y-auto space-y-2 p-2">
+                {items.map((opp) => (
+                  <KanbanCard
+                    key={opp.id}
+                    opp={opp}
+                    selectorOpen={openId === opp.id}
+                    onOpenSelector={(e) => { e.stopPropagation(); setOpenId(opp.id); }}
+                    onMove={(stage) => { onMove(opp.id, stage); setOpenId(null); }}
+                  />
+                ))}
+                {items.length === 0 && (
+                  <div className="py-5 text-center text-[11px] text-muted-foreground">Empty</div>
+                )}
+              </div>
             </div>
-          </div>
-        );
-      })}
+          );
+        })}
+      </div>
     </div>
   );
 }
@@ -205,7 +202,6 @@ function KanbanCard({
 }) {
   return (
     <div className="rounded-md border border-border bg-card p-3 hover:border-primary/30 transition-colors">
-      {/* Stage selector */}
       <div className="relative inline-block">
         <button
           onClick={onOpenSelector}
@@ -234,9 +230,6 @@ function KanbanCard({
 
       <div className="mt-1.5 text-[12.5px] font-semibold leading-snug truncate">{opp.company}</div>
       <div className="text-[11px] text-muted-foreground">{opp.contact}</div>
-      <div className="mt-1">
-        <span className="rounded bg-muted px-1.5 py-0.5 text-[10px] text-muted-foreground">{opp.tradeType}</span>
-      </div>
       <div className="mt-2.5 flex items-center justify-between">
         <span className="font-mono tabular-nums text-[12.5px] font-semibold">{currency(opp.value)}</span>
         <PriorityDot p={opp.priority} />
@@ -254,11 +247,10 @@ function KanbanCard({
 
 // ─── List view ────────────────────────────────────────────────────────────────
 
-type SortCol = "company" | "contact" | "tradeType" | "value" | "stage" | "closeDate" | "rep" | "source" | "priority";
+type SortCol = "company" | "contact" | "value" | "stage" | "closeDate" | "rep" | "source" | "priority";
 type SortDir = "asc" | "desc";
 
 function ListView({ opps }: { opps: Opportunity[] }) {
-  const [tradeFilter, setTradeFilter] = useState<TradeType | "all">("all");
   const [stageFilter, setStageFilter] = useState<OpportunityStage | "all">("all");
   const [repFilter,   setRepFilter]   = useState<string>("all");
   const [sortCol,     setSortCol]     = useState<SortCol>("closeDate");
@@ -268,9 +260,8 @@ function ListView({ opps }: { opps: Opportunity[] }) {
 
   const rows = useMemo(() => {
     let r = opps;
-    if (tradeFilter !== "all") r = r.filter((o) => o.tradeType === tradeFilter);
-    if (stageFilter !== "all") r = r.filter((o) => o.stage    === stageFilter);
-    if (repFilter   !== "all") r = r.filter((o) => o.rep      === repFilter);
+    if (stageFilter !== "all") r = r.filter((o) => o.stage === stageFilter);
+    if (repFilter   !== "all") r = r.filter((o) => o.rep   === repFilter);
 
     return [...r].sort((a, b) => {
       let av: number, bv: number;
@@ -287,7 +278,7 @@ function ListView({ opps }: { opps: Opportunity[] }) {
       }
       return (av - bv) * (sortDir === "asc" ? 1 : -1);
     });
-  }, [opps, tradeFilter, stageFilter, repFilter, sortCol, sortDir]);
+  }, [opps, stageFilter, repFilter, sortCol, sortDir]);
 
   const toggleSort = (col: SortCol) => {
     if (sortCol === col) setSortDir((d) => (d === "asc" ? "desc" : "asc"));
@@ -307,12 +298,7 @@ function ListView({ opps }: { opps: Opportunity[] }) {
 
   return (
     <div className="p-4 space-y-3">
-      {/* Filters */}
       <div className="flex flex-wrap gap-2">
-        <select value={tradeFilter} onChange={(e) => setTradeFilter(e.target.value as TradeType | "all")} className={selectCls}>
-          <option value="all">All trades</option>
-          {TRADE_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
-        </select>
         <select value={stageFilter} onChange={(e) => setStageFilter(e.target.value as OpportunityStage | "all")} className={selectCls}>
           <option value="all">All stages</option>
           {stageOrder.map((s) => <option key={s} value={s}>{stageMeta[s].label}</option>)}
@@ -324,22 +310,20 @@ function ListView({ opps }: { opps: Opportunity[] }) {
         <span className="ml-auto self-center font-mono text-[11px] text-muted-foreground">{rows.length} result{rows.length !== 1 ? "s" : ""}</span>
       </div>
 
-      {/* Table */}
       <div className="rounded-lg border border-border bg-card overflow-hidden">
         <table className="w-full text-[12.5px]">
           <thead className="bg-surface/50">
             <tr className="border-b border-border text-[10.5px] uppercase tracking-wide text-muted-foreground">
               {(
                 [
-                  ["company",   "Company",     "text-left"],
-                  ["contact",   "Contact",     "text-left"],
-                  ["tradeType", "Trade",       "text-left"],
-                  ["value",     "Value",       "text-right"],
-                  ["stage",     "Stage",       "text-left"],
-                  ["closeDate", "Close Date",  "text-left"],
-                  ["rep",       "Rep",         "text-left"],
-                  ["source",    "Source",      "text-left"],
-                  ["priority",  "Priority",    "text-left pr-3"],
+                  ["company",   "Company",    "text-left"],
+                  ["contact",   "Contact",    "text-left"],
+                  ["value",     "Value",      "text-right"],
+                  ["stage",     "Stage",      "text-left"],
+                  ["closeDate", "Close Date", "text-left"],
+                  ["rep",       "Rep",        "text-left"],
+                  ["source",    "Source",     "text-left"],
+                  ["priority",  "Priority",   "text-left pr-3"],
                 ] as [SortCol, string, string][]
               ).map(([col, label, align]) => (
                 <th
@@ -357,9 +341,6 @@ function ListView({ opps }: { opps: Opportunity[] }) {
               <tr key={o.id} className="row-hover border-b border-border/60">
                 <td className="py-2.5 px-2 font-medium">{o.company}</td>
                 <td className="py-2.5 px-2 text-muted-foreground">{o.contact}</td>
-                <td className="py-2.5 px-2">
-                  <span className="rounded bg-muted px-1.5 py-0.5 text-[10.5px] text-muted-foreground">{o.tradeType}</span>
-                </td>
                 <td className="py-2.5 px-2 text-right font-mono tabular-nums font-semibold">{currency(o.value)}</td>
                 <td className="py-2.5 px-2"><StageBadge stage={o.stage} /></td>
                 <td className="py-2.5 px-2 text-muted-foreground font-mono text-[11.5px]">{o.closeDate}</td>
@@ -375,7 +356,7 @@ function ListView({ opps }: { opps: Opportunity[] }) {
             ))}
             {rows.length === 0 && (
               <tr>
-                <td colSpan={9} className="py-8 text-center text-[12.5px] text-muted-foreground">
+                <td colSpan={8} className="py-8 text-center text-[12.5px] text-muted-foreground">
                   No opportunities match the current filters.
                 </td>
               </tr>
