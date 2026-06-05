@@ -1,5 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { PageHeader, Tab, Avatar } from "@/components/ui-bits";
+import { useEffect } from "react";
+import { Tab, Avatar } from "@/components/ui-bits";
+import { useMeta } from "@/contexts/PageMetaContext";
 import { Mail, AlertCircle, Eye, MessageSquare, CheckCircle2 } from "lucide-react";
 
 export const Route = createFileRoute("/inbox")({
@@ -18,13 +20,11 @@ const items = [
 ];
 
 function InboxPage() {
+  const { setMeta } = useMeta();
+  useEffect(() => { setMeta({ title: "Inbox" }); }, [setMeta]);
+
   return (
     <div>
-      <PageHeader
-        title="Inbox"
-        subtitle="Threads, mentions, and system alerts"
-        tabs={<><Tab active>All</Tab><Tab>Mentions</Tab><Tab>Alerts</Tab><Tab>Archived</Tab></>}
-      />
       <div className="p-4">
         <ul className="rounded-lg border border-border bg-card divide-y divide-border">
           {items.map((it, i) => (

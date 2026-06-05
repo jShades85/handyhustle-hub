@@ -1,6 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { useEffect } from "react";
 import { contacts } from "@/lib/demo-data";
-import { PageHeader, Tab, Avatar } from "@/components/ui-bits";
+import { Tab, Avatar } from "@/components/ui-bits";
+import { useMeta } from "@/contexts/PageMetaContext";
 import { Filter, Plus, Mail, Phone } from "lucide-react";
 
 export const Route = createFileRoute("/contacts")({
@@ -9,19 +11,11 @@ export const Route = createFileRoute("/contacts")({
 });
 
 function ContactsPage() {
+  const { setMeta } = useMeta();
+  useEffect(() => { setMeta({ title: "Contacts" }); }, [setMeta]);
+
   return (
     <div>
-      <PageHeader
-        title="Contacts"
-        subtitle={`${contacts.length} people across ${new Set(contacts.map(c=>c.company)).size} companies`}
-        actions={
-          <>
-            <button className="flex h-7 items-center gap-1.5 rounded-md border border-border bg-surface px-2 text-[11.5px] text-muted-foreground hover:text-foreground"><Filter className="h-3 w-3" /> Filter</button>
-            <button className="flex h-7 items-center gap-1 rounded-md bg-primary px-2.5 text-[12px] font-medium text-primary-foreground"><Plus className="h-3.5 w-3.5" /> Add</button>
-          </>
-        }
-        tabs={<><Tab active>All</Tab><Tab>Decision makers</Tab><Tab>Recent</Tab></>}
-      />
       <div className="px-4 py-3">
         <table className="w-full text-[12.5px]">
           <thead className="text-[10.5px] uppercase tracking-wide text-muted-foreground">

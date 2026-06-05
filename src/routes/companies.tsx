@@ -1,6 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { useEffect } from "react";
 import { companies, currency } from "@/lib/demo-data";
-import { PageHeader, Tab } from "@/components/ui-bits";
+import { Tab } from "@/components/ui-bits";
+import { useMeta } from "@/contexts/PageMetaContext";
 import { Filter, Plus, Building2, MapPin } from "lucide-react";
 
 export const Route = createFileRoute("/companies")({
@@ -9,19 +11,11 @@ export const Route = createFileRoute("/companies")({
 });
 
 function CompaniesPage() {
+  const { setMeta } = useMeta();
+  useEffect(() => { setMeta({ title: "Companies" }); }, [setMeta]);
+
   return (
     <div>
-      <PageHeader
-        title="Companies"
-        subtitle={`${companies.length} accounts · ${currency(companies.reduce((s,c)=>s+c.openValue,0))} open value`}
-        actions={
-          <>
-            <button className="flex h-7 items-center gap-1.5 rounded-md border border-border bg-surface px-2 text-[11.5px] text-muted-foreground hover:text-foreground"><Filter className="h-3 w-3" /> Filter</button>
-            <button className="flex h-7 items-center gap-1 rounded-md bg-primary px-2.5 text-[12px] font-medium text-primary-foreground"><Plus className="h-3.5 w-3.5" /> Add</button>
-          </>
-        }
-        tabs={<><Tab active>All</Tab><Tab>Active</Tab><Tab>By value</Tab></>}
-      />
       <div className="grid gap-3 p-4 md:grid-cols-2 lg:grid-cols-3">
         {companies.map((c) => (
           <div key={c.id} className="group rounded-lg border border-border bg-card p-4 hover:border-primary/40 transition-colors cursor-pointer">

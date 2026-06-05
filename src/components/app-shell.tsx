@@ -8,6 +8,7 @@ import {
 import { cn } from "@/lib/utils";
 import { CommandPalette } from "./command-palette";
 import ThemeToggle from "./ui/ThemeToggle";
+import { PageMetaProvider, useMeta } from "@/contexts/PageMetaContext";
 
 type NavItem = { to: string; label: string; icon: typeof Inbox; badge?: string };
 
@@ -64,6 +65,15 @@ const sections: { title?: string; items: NavItem[] }[] = [
 ];
 
 export function AppShell() {
+  return (
+    <PageMetaProvider>
+      <AppShellContent />
+    </PageMetaProvider>
+  );
+}
+
+function AppShellContent() {
+  const { meta } = useMeta();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const [collapsed, setCollapsed] = useState(false);
   const [paletteOpen, setPaletteOpen] = useState(false);
@@ -178,7 +188,20 @@ export function AppShell() {
           >
             <PanelLeft className="h-4 w-4" />
           </button>
-          <div className="ml-auto flex items-center gap-2">
+          <div className="flex flex-1 flex-col items-center justify-center">
+            {meta.title && (
+              <div className="flex items-center gap-1.5">
+                <span className="text-[13px] font-medium text-foreground">{meta.title}</span>
+                {meta.subtitle && (
+                  <>
+                    <span className="text-muted-foreground/40">·</span>
+                    <span className="text-[12px] text-muted-foreground">{meta.subtitle}</span>
+                  </>
+                )}
+              </div>
+            )}
+          </div>
+          <div className="flex items-center gap-2">
             <button
               onClick={() => setPaletteOpen(true)}
               className="flex h-7 items-center gap-1.5 rounded-md border border-border bg-surface px-2 text-[11.5px] text-muted-foreground hover:text-foreground"
@@ -186,10 +209,15 @@ export function AppShell() {
               <Search className="h-3 w-3" />
               <span>Search...</span>
             </button>
-            <button className="flex h-7 items-center gap-1.5 rounded-md bg-primary px-2.5 text-[12px] font-medium text-primary-foreground hover:opacity-90">
-              <Plus className="h-3.5 w-3.5" />
-              New
-            </button>
+            {meta.onNew && (
+              <button
+                onClick={meta.onNew}
+                className="flex h-7 items-center gap-1.5 rounded-md bg-primary px-2.5 text-[12px] font-medium text-primary-foreground hover:opacity-90"
+              >
+                <Plus className="h-3.5 w-3.5" />
+                {meta.newLabel ?? "New"}
+              </button>
+            )}
             <ThemeToggle />
           </div>
         </header>

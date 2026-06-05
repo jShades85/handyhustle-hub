@@ -1,6 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { useEffect } from "react";
 import { deals, quotes, projects, invoices, currency } from "@/lib/demo-data";
-import { PageHeader, StageChip } from "@/components/ui-bits";
+import { StageChip } from "@/components/ui-bits";
+import { useMeta } from "@/contexts/PageMetaContext";
 import {
   Briefcase, Receipt, Target, FileText, Package,
   AlertTriangle, Clock, Calendar,
@@ -32,6 +34,14 @@ function daysUntil(dateStr: string): number {
 }
 
 function Dashboard() {
+  const { setMeta } = useMeta();
+  useEffect(() => {
+    setMeta({
+      title: "Dashboard",
+      subtitle: new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" }),
+    });
+  }, [setMeta]);
+
   const open = deals.filter((d) => d.stage !== "won" && d.stage !== "lost");
   const pipeline = open.reduce((s, d) => s + d.value, 0);
   const activeProjects = projects.length;
@@ -48,13 +58,8 @@ function Dashboard() {
     .filter((p) => p.spent / p.budget > 0.85 || new Date(p.due) < new Date())
     .slice(0, 3);
 
-  const today = new Date().toLocaleDateString("en-US", {
-    weekday: "long", month: "long", day: "numeric",
-  });
-
   return (
     <div>
-      <PageHeader title="Dashboard" subtitle={today} />
       <div className="p-5 space-y-3">
 
         {/* Row 1 — 5 stat cards */}

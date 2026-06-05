@@ -1,6 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { useEffect } from "react";
 import { projects, phaseLabels, currency, ownerNames } from "@/lib/demo-data";
-import { PageHeader, Tab, Avatar } from "@/components/ui-bits";
+import { Tab, Avatar } from "@/components/ui-bits";
+import { useMeta } from "@/contexts/PageMetaContext";
 import { Filter, Plus, Calendar } from "lucide-react";
 
 export const Route = createFileRoute("/projects")({
@@ -17,19 +19,18 @@ const phaseColor: Record<string, string> = {
 };
 
 function ProjectsPage() {
+  const { setMeta } = useMeta();
+  useEffect(() => {
+    setMeta({
+      title: "Projects",
+      subtitle: "6 active · $752,200 in flight",
+      onNew: () => console.log("New project"),
+      newLabel: "New Project",
+    });
+  }, [setMeta]);
+
   return (
     <div>
-      <PageHeader
-        title="Projects"
-        subtitle={`${projects.length} active · ${currency(projects.reduce((s,p)=>s+p.budget,0))} in flight`}
-        actions={
-          <>
-            <button className="flex h-7 items-center gap-1.5 rounded-md border border-border bg-surface px-2 text-[11.5px] text-muted-foreground"><Filter className="h-3 w-3" /> Filter</button>
-            <button className="flex h-7 items-center gap-1 rounded-md bg-primary px-2.5 text-[12px] font-medium text-primary-foreground"><Plus className="h-3.5 w-3.5" /> New project</button>
-          </>
-        }
-        tabs={<><Tab active>Active</Tab><Tab>At risk</Tab><Tab>Completed</Tab></>}
-      />
       <div className="p-4 space-y-3">
         {projects.map((p) => {
           const spentPct = (p.spent / p.budget) * 100;

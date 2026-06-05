@@ -1,6 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { useEffect } from "react";
 import { catalog, currency } from "@/lib/demo-data";
-import { PageHeader, Tab } from "@/components/ui-bits";
+import { Tab } from "@/components/ui-bits";
+import { useMeta } from "@/contexts/PageMetaContext";
 import { Filter, Plus, Search } from "lucide-react";
 
 export const Route = createFileRoute("/catalog")({
@@ -9,30 +11,13 @@ export const Route = createFileRoute("/catalog")({
 });
 
 function CatalogPage() {
+  const { setMeta } = useMeta();
+  useEffect(() => { setMeta({ title: "Catalog" }); }, [setMeta]);
+
   const categories = Array.from(new Set(catalog.map((c) => c.category)));
 
   return (
     <div>
-      <PageHeader
-        title="Product catalog"
-        subtitle={`${catalog.length} items across ${categories.length} categories`}
-        actions={
-          <>
-            <div className="flex h-7 items-center gap-1.5 rounded-md border border-border bg-surface px-2 text-[11.5px] text-muted-foreground">
-              <Search className="h-3 w-3" />
-              <input placeholder="Search SKU or name…" className="bg-transparent outline-none w-48 text-foreground placeholder:text-muted-foreground" />
-            </div>
-            <button className="flex h-7 items-center gap-1.5 rounded-md border border-border bg-surface px-2 text-[11.5px] text-muted-foreground"><Filter className="h-3 w-3" /> Filter</button>
-            <button className="flex h-7 items-center gap-1 rounded-md bg-primary px-2.5 text-[12px] font-medium text-primary-foreground"><Plus className="h-3.5 w-3.5" /> Add SKU</button>
-          </>
-        }
-        tabs={
-          <>
-            <Tab active>All</Tab>
-            {categories.slice(0, 6).map((c) => <Tab key={c}>{c}</Tab>)}
-          </>
-        }
-      />
       <div className="px-4 py-3">
         <table className="w-full text-[12.5px]">
           <thead className="text-[10.5px] uppercase tracking-wide text-muted-foreground">

@@ -3,6 +3,7 @@ import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import type { DealStage, Priority } from "@/lib/demo-data";
 
+// Reserved for in-page section headers — do not delete
 export function PageHeader({
   title, subtitle, actions, tabs,
 }: { title: string; subtitle?: string; actions?: React.ReactNode; tabs?: React.ReactNode }) {

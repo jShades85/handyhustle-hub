@@ -1,6 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { useEffect } from "react";
 import { workOrders, ownerNames } from "@/lib/demo-data";
-import { PageHeader, Tab, Avatar, PriorityDot } from "@/components/ui-bits";
+import { Tab, Avatar, PriorityDot } from "@/components/ui-bits";
+import { useMeta } from "@/contexts/PageMetaContext";
 import { ChevronLeft, ChevronRight, Plus } from "lucide-react";
 
 export const Route = createFileRoute("/scheduling")({
@@ -19,6 +21,9 @@ const typeColor: Record<string, string> = {
 };
 
 function Scheduling() {
+  const { setMeta } = useMeta();
+  useEffect(() => { setMeta({ title: "Scheduling" }); }, [setMeta]);
+
   const byDay = days.map((_, dayIdx) =>
     workOrders.filter((w) => {
       const d = new Date(w.start);
@@ -29,21 +34,6 @@ function Scheduling() {
 
   return (
     <div>
-      <PageHeader
-        title="Scheduling"
-        subtitle={`${workOrders.length} work orders this week`}
-        actions={
-          <>
-            <div className="flex h-7 items-center rounded-md border border-border bg-surface">
-              <button className="px-1.5"><ChevronLeft className="h-3.5 w-3.5 text-muted-foreground" /></button>
-              <span className="px-2 text-[12px]">This week</span>
-              <button className="px-1.5"><ChevronRight className="h-3.5 w-3.5 text-muted-foreground" /></button>
-            </div>
-            <button className="flex h-7 items-center gap-1 rounded-md bg-primary px-2.5 text-[12px] font-medium text-primary-foreground"><Plus className="h-3.5 w-3.5" /> New WO</button>
-          </>
-        }
-        tabs={<><Tab active>Calendar</Tab><Tab>List</Tab><Tab>Map</Tab></>}
-      />
       <div className="p-4 overflow-x-auto">
         <div className="min-w-[920px] rounded-lg border border-border bg-card overflow-hidden">
           <div className="grid grid-cols-[60px_repeat(7,1fr)] border-b border-border bg-surface">

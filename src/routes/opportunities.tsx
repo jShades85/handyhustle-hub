@@ -1,8 +1,9 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { useEffect, useState } from "react";
 import { deals, stages, currency } from "@/lib/demo-data";
-import { PageHeader, Tab, StageChip, Avatar, PriorityDot } from "@/components/ui-bits";
+import { Tab, StageChip, Avatar, PriorityDot } from "@/components/ui-bits";
+import { useMeta } from "@/contexts/PageMetaContext";
 import { Filter, ArrowDownUp, LayoutGrid, List, Plus } from "lucide-react";
-import { useState } from "react";
 
 export const Route = createFileRoute("/opportunities")({
   head: () => ({ meta: [{ title: "Opportunities · Crosscurrent" }] }),
@@ -10,36 +11,20 @@ export const Route = createFileRoute("/opportunities")({
 });
 
 function Opportunities() {
+  const { setMeta } = useMeta();
+  useEffect(() => {
+    setMeta({
+      title: "Opportunities",
+      subtitle: "12 deals · $1,848,800 pipeline",
+      onNew: () => console.log("New opportunity"),
+      newLabel: "New Opportunity",
+    });
+  }, [setMeta]);
+
   const [view, setView] = useState<"board" | "list">("board");
 
   return (
     <div>
-      <PageHeader
-        title="Opportunities"
-        subtitle={`${deals.length} deals · ${currency(deals.reduce((s,d)=>s+d.value,0))} pipeline`}
-        actions={
-          <>
-            <button className="flex h-7 items-center gap-1.5 rounded-md border border-border bg-surface px-2 text-[11.5px] text-muted-foreground hover:text-foreground">
-              <Filter className="h-3 w-3" /> Filter
-            </button>
-            <button className="flex h-7 items-center gap-1.5 rounded-md border border-border bg-surface px-2 text-[11.5px] text-muted-foreground hover:text-foreground">
-              <ArrowDownUp className="h-3 w-3" /> Sort
-            </button>
-            <div className="flex h-7 items-center rounded-md border border-border bg-surface p-0.5">
-              <button onClick={() => setView("board")} className={`flex h-6 w-6 items-center justify-center rounded ${view==="board"?"bg-elevated text-foreground":"text-muted-foreground"}`}>
-                <LayoutGrid className="h-3 w-3" />
-              </button>
-              <button onClick={() => setView("list")} className={`flex h-6 w-6 items-center justify-center rounded ${view==="list"?"bg-elevated text-foreground":"text-muted-foreground"}`}>
-                <List className="h-3 w-3" />
-              </button>
-            </div>
-            <button className="flex h-7 items-center gap-1 rounded-md bg-primary px-2.5 text-[12px] font-medium text-primary-foreground">
-              <Plus className="h-3.5 w-3.5" /> New opportunity
-            </button>
-          </>
-        }
-        tabs={<><Tab active>All</Tab><Tab>Mine</Tab><Tab>Closing this month</Tab><Tab>Stalled</Tab></>}
-      />
 
       {view === "board" ? (
         <div className="flex gap-3 overflow-x-auto p-4">

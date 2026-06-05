@@ -1,6 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { useEffect } from "react";
 import { quotes, currency, catalog } from "@/lib/demo-data";
-import { PageHeader, Tab } from "@/components/ui-bits";
+import { Tab } from "@/components/ui-bits";
+import { useMeta } from "@/contexts/PageMetaContext";
 import { Filter, Plus, FileText, Eye, CheckCircle2, Clock, XCircle } from "lucide-react";
 
 export const Route = createFileRoute("/quotes")({
@@ -17,6 +19,15 @@ const statusStyle = {
 } as const;
 
 function QuotesPage() {
+  const { setMeta } = useMeta();
+  useEffect(() => {
+    setMeta({
+      title: "Quotes & Estimates",
+      onNew: () => console.log("New quote"),
+      newLabel: "New Quote",
+    });
+  }, [setMeta]);
+
   // Featured quote detail (Boardroom AV refresh)
   const featured = quotes[0];
   const lineItems = [
@@ -33,17 +44,6 @@ function QuotesPage() {
 
   return (
     <div>
-      <PageHeader
-        title="Quotes"
-        subtitle={`${quotes.length} quotes · ${currency(quotes.reduce((s,q)=>s+q.total,0))} total`}
-        actions={
-          <>
-            <button className="flex h-7 items-center gap-1.5 rounded-md border border-border bg-surface px-2 text-[11.5px] text-muted-foreground hover:text-foreground"><Filter className="h-3 w-3" /> Filter</button>
-            <button className="flex h-7 items-center gap-1 rounded-md bg-primary px-2.5 text-[12px] font-medium text-primary-foreground"><Plus className="h-3.5 w-3.5" /> New quote</button>
-          </>
-        }
-        tabs={<><Tab active>All</Tab><Tab>Drafts</Tab><Tab>Sent</Tab><Tab>Accepted</Tab></>}
-      />
       <div className="grid lg:grid-cols-[1fr_440px] gap-0">
         <div className="px-4 py-3 border-r border-border">
           <table className="w-full text-[12.5px]">
