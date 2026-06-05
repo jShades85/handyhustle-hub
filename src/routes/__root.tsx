@@ -95,11 +95,18 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
   errorComponent: ErrorComponent,
 });
 
+const THEME_SCRIPT = `(function(){try{var t=localStorage.getItem('hhh-theme');var d=t==='dark'||(!t||t==='system')&&window.matchMedia('(prefers-color-scheme: dark)').matches;document.documentElement.classList.add(d?'dark':'light')}catch(e){}})()`;
+
+function ThemeInitializer() {
+  return <script dangerouslySetInnerHTML={{ __html: THEME_SCRIPT }} />;
+}
+
 function RootShell({ children }: { children: ReactNode }) {
   return (
-    <html lang="en" className="dark">
+    <html lang="en">
       <head>
         <HeadContent />
+        <ThemeInitializer />
       </head>
       <body>
         {children}
