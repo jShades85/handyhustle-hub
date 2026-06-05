@@ -79,7 +79,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Crosscurrent — CRM & Ops for AV Integrators" },
+      { title: "Port City Sound & Security" },
       { name: "description", content: "A Linear-styled CRM, sales, and operations workspace for trade service companies." },
     ],
     links: [

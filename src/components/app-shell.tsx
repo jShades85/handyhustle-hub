@@ -94,13 +94,13 @@ export function AppShell() {
       >
         <div className="flex h-12 items-center gap-2 px-3 border-b border-sidebar-border">
           <div className="flex h-6 w-6 items-center justify-center rounded-md bg-gradient-to-br from-primary to-chart-2 text-[10px] font-bold text-primary-foreground shadow-glow">
-            AV
+            PCSS
           </div>
           {!collapsed && (
             <>
               <div className="flex flex-col leading-tight">
-                <span className="text-[13px] font-semibold tracking-tight">Crosscurrent</span>
-                <span className="text-[10px] text-muted-foreground">AV Integrators</span>
+                <span className="text-[13px] font-semibold tracking-tight">Port City Sound & Security</span>
+                <span className="text-[10px] text-muted-foreground">AV & Security Systems</span>
               </div>
               <button
                 onClick={() => setCollapsed(true)}
@@ -170,13 +170,13 @@ export function AppShell() {
         <div className="border-t border-sidebar-border p-2">
           <div className={cn("flex items-center gap-2 rounded-md p-1.5", !collapsed && "hover:bg-sidebar-accent/60")}>
             <div className="flex h-7 w-7 items-center justify-center rounded-full bg-gradient-to-br from-chart-2 to-primary text-[10px] font-semibold text-primary-foreground">
-              EM
+              JS
             </div>
             {!collapsed && (
               <>
                 <div className="flex flex-col leading-tight">
-                  <span className="text-[12px] font-medium">Eli Moreno</span>
-                  <span className="text-[10px] text-muted-foreground">Owner · Workspace</span>
+                  <span className="text-[12px] font-medium">Justin Shader</span>
+                  <span className="text-[10px] text-muted-foreground">Admin · Workspace</span>
                 </div>
                 <Settings className="ml-auto h-3.5 w-3.5 text-muted-foreground" />
               </>
