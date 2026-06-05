@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import {
   Inbox, LayoutDashboard, Target, Building2, Users, FileText, Package,
   Briefcase, CalendarDays, Receipt, HardHat, Boxes, Truck, CreditCard, BarChart2,
-  Search, Plus, Settings, PanelLeft,
+  Search, Plus, Settings, PanelLeft, ClipboardList, Headphones, ShieldCheck, ShoppingCart,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { CommandPalette } from "./command-palette";
@@ -21,14 +21,6 @@ const sections: { title?: string; items: NavItem[] }[] = [
     ],
   },
   {
-    title: "Sales",
-    items: [
-      { to: "/opportunities", label: "Opportunities", icon: Target },
-      { to: "/quotes", label: "Quotes & Estimates", icon: FileText },
-      { to: "/catalog", label: "Catalog", icon: Package },
-    ],
-  },
-  {
     title: "CRM",
     items: [
       { to: "/contacts", label: "Contacts", icon: Users },
@@ -36,17 +28,35 @@ const sections: { title?: string; items: NavItem[] }[] = [
     ],
   },
   {
+    title: "Sales",
+    items: [
+      { to: "/lead-inbox", label: "Lead Inbox", icon: Inbox },
+      { to: "/opportunities", label: "Opportunities", icon: Target },
+      { to: "/quotes", label: "Quotes & Estimates", icon: FileText },
+    ],
+  },
+  {
     title: "Operations",
     items: [
       { to: "/projects", label: "Projects", icon: Briefcase },
+      { to: "/work-orders", label: "Work Orders", icon: ClipboardList },
       { to: "/scheduling", label: "Scheduling", icon: CalendarDays },
       { to: "/team", label: "Team", icon: HardHat },
     ],
   },
   {
+    title: "Service",
+    items: [
+      { to: "/service-tickets", label: "Service Tickets", icon: Headphones },
+      { to: "/service-plans", label: "Service Plans", icon: ShieldCheck },
+    ],
+  },
+  {
     title: "Inventory",
     items: [
+      { to: "/catalog", label: "Catalog", icon: Package },
       { to: "/inventory", label: "Parts & Materials", icon: Boxes },
+      { to: "/purchase-orders", label: "Purchase Orders", icon: ShoppingCart },
       { to: "/vendors", label: "Vendors", icon: Truck },
     ],
   },
