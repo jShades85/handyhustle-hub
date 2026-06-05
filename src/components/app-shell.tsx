@@ -79,10 +79,6 @@ export function AppShell() {
     return () => window.removeEventListener("keydown", onKey);
   }, []);
 
-  const current = sections.flatMap((s) => s.items).find((i) =>
-    i.to === "/" ? pathname === "/" : pathname.startsWith(i.to)
-  );
-
   return (
     <div className="flex h-screen w-full overflow-hidden bg-background text-foreground">
       {/* Sidebar */}
@@ -182,11 +178,6 @@ export function AppShell() {
           >
             <PanelLeft className="h-4 w-4" />
           </button>
-          <div className="flex items-center gap-1.5 text-[13px]">
-            <span className="text-muted-foreground">Workspace</span>
-            <span className="text-muted-foreground/40">/</span>
-            <span className="font-medium">{current?.label ?? "Page"}</span>
-          </div>
           <div className="ml-auto flex items-center gap-2">
             <button
               onClick={() => setPaletteOpen(true)}
