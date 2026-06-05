@@ -169,9 +169,6 @@ export function AppShell() {
               </>
             )}
           </div>
-          <div className={cn("mt-1 flex", collapsed ? "justify-center" : "px-0.5")}>
-            <ThemeToggle />
-          </div>
         </div>
       </aside>
 
