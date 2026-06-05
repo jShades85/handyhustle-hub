@@ -12,6 +12,7 @@ import { useEffect, type ReactNode } from "react";
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
 import { AppShell } from "../components/app-shell";
+import { useTheme } from "../hooks/useTheme";
 
 function NotFoundComponent() {
   return (
@@ -110,6 +111,7 @@ function RootShell({ children }: { children: ReactNode }) {
 
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
+  useTheme();
   return (
     <QueryClientProvider client={queryClient}>
       {/* AppShell renders its own <Outlet /> for nested route content */}

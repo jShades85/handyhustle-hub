@@ -7,6 +7,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { CommandPalette } from "./command-palette";
+import ThemeToggle from "./ui/ThemeToggle";
 
 type NavItem = { to: string; label: string; icon: typeof Inbox; badge?: string };
 
@@ -161,6 +162,9 @@ export function AppShell() {
                 <Settings className="ml-auto h-3.5 w-3.5 text-muted-foreground" />
               </>
             )}
+          </div>
+          <div className={cn("mt-1 flex", collapsed ? "justify-center" : "px-0.5")}>
+            <ThemeToggle />
           </div>
           {collapsed && (
             <button
