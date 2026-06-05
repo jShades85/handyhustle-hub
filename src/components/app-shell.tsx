@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import {
   Inbox, LayoutDashboard, Target, Building2, Users, FileText, Package,
   Briefcase, CalendarDays, Receipt, HardHat, Boxes, Truck, CreditCard, BarChart2,
-  Search, Plus, Settings, PanelLeft, Sparkles, Command as CommandIcon,
+  Search, Plus, Settings, PanelLeft, Command as CommandIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { CommandPalette } from "./command-palette";
@@ -79,6 +79,9 @@ export function AppShell() {
     return () => window.removeEventListener("keydown", onKey);
   }, []);
 
+  const isMac = typeof navigator !== "undefined" && /Mac|iPhone|iPad|iPod/i.test(navigator.platform);
+  const modKey = isMac ? "⌘" : "Ctrl";
+
   const current = sections.flatMap((s) => s.items).find((i) =>
     i.to === "/" ? pathname === "/" : pathname.startsWith(i.to)
   );
@@ -112,7 +115,7 @@ export function AppShell() {
             <Search className="h-3.5 w-3.5" />
             <span>Search or jump…</span>
             <span className="ml-auto flex items-center gap-0.5">
-              <span className="kbd">⌘</span>
+              <span className="kbd">{modKey}</span>
               <span className="kbd">K</span>
             </span>
           </button>
@@ -200,16 +203,13 @@ export function AppShell() {
               className="flex h-7 items-center gap-1.5 rounded-md border border-border bg-surface px-2 text-[11.5px] text-muted-foreground hover:text-foreground"
             >
               <CommandIcon className="h-3 w-3" />
-              <span className="kbd">⌘K</span>
+              <span className="kbd">{modKey}K</span>
             </button>
             <button className="flex h-7 items-center gap-1.5 rounded-md bg-primary px-2.5 text-[12px] font-medium text-primary-foreground hover:opacity-90">
               <Plus className="h-3.5 w-3.5" />
               New
             </button>
-            <button className="flex h-7 items-center gap-1.5 rounded-md border border-border bg-surface px-2 text-[11.5px] text-muted-foreground hover:text-foreground">
-              <Sparkles className="h-3 w-3 text-primary" />
-              Ask
-            </button>
+            <ThemeToggle />
           </div>
         </header>
         <main className="flex-1 overflow-y-auto">
