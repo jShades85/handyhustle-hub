@@ -2,8 +2,8 @@ import { Link, useRouterState, Outlet } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import {
   Inbox, LayoutDashboard, Target, Building2, Users, FileText, Package,
-  Briefcase, CalendarDays, Receipt, Search, Plus, Settings, ChevronsLeft,
-  Sparkles, Command as CommandIcon,
+  Briefcase, CalendarDays, Receipt, HardHat, Boxes, Truck, CreditCard, BarChart2,
+  Search, Plus, Settings, ChevronsLeft, Sparkles, Command as CommandIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { CommandPalette } from "./command-palette";
@@ -21,25 +21,44 @@ const sections: { title?: string; items: NavItem[] }[] = [
   {
     title: "Sales",
     items: [
-      { to: "/deals", label: "Deals", icon: Target },
-      { to: "/quotes", label: "Quotes", icon: FileText },
+      { to: "/opportunities", label: "Opportunities", icon: Target },
+      { to: "/quotes", label: "Quotes & Estimates", icon: FileText },
       { to: "/catalog", label: "Catalog", icon: Package },
     ],
   },
   {
     title: "CRM",
     items: [
-      { to: "/companies", label: "Companies", icon: Building2 },
       { to: "/contacts", label: "Contacts", icon: Users },
+      { to: "/companies", label: "Companies", icon: Building2 },
     ],
   },
   {
     title: "Operations",
     items: [
       { to: "/projects", label: "Projects", icon: Briefcase },
-      { to: "/dispatch", label: "Dispatch", icon: CalendarDays },
-      { to: "/inventory", label: "Inventory", icon: Package },
+      { to: "/scheduling", label: "Scheduling", icon: CalendarDays },
+      { to: "/team", label: "Team", icon: HardHat },
+    ],
+  },
+  {
+    title: "Inventory",
+    items: [
+      { to: "/inventory", label: "Parts & Materials", icon: Boxes },
+      { to: "/vendors", label: "Vendors", icon: Truck },
+    ],
+  },
+  {
+    title: "Finance",
+    items: [
       { to: "/invoices", label: "Invoices", icon: Receipt },
+      { to: "/payments", label: "Payments", icon: CreditCard },
+    ],
+  },
+  {
+    title: "Reports",
+    items: [
+      { to: "/reports", label: "Reports", icon: BarChart2 },
     ],
   },
 ];
