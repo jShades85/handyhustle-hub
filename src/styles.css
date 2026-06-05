@@ -203,16 +203,18 @@
     background: oklch(0.68 0.19 278 / 0.35);
   }
 
-  /* Linear-style scrollbar */
+  /* Linear-style scrollbar — dark mode default, light override */
   ::-webkit-scrollbar { width: 10px; height: 10px; }
   ::-webkit-scrollbar-track { background: transparent; }
   ::-webkit-scrollbar-thumb {
-    background: oklch(1 0 0 / 0.08);
+    background: oklch(1 0 0 / 0.15);
     border-radius: 999px;
     border: 2px solid transparent;
     background-clip: padding-box;
   }
-  ::-webkit-scrollbar-thumb:hover { background: oklch(1 0 0 / 0.14); background-clip: padding-box; }
+  ::-webkit-scrollbar-thumb:hover { background: oklch(1 0 0 / 0.25); background-clip: padding-box; }
+  .light ::-webkit-scrollbar-thumb { background: oklch(0 0 0 / 0.15); background-clip: padding-box; }
+  .light ::-webkit-scrollbar-thumb:hover { background: oklch(0 0 0 / 0.25); background-clip: padding-box; }
 }
 
 @layer utilities {

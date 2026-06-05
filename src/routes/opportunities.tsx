@@ -102,7 +102,7 @@ function Opportunities() {
     setOpps((prev) => prev.map((o) => (o.id === id ? { ...o, stage } : o)));
 
   return (
-    <div>
+    <div className="flex h-full flex-col">
       <div className="flex items-center gap-1 border-b border-border px-4 py-2">
         <button
           onClick={() => setView("kanban")}
@@ -143,8 +143,8 @@ function KanbanView({
   const [openId, setOpenId] = useState<number | null>(null);
 
   return (
-    <div style={{ overflowX: "auto", width: "100%", paddingBottom: "12px", paddingRight: "24px" }}>
-      <div className="relative flex flex-row gap-3 p-4" style={{ minWidth: "max-content" }}>
+    <div style={{ flex: 1, overflowX: "auto", overflowY: "hidden", paddingRight: "24px" }}>
+      <div className="relative flex h-full flex-row gap-3 p-4" style={{ minWidth: "max-content" }}>
         {openId !== null && (
           <div className="fixed inset-0 z-10" onClick={() => setOpenId(null)} />
         )}
@@ -156,7 +156,7 @@ function KanbanView({
             <div
               key={stage}
               className={cn(
-                "flex w-[272px] min-w-[260px] shrink-0 flex-col rounded-lg border border-border",
+                "flex h-full w-[272px] min-w-[260px] shrink-0 flex-col rounded-lg border border-border",
                 dim ? "bg-muted/30 opacity-80" : "bg-surface/40",
               )}
             >
@@ -167,7 +167,7 @@ function KanbanView({
                 </div>
                 <span className="font-mono text-[10.5px] tabular-nums text-muted-foreground">{currency(total)}</span>
               </div>
-              <div className="max-h-[calc(100vh-220px)] overflow-y-auto space-y-2 p-2">
+              <div className="flex-1 overflow-y-auto space-y-2 p-2">
                 {items.map((opp) => (
                   <KanbanCard
                     key={opp.id}
