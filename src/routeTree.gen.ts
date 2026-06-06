@@ -29,6 +29,8 @@ import { Route as ContactsRouteImport } from './routes/contacts'
 import { Route as CompaniesRouteImport } from './routes/companies'
 import { Route as CatalogRouteImport } from './routes/catalog'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as CompaniesIndexRouteImport } from './routes/companies/index'
+import { Route as CompaniesCompanyIdRouteImport } from './routes/companies/$companyId'
 
 const WorkOrdersRoute = WorkOrdersRouteImport.update({
   id: '/work-orders',
@@ -130,11 +132,21 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const CompaniesIndexRoute = CompaniesIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => CompaniesRoute,
+} as any)
+const CompaniesCompanyIdRoute = CompaniesCompanyIdRouteImport.update({
+  id: '/$companyId',
+  path: '/$companyId',
+  getParentRoute: () => CompaniesRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/catalog': typeof CatalogRoute
-  '/companies': typeof CompaniesRoute
+  '/companies': typeof CompaniesRouteWithChildren
   '/contacts': typeof ContactsRoute
   '/inbox': typeof InboxRoute
   '/inventory': typeof InventoryRoute
@@ -152,11 +164,12 @@ export interface FileRoutesByFullPath {
   '/team': typeof TeamRoute
   '/vendors': typeof VendorsRoute
   '/work-orders': typeof WorkOrdersRoute
+  '/companies/$companyId': typeof CompaniesCompanyIdRoute
+  '/companies/': typeof CompaniesIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/catalog': typeof CatalogRoute
-  '/companies': typeof CompaniesRoute
   '/contacts': typeof ContactsRoute
   '/inbox': typeof InboxRoute
   '/inventory': typeof InventoryRoute
@@ -174,12 +187,14 @@ export interface FileRoutesByTo {
   '/team': typeof TeamRoute
   '/vendors': typeof VendorsRoute
   '/work-orders': typeof WorkOrdersRoute
+  '/companies/$companyId': typeof CompaniesCompanyIdRoute
+  '/companies': typeof CompaniesIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/catalog': typeof CatalogRoute
-  '/companies': typeof CompaniesRoute
+  '/companies': typeof CompaniesRouteWithChildren
   '/contacts': typeof ContactsRoute
   '/inbox': typeof InboxRoute
   '/inventory': typeof InventoryRoute
@@ -197,6 +212,8 @@ export interface FileRoutesById {
   '/team': typeof TeamRoute
   '/vendors': typeof VendorsRoute
   '/work-orders': typeof WorkOrdersRoute
+  '/companies/$companyId': typeof CompaniesCompanyIdRoute
+  '/companies/': typeof CompaniesIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -221,11 +238,12 @@ export interface FileRouteTypes {
     | '/team'
     | '/vendors'
     | '/work-orders'
+    | '/companies/$companyId'
+    | '/companies/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/catalog'
-    | '/companies'
     | '/contacts'
     | '/inbox'
     | '/inventory'
@@ -243,6 +261,8 @@ export interface FileRouteTypes {
     | '/team'
     | '/vendors'
     | '/work-orders'
+    | '/companies/$companyId'
+    | '/companies'
   id:
     | '__root__'
     | '/'
@@ -265,12 +285,14 @@ export interface FileRouteTypes {
     | '/team'
     | '/vendors'
     | '/work-orders'
+    | '/companies/$companyId'
+    | '/companies/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   CatalogRoute: typeof CatalogRoute
-  CompaniesRoute: typeof CompaniesRoute
+  CompaniesRoute: typeof CompaniesRouteWithChildren
   ContactsRoute: typeof ContactsRoute
   InboxRoute: typeof InboxRoute
   InventoryRoute: typeof InventoryRoute
@@ -432,13 +454,41 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/companies/': {
+      id: '/companies/'
+      path: '/'
+      fullPath: '/companies/'
+      preLoaderRoute: typeof CompaniesIndexRouteImport
+      parentRoute: typeof CompaniesRoute
+    }
+    '/companies/$companyId': {
+      id: '/companies/$companyId'
+      path: '/$companyId'
+      fullPath: '/companies/$companyId'
+      preLoaderRoute: typeof CompaniesCompanyIdRouteImport
+      parentRoute: typeof CompaniesRoute
+    }
   }
 }
+
+interface CompaniesRouteChildren {
+  CompaniesCompanyIdRoute: typeof CompaniesCompanyIdRoute
+  CompaniesIndexRoute: typeof CompaniesIndexRoute
+}
+
+const CompaniesRouteChildren: CompaniesRouteChildren = {
+  CompaniesCompanyIdRoute: CompaniesCompanyIdRoute,
+  CompaniesIndexRoute: CompaniesIndexRoute,
+}
+
+const CompaniesRouteWithChildren = CompaniesRoute._addFileChildren(
+  CompaniesRouteChildren,
+)
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   CatalogRoute: CatalogRoute,
-  CompaniesRoute: CompaniesRoute,
+  CompaniesRoute: CompaniesRouteWithChildren,
   ContactsRoute: ContactsRoute,
   InboxRoute: InboxRoute,
   InventoryRoute: InventoryRoute,
