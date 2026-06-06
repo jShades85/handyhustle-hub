@@ -5,8 +5,8 @@ import { useMeta } from "@/contexts/PageMetaContext";
 import { ownerNames } from "@/lib/demo-data";
 import { cn } from "@/lib/utils";
 import {
-  CheckCircle2, CreditCard, Eye, FileText,
-  Mail, MapPin, Pencil, Phone, Building2,
+  Building2, CheckCircle2, CreditCard, Eye, FileText,
+  Home, Mail, MapPin, Pencil, Phone,
 } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -18,6 +18,7 @@ export const Route = createFileRoute("/contacts")({
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
+type CustomerType   = "commercial" | "residential";
 type ContactType    = "Decision Maker" | "Billing Contact" | "Site Contact" | "Influencer";
 type LifecycleStage = "Lead" | "Customer" | "Inactive";
 type ContactTag     = "VIP" | "Referral Source" | "Commercial" | "Residential";
@@ -32,11 +33,11 @@ interface Contact {
   id: string;
   name: string;
   title: string;
-  company: string;
+  company?: string;
   phone: string;
   email: string;
   address: string;
-  type: ContactType;
+  type?: ContactType;
   source: ContactSource;
   assignedTo: string;
   stage: LifecycleStage;
@@ -45,6 +46,7 @@ interface Contact {
   openOpps: LinkedOpp[];
   recentJobs: LinkedJob[];
   activity: ActivityEntry[];
+  customerType: CustomerType;
 }
 
 // ─── Config ──────────────────────────────────────────────────────────────────
@@ -94,7 +96,9 @@ const CONTACTS: Contact[] = [
     company: "Northbeam Architects", phone: "(718) 555-0142",
     email: "audrey@northbeam.co", address: "44 Berry St, Brooklyn, NY 11211",
     type: "Decision Maker", source: "Referral", assignedTo: "MO",
-    stage: "Customer", tags: ["VIP", "Commercial"], notes: "Key contact for all Northbeam AV projects. Prefers email.",
+    stage: "Customer", tags: ["VIP", "Commercial"],
+    customerType: "commercial",
+    notes: "Key contact for all Northbeam AV projects. Prefers email.",
     openOpps: [{ id: "AV-226", title: "Penthouse cinema build", value: 184500 }],
     recentJobs: [{ id: "pr1", title: "Penthouse cinema build", date: "Jul 09" }],
     activity: [
@@ -109,7 +113,9 @@ const CONTACTS: Contact[] = [
     company: "Pinecrest Hospitality Group", phone: "(512) 555-0911",
     email: "mbell@pinecrest.com", address: "905 Congress Ave, Austin, TX 78701",
     type: "Decision Maker", source: "Web Form", assignedTo: "JK",
-    stage: "Lead", tags: ["Commercial"], notes: "Evaluating multiple vendors. Budget confirmed at $200k+.",
+    stage: "Lead", tags: ["Commercial"],
+    customerType: "commercial",
+    notes: "Evaluating multiple vendors. Budget confirmed at $200k+.",
     openOpps: [{ id: "AV-238", title: "Lobby video wall (7×3 LED)", value: 212000 }],
     recentJobs: [],
     activity: [
@@ -123,7 +129,9 @@ const CONTACTS: Contact[] = [
     company: "Helio Health Systems", phone: "(303) 555-2230",
     email: "panand@heliohealth.org", address: "1719 E 19th Ave, Denver, CO 80218",
     type: "Site Contact", source: "Referral", assignedTo: "RT",
-    stage: "Customer", tags: ["Commercial"], notes: "On-site coordinator for all installs. CC on all scheduling.",
+    stage: "Customer", tags: ["Commercial"],
+    customerType: "commercial",
+    notes: "On-site coordinator for all installs. CC on all scheduling.",
     openOpps: [{ id: "AV-235", title: "Surgical center A/V overhaul", value: 148000 }],
     recentJobs: [{ id: "pr2", title: "Surgical center overhaul", date: "Aug 21" }],
     activity: [
@@ -134,12 +142,14 @@ const CONTACTS: Contact[] = [
   },
   {
     id: "p4", name: "Theodore Fox", title: "Homeowner",
-    company: "Quay Residential", phone: "(305) 555-1108",
+    phone: "(305) 555-1108",
     email: "tfox@quay.dev", address: "1408 Bayshore Dr, Miami, FL 33132",
-    type: "Decision Maker", source: "Referral", assignedTo: "SN",
-    stage: "Customer", tags: ["VIP", "Residential"], notes: "High-value residential client. Very detail-oriented.",
+    source: "Referral", assignedTo: "SN",
+    stage: "Customer", tags: ["VIP", "Residential"],
+    customerType: "residential",
+    notes: "High-value residential client. Very detail-oriented.",
     openOpps: [],
-    recentJobs: [{ id: "pr3", title: "Smart home — Quay residence", date: "Jun 19" }],
+    recentJobs: [{ id: "pr3", title: "Smart home — Fox residence", date: "Jun 19" }],
     activity: [
       { kind: "invoice", text: "INV-04811 paid — $48,200",              date: "Jun 12" },
       { kind: "job",     text: "Smart home commissioning — completed",   date: "Jun 01" },
@@ -151,7 +161,9 @@ const CONTACTS: Contact[] = [
     company: "Arden & Loom Studios", phone: "(323) 555-7741",
     email: "lena@ardenloom.tv", address: "5200 Lankershim Blvd, LA, CA 91601",
     type: "Decision Maker", source: "Phone", assignedTo: "AV",
-    stage: "Lead", tags: ["Commercial"], notes: "Wants full sound stage control room. Budget TBD.",
+    stage: "Lead", tags: ["Commercial"],
+    customerType: "commercial",
+    notes: "Wants full sound stage control room. Budget TBD.",
     openOpps: [{ id: "AV-230", title: "Sound stage 3 — control room", value: 142800 }],
     recentJobs: [{ id: "pr4", title: "Sound stage 3 control room", date: "Oct 02" }],
     activity: [
@@ -165,7 +177,9 @@ const CONTACTS: Contact[] = [
     company: "Halcyon Public Schools", phone: "(503) 555-4422",
     email: "dreyes@halcyon.k12.or.us", address: "1010 SE Powell Blvd, Portland, OR 97202",
     type: "Billing Contact", source: "Email", assignedTo: "EM",
-    stage: "Customer", tags: ["Commercial"], notes: "Approves all POs. Prefers invoices via email.",
+    stage: "Customer", tags: ["Commercial"],
+    customerType: "commercial",
+    notes: "Approves all POs. Prefers invoices via email.",
     openOpps: [{ id: "AV-229", title: "District-wide classroom standardization", value: 521000 }],
     recentJobs: [{ id: "pr6", title: "Auditorium AV — Halcyon HS", date: "Aug 04" }],
     activity: [
@@ -179,7 +193,9 @@ const CONTACTS: Contact[] = [
     company: "Vertex Capital Partners", phone: "(312) 555-9090",
     email: "iwang@vertexcap.io", address: "200 W Madison St, Chicago, IL 60606",
     type: "Decision Maker", source: "Referral", assignedTo: "EM",
-    stage: "Customer", tags: ["VIP", "Commercial"], notes: "Key decision maker. High priority account.",
+    stage: "Customer", tags: ["VIP", "Commercial"],
+    customerType: "commercial",
+    notes: "Key decision maker. High priority account.",
     openOpps: [{ id: "AV-218", title: "Trading floor latency upgrade", value: 234400 }],
     recentJobs: [{ id: "pr5", title: "Vertex 14F boardroom", date: "Jun 12" }],
     activity: [
@@ -194,7 +210,9 @@ const CONTACTS: Contact[] = [
     company: "Cinder & Oak Hospitality", phone: "(615) 555-3201",
     email: "hugo@cinderoak.co", address: "112 3rd Ave S, Nashville, TN 37201",
     type: "Decision Maker", source: "Walk-in", assignedTo: "JK",
-    stage: "Inactive", tags: ["Commercial"], notes: "Lost bid in May. Follow up Q4 — new location opening.",
+    stage: "Inactive", tags: ["Commercial"],
+    customerType: "commercial",
+    notes: "Lost bid in May. Follow up Q4 — new location opening.",
     openOpps: [],
     recentJobs: [],
     activity: [
@@ -208,7 +226,9 @@ const CONTACTS: Contact[] = [
     company: "Vertex Capital Partners", phone: "(312) 555-9111",
     email: "nsaleh@vertexcap.io", address: "200 W Madison St, Chicago, IL 60606",
     type: "Site Contact", source: "Referral", assignedTo: "RT",
-    stage: "Customer", tags: ["Commercial"], notes: "Technical point of contact. Coordinates with Iris on approvals.",
+    stage: "Customer", tags: ["Commercial"],
+    customerType: "commercial",
+    notes: "Technical point of contact. Coordinates with Iris on approvals.",
     openOpps: [],
     recentJobs: [{ id: "pr5", title: "Vertex 14F boardroom", date: "Jun 12" }],
     activity: [
@@ -222,11 +242,58 @@ const CONTACTS: Contact[] = [
     email: "caleb@northbeam.co", address: "44 Berry St, Brooklyn, NY 11211",
     type: "Influencer", source: "Referral", assignedTo: "MO",
     stage: "Lead", tags: ["Referral Source", "Commercial"],
+    customerType: "commercial",
     notes: "Referred Audrey Chen. Potential to influence future residential projects.",
     openOpps: [],
     recentJobs: [],
     activity: [
       { kind: "call", text: "Call logged — intro, discussed referral program", date: "Jun 02" },
+    ],
+  },
+  {
+    id: "p11", name: "Sandra Mitchell", title: "Homeowner",
+    phone: "(614) 555-0374",
+    email: "smitchell@gmail.com", address: "219 Birchwood Ln, Columbus, OH 43215",
+    source: "Referral", assignedTo: "SN",
+    stage: "Customer", tags: ["Residential"],
+    customerType: "residential",
+    notes: "Referred by Theodore Fox. Interested in full home automation and whole-home audio.",
+    openOpps: [{ id: "AV-241", title: "Whole-home audio — Mitchell residence", value: 28400 }],
+    recentJobs: [],
+    activity: [
+      { kind: "quote", text: "Quote Q-2026-0419 sent — $28,400", date: "Jun 04" },
+      { kind: "call",  text: "Call logged — walkthrough and scope review",   date: "May 29" },
+    ],
+  },
+  {
+    id: "p12", name: "James Whitfield", title: "Homeowner",
+    phone: "(919) 555-2287",
+    email: "jwhitfield@outlook.com", address: "17 Oak Ridge Ct, Raleigh, NC 27615",
+    source: "Web Form", assignedTo: "JK",
+    stage: "Lead", tags: ["Residential"],
+    customerType: "residential",
+    notes: "Looking for home theater and outdoor speaker install. Lot of natural light — projector vs display TBD.",
+    openOpps: [{ id: "AV-243", title: "Home theater — Whitfield residence", value: 54000 }],
+    recentJobs: [],
+    activity: [
+      { kind: "call",  text: "Call logged — initial consultation",         date: "Jun 05" },
+      { kind: "quote", text: "Quote Q-2026-0421 drafted — $54,000",        date: "Jun 05" },
+    ],
+  },
+  {
+    id: "p13", name: "Elena Vasquez", title: "Homeowner",
+    phone: "(210) 555-8819",
+    email: "evasquez@icloud.com", address: "832 Sycamore Ave, San Antonio, TX 78210",
+    source: "Phone", assignedTo: "RT",
+    stage: "Customer", tags: ["Residential"],
+    customerType: "residential",
+    notes: "Completed smart lighting and security camera install last quarter. Wants to add door locks and thermostat control.",
+    openOpps: [],
+    recentJobs: [{ id: "pr7", title: "Smart lighting & security — Vasquez residence", date: "Apr 18" }],
+    activity: [
+      { kind: "call",    text: "Call logged — follow-up, add-on scope discussion", date: "Jun 03" },
+      { kind: "invoice", text: "INV-04798 paid — $11,650",                          date: "Apr 22" },
+      { kind: "job",     text: "Smart lighting & security — project completed",      date: "Apr 18" },
     ],
   },
 ];
@@ -273,6 +340,7 @@ function ContactsPage() {
   const [newOpen, setNewOpen] = useState(false);
   const [search, setSearch] = useState("");
   const [typeFilter, setTypeFilter] = useState<ContactType | "all">("all");
+  const [customerTypeFilter, setCustomerTypeFilter] = useState<CustomerType | "all">("all");
   const [sourceFilter, setSourceFilter] = useState<ContactSource | "all">("all");
   const [assignedFilter, setAssignedFilter] = useState<string>("all");
 
@@ -288,13 +356,14 @@ function ContactsPage() {
   const filtered = useMemo(() => {
     const q = search.toLowerCase().trim();
     return CONTACTS.filter((c) => {
-      if (q && !c.name.toLowerCase().includes(q) && !c.company.toLowerCase().includes(q) && !c.email.toLowerCase().includes(q)) return false;
+      if (q && !c.name.toLowerCase().includes(q) && !(c.company?.toLowerCase().includes(q)) && !c.email.toLowerCase().includes(q)) return false;
       if (typeFilter !== "all" && c.type !== typeFilter) return false;
+      if (customerTypeFilter !== "all" && c.customerType !== customerTypeFilter) return false;
       if (sourceFilter !== "all" && c.source !== sourceFilter) return false;
       if (assignedFilter !== "all" && c.assignedTo !== assignedFilter) return false;
       return true;
     });
-  }, [search, typeFilter, sourceFilter, assignedFilter]);
+  }, [search, typeFilter, customerTypeFilter, sourceFilter, assignedFilter]);
 
   const openDrawer = useCallback((c: Contact) => setSelected(c), []);
 
@@ -311,6 +380,11 @@ function ContactsPage() {
           placeholder="Search contacts…"
           className="h-7 min-w-[180px] flex-1 rounded-md border border-border bg-surface px-2.5 text-[12px] text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-1 focus:ring-primary"
         />
+        <select value={customerTypeFilter} onChange={(e) => setCustomerTypeFilter(e.target.value as CustomerType | "all")} className={selectCls}>
+          <option value="all">All Customers</option>
+          <option value="commercial">Commercial</option>
+          <option value="residential">Residential</option>
+        </select>
         <select value={typeFilter} onChange={(e) => setTypeFilter(e.target.value as ContactType | "all")} className={selectCls}>
           <option value="all">All Types</option>
           {typeOptions.map((t) => <option key={t} value={t}>{t}</option>)}
@@ -354,16 +428,25 @@ function ContactsPage() {
                   <td className="py-2.5 px-3">
                     <div className="flex items-center gap-2.5">
                       <Avatar initials={getInitials(c.name)} />
-                      <div>
+                      <div className="flex-1 min-w-0">
                         <div className="font-semibold leading-snug">{c.name}</div>
                         <div className="text-[11px] text-muted-foreground">{c.title}</div>
                       </div>
+                      {c.customerType === "commercial"
+                        ? <Building2 className="h-3.5 w-3.5 shrink-0 text-muted-foreground/40" />
+                        : <Home className="h-3.5 w-3.5 shrink-0 text-muted-foreground/40" />
+                      }
                     </div>
                   </td>
                   <td className="py-2.5 px-3">
-                    <span className="text-foreground/75 hover:text-foreground hover:underline cursor-pointer text-[12px]">
-                      {c.company}
-                    </span>
+                    {c.customerType === "commercial" && c.company
+                      ? (
+                        <span className="text-foreground/75 hover:text-foreground hover:underline cursor-pointer text-[12px]">
+                          {c.company}
+                        </span>
+                      )
+                      : <span className="text-muted-foreground/40 text-[12px]">—</span>
+                    }
                   </td>
                   <td className="py-2.5 px-3 font-mono text-[11.5px] text-muted-foreground whitespace-nowrap">
                     {c.phone}
@@ -372,7 +455,10 @@ function ContactsPage() {
                     <span className="truncate block max-w-[180px]">{c.email}</span>
                   </td>
                   <td className="py-2.5 px-3">
-                    <TypeBadge type={c.type} />
+                    {c.type
+                      ? <TypeBadge type={c.type} />
+                      : <span className="text-muted-foreground/40 text-[12px]">—</span>
+                    }
                   </td>
                   <td className="py-2.5 px-3">
                     <div className="flex items-center gap-1.5">
@@ -431,6 +517,8 @@ function ContactsPage() {
 // ─── Contact detail drawer ────────────────────────────────────────────────────
 
 function ContactDrawer({ contact: c }: { contact: Contact }) {
+  const isResidential = c.customerType === "residential";
+
   return (
     <SheetContent className="sm:max-w-[460px] flex flex-col p-0 gap-0">
       <SheetHeader className="border-b border-border px-5 py-4">
@@ -438,7 +526,16 @@ function ContactDrawer({ contact: c }: { contact: Contact }) {
           <Avatar initials={getInitials(c.name)} className="!h-11 !w-11 !text-[15px] !rounded-xl" />
           <div>
             <SheetTitle className="text-[15px] font-semibold leading-tight">{c.name}</SheetTitle>
-            <p className="text-[12px] text-muted-foreground">{c.title} · {c.company}</p>
+            {isResidential ? (
+              <div className="flex items-center gap-1.5 mt-0.5">
+                <span className="inline-flex items-center gap-1 rounded-full bg-rose-500/15 px-2 py-0.5 text-[10.5px] font-medium text-rose-600 dark:text-rose-400">
+                  <Home className="h-3 w-3" />
+                  Residential
+                </span>
+              </div>
+            ) : (
+              <p className="text-[12px] text-muted-foreground">{c.title} · {c.company}</p>
+            )}
           </div>
         </div>
         {c.tags.length > 0 && (
@@ -461,12 +558,25 @@ function ContactDrawer({ contact: c }: { contact: Contact }) {
               <Mail className="h-3.5 w-3.5 shrink-0" />
               <span>{c.email}</span>
             </div>
-            <div className="flex items-start gap-2.5 text-muted-foreground">
-              <MapPin className="h-3.5 w-3.5 shrink-0 mt-0.5" />
-              <span>{c.address}</span>
-            </div>
+            {!isResidential && (
+              <div className="flex items-start gap-2.5 text-muted-foreground">
+                <MapPin className="h-3.5 w-3.5 shrink-0 mt-0.5" />
+                <span>{c.address}</span>
+              </div>
+            )}
           </div>
         </section>
+
+        {/* Property address — residential only */}
+        {isResidential && (
+          <section>
+            <p className="text-[10px] uppercase tracking-wider text-muted-foreground mb-2.5">Property Address</p>
+            <div className="flex items-start gap-2.5 rounded-md border border-border bg-surface/50 px-3 py-2.5 text-[12.5px]">
+              <Home className="h-3.5 w-3.5 shrink-0 mt-0.5 text-muted-foreground" />
+              <span className="text-foreground">{c.address}</span>
+            </div>
+          </section>
+        )}
 
         {/* Details */}
         <section>
@@ -483,10 +593,12 @@ function ContactDrawer({ contact: c }: { contact: Contact }) {
               <p className="text-[10px] text-muted-foreground mb-0.5">Lead Source</p>
               <span>{c.source}</span>
             </div>
-            <div>
-              <p className="text-[10px] text-muted-foreground mb-0.5">Type</p>
-              <TypeBadge type={c.type} />
-            </div>
+            {!isResidential && c.type && (
+              <div>
+                <p className="text-[10px] text-muted-foreground mb-0.5">Type</p>
+                <TypeBadge type={c.type} />
+              </div>
+            )}
             <div>
               <p className="text-[10px] text-muted-foreground mb-0.5">Stage</p>
               <StageBadge stage={c.stage} />
@@ -494,16 +606,18 @@ function ContactDrawer({ contact: c }: { contact: Contact }) {
           </div>
         </section>
 
-        {/* Related company */}
-        <section>
-          <p className="text-[10px] uppercase tracking-wider text-muted-foreground mb-2.5">Company</p>
-          <div className="flex items-center gap-2 text-[12.5px]">
-            <div className="flex h-7 w-7 items-center justify-center rounded-md border border-border bg-surface">
-              <Building2 className="h-3.5 w-3.5 text-muted-foreground" />
+        {/* Related company — commercial only */}
+        {!isResidential && c.company && (
+          <section>
+            <p className="text-[10px] uppercase tracking-wider text-muted-foreground mb-2.5">Company</p>
+            <div className="flex items-center gap-2 text-[12.5px]">
+              <div className="flex h-7 w-7 items-center justify-center rounded-md border border-border bg-surface">
+                <Building2 className="h-3.5 w-3.5 text-muted-foreground" />
+              </div>
+              <span className="text-primary hover:underline cursor-pointer">{c.company}</span>
             </div>
-            <span className="text-primary hover:underline cursor-pointer">{c.company}</span>
-          </div>
-        </section>
+          </section>
+        )}
 
         {/* Open opportunities */}
         {c.openOpps.length > 0 && (
@@ -583,6 +697,7 @@ function NewContactModal({ onClose }: { onClose: () => void }) {
 
   const allTags: ContactTag[] = ["VIP", "Referral Source", "Commercial", "Residential"];
   const [selectedTags, setSelectedTags] = useState<ContactTag[]>([]);
+  const [customerModalType, setCustomerModalType] = useState<CustomerType>("commercial");
 
   const toggleTag = (tag: ContactTag) =>
     setSelectedTags((prev) => prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]);
@@ -593,6 +708,39 @@ function NewContactModal({ onClose }: { onClose: () => void }) {
         <DialogTitle>New Contact</DialogTitle>
       </DialogHeader>
       <div className="mt-1 grid grid-cols-2 gap-3">
+        {/* Customer type toggle */}
+        <div className="col-span-2">
+          <label className={labelCls}>Customer Type</label>
+          <div className="flex rounded-md border border-border overflow-hidden">
+            <button
+              type="button"
+              onClick={() => setCustomerModalType("commercial")}
+              className={cn(
+                "flex-1 h-8 flex items-center justify-center gap-1.5 text-[12px] font-medium transition-colors",
+                customerModalType === "commercial"
+                  ? "bg-primary text-primary-foreground"
+                  : "bg-surface text-muted-foreground hover:text-foreground",
+              )}
+            >
+              <Building2 className="h-3.5 w-3.5" />
+              Commercial
+            </button>
+            <button
+              type="button"
+              onClick={() => setCustomerModalType("residential")}
+              className={cn(
+                "flex-1 h-8 flex items-center justify-center gap-1.5 text-[12px] font-medium transition-colors border-l border-border",
+                customerModalType === "residential"
+                  ? "bg-primary text-primary-foreground"
+                  : "bg-surface text-muted-foreground hover:text-foreground",
+              )}
+            >
+              <Home className="h-3.5 w-3.5" />
+              Residential
+            </button>
+          </div>
+        </div>
+
         <div>
           <label className={labelCls}>First Name</label>
           <input className={inputCls} placeholder="First name" />
@@ -603,12 +751,17 @@ function NewContactModal({ onClose }: { onClose: () => void }) {
         </div>
         <div className="col-span-2">
           <label className={labelCls}>Job Title</label>
-          <input className={inputCls} placeholder="e.g. Facilities Manager" />
+          <input className={inputCls} placeholder={customerModalType === "residential" ? "e.g. Homeowner" : "e.g. Facilities Manager"} />
         </div>
-        <div className="col-span-2">
-          <label className={labelCls}>Company</label>
-          <input className={inputCls} placeholder="Company name" />
-        </div>
+
+        {/* Company — commercial only */}
+        {customerModalType === "commercial" && (
+          <div className="col-span-2">
+            <label className={labelCls}>Company <span className="text-rose-500">*</span></label>
+            <input className={inputCls} placeholder="Company name" required />
+          </div>
+        )}
+
         <div>
           <label className={labelCls}>Phone</label>
           <input className={inputCls} placeholder="(555) 000-0000" type="tel" />
@@ -617,22 +770,30 @@ function NewContactModal({ onClose }: { onClose: () => void }) {
           <label className={labelCls}>Email</label>
           <input className={inputCls} placeholder="email@example.com" type="email" />
         </div>
+
+        {/* Address field — label changes by type */}
         <div className="col-span-2">
-          <label className={labelCls}>Address</label>
+          <label className={labelCls}>{customerModalType === "residential" ? "Property Address" : "Address"}</label>
           <input className={inputCls} placeholder="Street, City, State ZIP" />
         </div>
-        <div>
-          <label className={labelCls}>Contact Type</label>
-          <select className={selectCls}>
-            {typeOptions.map((t) => <option key={t}>{t}</option>)}
-          </select>
-        </div>
-        <div>
+
+        {/* Contact type — commercial only */}
+        {customerModalType === "commercial" && (
+          <div>
+            <label className={labelCls}>Contact Type</label>
+            <select className={selectCls}>
+              {typeOptions.map((t) => <option key={t}>{t}</option>)}
+            </select>
+          </div>
+        )}
+
+        <div className={customerModalType === "commercial" ? "" : "col-span-2"}>
           <label className={labelCls}>Lead Source</label>
           <select className={selectCls}>
             {sourceOptions.map((s) => <option key={s}>{s}</option>)}
           </select>
         </div>
+
         <div className="col-span-2">
           <label className={labelCls}>Assign To</label>
           <select className={selectCls}>
