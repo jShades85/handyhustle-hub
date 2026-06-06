@@ -4,6 +4,7 @@ import {
   Inbox, LayoutDashboard, Target, Building2, Users, FileText, Package,
   Briefcase, CalendarDays, Receipt, HardHat, Boxes, Truck, CreditCard, BarChart2,
   Search, Plus, Settings, PanelLeft, ClipboardList, Headphones, ShieldCheck, ShoppingCart,
+  GanttChart,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { CommandPalette } from "./command-palette";
@@ -11,7 +12,11 @@ import ThemeToggle from "./ui/ThemeToggle";
 import { PageMetaProvider, useMeta } from "@/contexts/PageMetaContext";
 import { requestItems } from "@/data/inbox-data";
 
+// ─── Types ────────────────────────────────────────────────────────────────────
+
 type NavItem = { to: string; label: string; icon: typeof Inbox; badge?: string };
+
+// ─── Nav data ─────────────────────────────────────────────────────────────────
 
 const sections: { title?: string; items: NavItem[] }[] = [
   {
@@ -40,7 +45,8 @@ const sections: { title?: string; items: NavItem[] }[] = [
     items: [
       { to: "/projects", label: "Projects", icon: Briefcase },
       { to: "/work-orders", label: "Work Orders", icon: ClipboardList },
-      { to: "/scheduling", label: "Scheduling", icon: CalendarDays },
+      { to: "/planner",    label: "Planner",     icon: GanttChart },
+      { to: "/scheduling", label: "Scheduling",  icon: CalendarDays },
       { to: "/team", label: "Team", icon: HardHat },
     ],
   },
@@ -54,7 +60,8 @@ const sections: { title?: string; items: NavItem[] }[] = [
   {
     title: "Inventory",
     items: [
-      { to: "/catalog", label: "Catalog", icon: Package },
+      { to: "/inventory/catalog", label: "Catalog", icon: Package },
+      { to: "/inventory/stock", label: "Stock", icon: Boxes },
       { to: "/inventory", label: "Parts & Materials", icon: Boxes },
       { to: "/purchase-orders", label: "Purchase Orders", icon: ShoppingCart },
       { to: "/vendors", label: "Vendors", icon: Truck },
@@ -73,7 +80,15 @@ const sections: { title?: string; items: NavItem[] }[] = [
       { to: "/reports", label: "Reports", icon: BarChart2 },
     ],
   },
+  {
+    title: "Settings",
+    items: [
+      { to: "/settings/quote-templates", label: "Quote Templates", icon: FileText },
+    ],
+  },
 ];
+
+// ─── Shell ────────────────────────────────────────────────────────────────────
 
 export function AppShell() {
   return (
@@ -90,7 +105,6 @@ function AppShellContent() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const [collapsed, setCollapsed] = useState(false);
   const [paletteOpen, setPaletteOpen] = useState(false);
-
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {

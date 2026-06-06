@@ -1,0 +1,482 @@
+import { createFileRoute, Link } from "@tanstack/react-router";
+import { useEffect, useRef, useState } from "react";
+import { useMeta } from "@/contexts/PageMetaContext";
+import { currency } from "@/lib/demo-data";
+import { cn } from "@/lib/utils";
+import {
+  Archive, Briefcase, ChevronDown, Clock, Copy, FileText,
+  FolderKanban, MapPin, MoreHorizontal, Pencil, Trash2, UploadCloud,
+} from "lucide-react";
+import {
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem,
+  DropdownMenuSeparator, DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  PROJECTS, statusMeta, STATUS_OPTIONS,
+  type ProjectStatus, type ProjectRecord,
+} from "@/data/projects";
+import { PhasesPanel } from "@/components/projects/PhasesPanel";
+import { PartsPanel } from "@/components/projects/PartsPanel";
+import { TeamPanel } from "@/components/projects/TeamPanel";
+import { ActivityPanel } from "@/components/projects/ActivityPanel";
+
+export const Route = createFileRoute("/projects/$projectId")({
+  component: ProjectDetailPage,
+});
+
+// ─── Types ───────────────────────────────────────────────────────────────────
+
+type TabId = "overview" | "phases" | "parts" | "team" | "activity" | "files";
+type DetailSection = "Projects" | "Work Orders";
+
+// ─── Config ──────────────────────────────────────────────────────────────────
+
+const TABS: Array<{ id: TabId; label: string }> = [
+  { id: "overview",  label: "Overview" },
+  { id: "phases",    label: "Phases & Tasks" },
+  { id: "parts",     label: "Parts List" },
+  { id: "team",      label: "Team" },
+  { id: "activity",  label: "Activity" },
+  { id: "files",     label: "Files" },
+];
+
+const ACTIVITY: Array<{ icon: typeof FileText; color: string; text: string; time: string }> = [
+  { icon: Clock,        color: "text-amber-500",  text: "Ravi Tate logged 8 hours on Install — Phase 2", time: "2h ago" },
+  { icon: FolderKanban, color: "text-primary",     text: "Status changed to In Progress",                 time: "Jun 2" },
+  { icon: FileText,     color: "text-blue-500",    text: "Quote Q-2026-0415 linked to this project",      time: "May 28" },
+];
+
+// ─── Sub-components ───────────────────────────────────────────────────────────
+
+function StatusBadge({ status }: { status: ProjectStatus }) {
+  const { label, cls } = statusMeta[status];
+  return (
+    <span className={cn("inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[10.5px] font-medium", cls)}>
+      <span className="h-1.5 w-1.5 rounded-full bg-current" />
+      {label}
+    </span>
+  );
+}
+
+function TypeBadge({ type }: { type: ProjectRecord["type"] }) {
+  return (
+    <span className={cn(
+      "inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-medium",
+      type === "work-order"
+        ? "bg-slate-500/10 text-slate-500 dark:text-slate-400"
+        : "bg-primary/10 text-primary",
+    )}>
+      {type === "work-order" ? "Work Order" : "Project"}
+    </span>
+  );
+}
+
+function StatusDropdown({
+  status,
+  onChange,
+}: {
+  status: ProjectStatus;
+  onChange: (s: ProjectStatus) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const handler = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [open]);
+
+  const { label, cls } = statusMeta[status];
+
+  return (
+    <div ref={ref} className="relative">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className={cn(
+          "inline-flex items-center gap-1.5 rounded px-2 py-1 text-[11px] font-medium transition-opacity hover:opacity-80",
+          cls,
+        )}
+      >
+        <span className="h-1.5 w-1.5 rounded-full bg-current" />
+        {label}
+        <ChevronDown className="h-3 w-3 opacity-60" />
+      </button>
+      {open && (
+        <div className="absolute left-0 top-full z-50 mt-1 w-40 rounded-lg border border-border bg-popover py-1 shadow-md">
+          {STATUS_OPTIONS.filter((o) => o.value !== "all").map((o) => {
+            const s = o.value as ProjectStatus;
+            const { label: l, cls: c } = statusMeta[s];
+            return (
+              <button
+                key={s}
+                type="button"
+                onClick={() => { onChange(s); setOpen(false); }}
+                className={cn(
+                  "flex w-full items-center gap-2 px-3 py-1.5 text-[12px] hover:bg-accent transition-colors",
+                  status === s && "bg-accent/50",
+                )}
+              >
+                <span className={cn("inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[10.5px] font-medium", c)}>
+                  <span className="h-1.5 w-1.5 rounded-full bg-current" />
+                  {l}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function StatBlock({
+  label,
+  value,
+  sub,
+  valueClass,
+}: {
+  label: string;
+  value: string;
+  sub?: string;
+  valueClass?: string;
+}) {
+  return (
+    <div className="rounded-lg border border-border bg-card px-4 py-3">
+      <p className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">{label}</p>
+      <p className={cn("text-[18px] font-semibold tabular-nums leading-none", valueClass)}>{value}</p>
+      {sub && <p className="mt-1 text-[11px] text-muted-foreground">{sub}</p>}
+    </div>
+  );
+}
+
+// ─── Shared detail view (used by both /projects and /work-orders) ─────────────
+
+export interface ProjectDetailViewProps {
+  projectId: string;
+  section?: DetailSection;
+}
+
+export function ProjectDetailView({
+  projectId,
+  section = "Projects",
+}: ProjectDetailViewProps) {
+  const { setMeta } = useMeta();
+  const [tab, setTab] = useState<TabId>("overview");
+
+  const project = PROJECTS.find((p) => p.id === projectId);
+  const [status, setStatus] = useState<ProjectStatus>(project?.status ?? "in-progress");
+
+  const backHref = section === "Work Orders" ? "/work-orders" : "/projects";
+  const backLabel = section === "Work Orders" ? "All Work Orders" : "All Projects";
+
+  useEffect(() => {
+    if (project) {
+      setMeta({ title: project.name, subtitle: section });
+    }
+  }, [setMeta, project, section]);
+
+  if (!project) {
+    return (
+      <div className="flex flex-col items-center justify-center py-24 text-center">
+        <Briefcase className="h-10 w-10 text-muted-foreground/40 mb-3" />
+        <p className="text-[14px] font-medium">
+          {section === "Work Orders" ? "Work order" : "Project"} not found
+        </p>
+        <p className="text-[12.5px] text-muted-foreground mt-1 mb-4">
+          No record with ID &ldquo;{projectId}&rdquo; exists.
+        </p>
+        <Link
+          to={backHref}
+          className="inline-flex items-center gap-1.5 rounded-md bg-primary px-3 py-1.5 text-[12.5px] font-medium text-primary-foreground hover:opacity-90"
+        >
+          Back to {section}
+        </Link>
+      </div>
+    );
+  }
+
+  const margin = project.contractValue > 0
+    ? ((project.contractValue - project.actualCost) / project.contractValue) * 100
+    : 0;
+  const completionPct = project.tasksTotal > 0
+    ? Math.round((project.tasksDone / project.tasksTotal) * 100)
+    : 0;
+
+  return (
+    <div className="flex flex-col">
+      {/* Back nav */}
+      <div className="border-b border-border px-5 py-2.5">
+        <Link
+          to={backHref}
+          className="inline-flex items-center gap-1.5 text-[12px] text-muted-foreground hover:text-foreground transition-colors"
+        >
+          <svg className="h-3.5 w-3.5" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5">
+            <path d="M10 13L5 8l5-5" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+          {backLabel}
+        </Link>
+      </div>
+
+      {/* Header */}
+      <div className="border-b border-border px-5 py-5 space-y-4">
+        {/* Row 1: title + right column */}
+        <div className="flex items-start justify-between gap-6">
+          {/* Left: name / customer / address */}
+          <div className="min-w-0">
+            <div className="flex items-center gap-2 mb-1.5">
+              <span className="font-mono text-[10.5px] text-muted-foreground">{project.code}</span>
+              <TypeBadge type={project.type} />
+            </div>
+            <h1 className="text-[19px] font-semibold tracking-tight leading-snug">{project.name}</h1>
+            <p className="mt-0.5 text-[13px] text-muted-foreground">{project.customer}</p>
+            <div className="mt-1.5 flex items-center gap-1.5 text-[12px] text-muted-foreground">
+              <MapPin className="h-3.5 w-3.5 shrink-0" />
+              <span>{project.siteAddress}</span>
+            </div>
+          </div>
+
+          {/* Right: status + value */}
+          <div className="flex flex-col items-end gap-2 shrink-0">
+            <StatusDropdown status={status} onChange={setStatus} />
+            <p className="text-[22px] font-semibold tabular-nums">{currency(project.contractValue)}</p>
+            <p className="text-[10.5px] text-muted-foreground">Contract Value</p>
+          </div>
+        </div>
+
+        {/* Row 2: meta fields + action buttons */}
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <dl className="flex flex-wrap gap-x-6 gap-y-2 text-[12px]">
+            <div className="flex items-center gap-1.5">
+              <dt className="text-muted-foreground">Start</dt>
+              <dd className="font-medium">{project.startDate}</dd>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <dt className="text-muted-foreground">Target End</dt>
+              <dd className="font-medium">{project.targetEndDate}</dd>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <dt className="text-muted-foreground">Quote</dt>
+              <dd className={project.sourceQuote ? "font-medium text-blue-500" : "text-muted-foreground"}>
+                {project.sourceQuote ?? "No quote linked"}
+              </dd>
+            </div>
+            <div className="flex items-center gap-1.5 max-w-xs">
+              <dt className="text-muted-foreground shrink-0">Opportunity</dt>
+              <dd className={cn("truncate", project.opportunityRef ? "font-medium text-blue-500" : "text-muted-foreground")}>
+                {project.opportunityRef ?? "No opportunity linked"}
+              </dd>
+            </div>
+          </dl>
+
+          {/* Action buttons */}
+          <div className="flex items-center gap-2 shrink-0">
+            <button
+              type="button"
+              className="flex h-7 items-center gap-1.5 rounded-md border border-border bg-surface px-2.5 text-[12px] text-muted-foreground hover:text-foreground hover:border-primary/40 transition-colors"
+            >
+              <Pencil className="h-3.5 w-3.5" />
+              Edit
+            </button>
+            <button
+              type="button"
+              onClick={() => console.log("log hours")}
+              className="flex h-7 items-center gap-1.5 rounded-md border border-border bg-surface px-2.5 text-[12px] text-muted-foreground hover:text-foreground hover:border-primary/40 transition-colors"
+            >
+              <Clock className="h-3.5 w-3.5" />
+              Log Hours
+            </button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button
+                  type="button"
+                  className="flex h-7 w-7 items-center justify-center rounded-md border border-border bg-surface text-muted-foreground hover:text-foreground hover:border-primary/40 transition-colors"
+                  aria-label="More options"
+                >
+                  <MoreHorizontal className="h-4 w-4" />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-44">
+                <DropdownMenuItem onClick={() => console.log("duplicate")} className="gap-2">
+                  <Copy className="h-3.5 w-3.5" />
+                  Duplicate
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => console.log("archive")} className="gap-2">
+                  <Archive className="h-3.5 w-3.5" />
+                  Archive
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  onClick={() => console.log("delete")}
+                  className="gap-2 text-destructive focus:text-destructive"
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                  Delete
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+        </div>
+      </div>
+
+      {/* Sticky tab bar */}
+      <div className="sticky top-0 z-10 flex items-center gap-1 border-b border-border bg-background px-3">
+        {TABS.map((t) => (
+          <button
+            key={t.id}
+            type="button"
+            onClick={() => setTab(t.id)}
+            className={cn(
+              "relative h-9 rounded-md px-2.5 text-[12.5px] transition-colors",
+              tab === t.id
+                ? "text-foreground"
+                : "text-muted-foreground hover:text-foreground",
+            )}
+          >
+            {t.label}
+            {tab === t.id && (
+              <span className="absolute inset-x-2 -bottom-px h-px bg-primary" />
+            )}
+          </button>
+        ))}
+      </div>
+
+      {/* Tab content */}
+      <div className="flex-1">
+        {tab === "overview" && (
+          <OverviewTab project={project} margin={margin} completionPct={completionPct} />
+        )}
+        {tab === "phases"   && <PhasesPanel projectId={project.id} projectType={project.type} />}
+        {tab === "parts"    && <PartsPanel projectId={project.id} />}
+        {tab === "team"     && <TeamPanel projectId={project.id} />}
+        {tab === "activity" && <ActivityPanel projectId={project.id} />}
+        {tab === "files"    && (
+          <div className="flex flex-col items-center justify-center py-20 text-center">
+            <UploadCloud className="h-9 w-9 text-muted-foreground/30 mb-3" />
+            <p className="text-[13px] font-medium">No files attached</p>
+            <p className="mt-1 text-[12px] text-muted-foreground">File attachments coming soon.</p>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ─── Route component ──────────────────────────────────────────────────────────
+
+function ProjectDetailPage() {
+  const { projectId } = Route.useParams();
+  return <ProjectDetailView projectId={projectId} section="Projects" />;
+}
+
+// ─── Overview Tab ─────────────────────────────────────────────────────────────
+
+function OverviewTab({
+  project,
+  margin,
+  completionPct,
+}: {
+  project: ProjectRecord;
+  margin: number;
+  completionPct: number;
+}) {
+  const marginClass =
+    margin >= 30 ? "text-status-won" :
+    margin >= 20 ? "text-amber-500" :
+    project.actualCost === 0 ? "" :
+    "text-status-lost";
+
+  return (
+    <div className="px-5 py-5 space-y-6">
+      {/* Financials */}
+      <section>
+        <p className="text-[10px] uppercase tracking-wider text-muted-foreground mb-3">Financials</p>
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+          <StatBlock
+            label="Contract Value"
+            value={currency(project.contractValue)}
+          />
+          <StatBlock
+            label="Budgeted Cost"
+            value={currency(project.budgetedCost)}
+          />
+          <StatBlock
+            label="Actual Cost"
+            value={project.actualCost > 0 ? currency(project.actualCost) : "—"}
+          />
+          <StatBlock
+            label="Margin"
+            value={project.actualCost > 0 ? `${margin.toFixed(1)}%` : "—"}
+            sub={project.actualCost > 0 ? `${currency(project.contractValue - project.actualCost)} gross` : undefined}
+            valueClass={marginClass}
+          />
+        </div>
+      </section>
+
+      {/* Hours & Completion */}
+      <section>
+        <p className="text-[10px] uppercase tracking-wider text-muted-foreground mb-3">Progress</p>
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+          <StatBlock
+            label="Budgeted Hours"
+            value={project.budgetedHours > 0 ? `${project.budgetedHours} hrs` : "—"}
+          />
+          <StatBlock
+            label="Logged Hours"
+            value={project.loggedHours > 0 ? `${project.loggedHours} hrs` : "—"}
+            sub={project.budgetedHours > 0 && project.loggedHours > 0
+              ? `${Math.round((project.loggedHours / project.budgetedHours) * 100)}% of budget`
+              : undefined}
+          />
+          <StatBlock
+            label="Completion"
+            value={project.tasksTotal > 0 ? `${completionPct}%` : "—"}
+            sub={project.tasksTotal > 0
+              ? `${project.tasksDone} of ${project.tasksTotal} tasks done`
+              : "No tasks yet"}
+          />
+        </div>
+        {/* Hours progress bar */}
+        {project.budgetedHours > 0 && (
+          <div className="mt-3 space-y-1">
+            <div className="flex items-center justify-between text-[10.5px] text-muted-foreground">
+              <span>Hours used</span>
+              <span className="font-mono">{project.loggedHours} / {project.budgetedHours} hrs</span>
+            </div>
+            <div className="h-1.5 rounded-full bg-muted overflow-hidden">
+              <div
+                className="h-full bg-primary rounded-full transition-[width]"
+                style={{ width: `${Math.min(100, (project.loggedHours / project.budgetedHours) * 100)}%` }}
+              />
+            </div>
+          </div>
+        )}
+      </section>
+
+      {/* Recent Activity */}
+      <section>
+        <p className="text-[10px] uppercase tracking-wider text-muted-foreground mb-3">Recent Activity</p>
+        <ul className="space-y-3">
+          {ACTIVITY.map((a, i) => {
+            const Icon = a.icon;
+            return (
+              <li key={i} className="flex gap-3 text-[12.5px]">
+                <div className={cn("mt-0.5 shrink-0", a.color)}>
+                  <Icon className="h-3.5 w-3.5" />
+                </div>
+                <div>
+                  <p>{a.text}</p>
+                  <p className="mt-0.5 font-mono text-[10.5px] text-muted-foreground">{a.time}</p>
+                </div>
+              </li>
+            );
+          })}
+        </ul>
+      </section>
+    </div>
+  );
+}

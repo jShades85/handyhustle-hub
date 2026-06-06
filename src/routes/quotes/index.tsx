@@ -7,7 +7,6 @@ import { cn } from "@/lib/utils";
 import {
   CheckCircle2, Clock, Eye, FileText, XCircle,
 } from "lucide-react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 export const Route = createFileRoute("/quotes/")({
   head: () => ({ meta: [{ title: "Quotes & Estimates · Port City Sound & Security" }] }),
@@ -70,7 +69,6 @@ function marginColor(m: number): string {
 function QuotesPage() {
   const { setMeta } = useMeta();
   const navigate = useNavigate();
-  const [newOpen, setNewOpen] = useState(false);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<QuoteStatus | "all">("all");
   const [dateRange, setDateRange] = useState<DateRange>("All Time");
@@ -79,10 +77,10 @@ function QuotesPage() {
     setMeta({
       title: "Quotes & Estimates",
       subtitle: `${quotes.length} quotes`,
-      onNew: () => setNewOpen(true),
+      onNew: () => navigate({ to: "/quotes/new" }),
       newLabel: "+ New Quote",
     });
-  }, [setMeta]);
+  }, [setMeta, navigate]);
 
   const filtered = useMemo(() => {
     const q = search.toLowerCase().trim();
@@ -190,120 +188,6 @@ function QuotesPage() {
         </div>
       </div>
 
-      {/* New Quote modal */}
-      <Dialog open={newOpen} onOpenChange={setNewOpen}>
-        <NewQuoteModal onClose={() => setNewOpen(false)} />
-      </Dialog>
     </div>
-  );
-}
-
-// ─── New Quote Modal ──────────────────────────────────────────────────────────
-
-function NewQuoteModal({ onClose }: { onClose: () => void }) {
-  const inputCls = "w-full h-8 rounded-md border border-border bg-surface px-2.5 text-[12.5px] focus:outline-none focus:ring-1 focus:ring-primary placeholder:text-muted-foreground/50";
-  const selectCls = "w-full h-8 rounded-md border border-border bg-surface px-2 text-[12.5px] focus:outline-none focus:ring-1 focus:ring-primary";
-  const labelCls = "block text-[10px] uppercase tracking-wider text-muted-foreground mb-1";
-
-  const [selectedCompany, setSelectedCompany] = useState("");
-
-  const companies = [
-    "Vertex Capital Partners",
-    "Pinecrest Hospitality Group",
-    "Northbeam Architects",
-    "Helio Health Systems",
-    "Arden & Loom Studios",
-    "Halcyon Public Schools",
-    "Quay Residential",
-    "Cinder & Oak Hospitality",
-  ];
-
-  const contactsByCompany: Record<string, string[]> = {
-    "Vertex Capital Partners":    ["Iris Wang", "Noor Saleh"],
-    "Pinecrest Hospitality Group":["Marcus Bell"],
-    "Northbeam Architects":       ["Audrey Chen", "Caleb Ortiz"],
-    "Helio Health Systems":       ["Priya Anand"],
-    "Arden & Loom Studios":       ["Lena Romero"],
-    "Halcyon Public Schools":     ["Damon Reyes"],
-    "Quay Residential":           ["Theodore Fox"],
-    "Cinder & Oak Hospitality":   ["Hugo Albright"],
-  };
-
-  const opportunities = [
-    "AV-241 · Boardroom AV refresh — 14F",
-    "AV-238 · Lobby video wall (7×3 LED)",
-    "AV-235 · Surgical center A/V overhaul",
-    "AV-233 · Primary residence — full smart home",
-    "AV-230 · Sound stage 3 — control room",
-    "AV-229 · District-wide classroom standardization",
-    "AV-226 · Penthouse cinema build",
-    "AV-218 · Trading floor latency upgrade",
-  ];
-
-  const contacts = selectedCompany ? (contactsByCompany[selectedCompany] ?? []) : [];
-
-  return (
-    <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
-      <DialogHeader>
-        <DialogTitle>New Quote</DialogTitle>
-      </DialogHeader>
-      <div className="mt-1 grid grid-cols-2 gap-3">
-        <div className="col-span-2">
-          <label className={labelCls}>Quote Name</label>
-          <input className={inputCls} placeholder="e.g. Boardroom AV refresh — Rev 2" />
-        </div>
-        <div className="col-span-2">
-          <label className={labelCls}>Linked Opportunity</label>
-          <select className={selectCls}>
-            <option value="">Select opportunity…</option>
-            {opportunities.map((o) => <option key={o} value={o}>{o}</option>)}
-          </select>
-        </div>
-        <div className="col-span-2">
-          <label className={labelCls}>Company</label>
-          <select
-            className={selectCls}
-            value={selectedCompany}
-            onChange={(e) => setSelectedCompany(e.target.value)}
-          >
-            <option value="">Select company…</option>
-            {companies.map((c) => <option key={c} value={c}>{c}</option>)}
-          </select>
-        </div>
-        <div className="col-span-2">
-          <label className={labelCls}>Contact</label>
-          <select className={selectCls} disabled={!selectedCompany}>
-            <option value="">{selectedCompany ? "Select contact…" : "Select a company first"}</option>
-            {contacts.map((c) => <option key={c} value={c}>{c}</option>)}
-          </select>
-        </div>
-        <div className="col-span-2">
-          <label className={labelCls}>Expiry Date</label>
-          <input className={inputCls} type="date" />
-        </div>
-        <div className="col-span-2">
-          <label className={labelCls}>Notes</label>
-          <textarea
-            rows={3}
-            placeholder="Add any notes…"
-            className="w-full resize-none rounded-md border border-border bg-surface px-2.5 py-2 text-[12.5px] placeholder:text-muted-foreground/50 focus:outline-none focus:ring-1 focus:ring-primary"
-          />
-        </div>
-      </div>
-      <div className="mt-3 flex justify-end gap-2">
-        <button
-          onClick={onClose}
-          className="h-8 rounded-md border border-border px-3 text-[12.5px] text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
-        >
-          Cancel
-        </button>
-        <button
-          onClick={onClose}
-          className="h-8 rounded-md bg-primary px-4 text-[12.5px] font-medium text-primary-foreground hover:opacity-90 transition-opacity"
-        >
-          Create Quote
-        </button>
-      </div>
-    </DialogContent>
   );
 }

@@ -1,19 +1,18 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import { useMeta } from "@/contexts/PageMetaContext";
-import { quotes, currency } from "@/lib/demo-data";
-import type { QuoteActivity } from "@/lib/demo-data";
+import { currency } from "@/lib/demo-data";
 import { cn } from "@/lib/utils";
 import {
-  CheckCircle2, Clock, Download, Eye, FileText, FolderKanban,
-  MessageSquare, Plus, Search, Send, Trash2, XCircle, ChevronDown,
+  ArrowLeft, ChevronDown, FileText, Plus, Search, Trash2,
 } from "lucide-react";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
 
-export const Route = createFileRoute("/quotes/$quoteId")({
-  component: QuoteDetailPage,
+export const Route = createFileRoute("/quotes/new")({
+  head: () => ({ meta: [{ title: "New Quote · Port City Sound & Security" }] }),
+  component: NewQuotePage,
 });
 
 // ─── Builder types ────────────────────────────────────────────────────────────
@@ -62,7 +61,7 @@ type EditingCell = {
   draft: string;
 } | null;
 
-// ─── Static data ──────────────────────────────────────────────────────────────
+// ─── Static builder data ──────────────────────────────────────────────────────
 
 const BUILDER_CATALOG: BuilderCatalogItem[] = [
   { id: "bc-1",  sku: "CRE-MX-150",  name: "Crestron MX-150 Control Processor",    category: "Control",   unitCost: 1820,  unitPrice: 2750,  unit: "ea",  hasLabor: true,  laborHours: 2,   laborRate: 85 },
@@ -108,56 +107,50 @@ const BUILDER_TEMPLATES: BuilderTemplate[] = [
   },
 ];
 
-// ─── Pre-seeded state for q1 ──────────────────────────────────────────────────
+// ─── Demo form data ───────────────────────────────────────────────────────────
 
-const Q1_SECTIONS: BuilderSection[] = BUILDER_TEMPLATES[0].sections;
-
-const Q1_ITEMS: BuilderLineItem[] = [
-  { id: "li-q1-1",  sectionId: "s-001-1", type: "product", catalogItemId: "bc-1",  description: "Crestron MX-150 Control Processor",    qty: 1,  unitCost: 1820, unitPrice: 2750, unit: "ea",  parentLineItemId: null       },
-  { id: "li-q1-1L", sectionId: "s-001-1", type: "labor",   catalogItemId: null,    description: "Installation — Crestron MX-150",         qty: 2,  unitCost: 55,   unitPrice: 85,  unit: "hr",  parentLineItemId: "li-q1-1"  },
-  { id: "li-q1-2",  sectionId: "s-001-1", type: "product", catalogItemId: "bc-11", description: "Poly Studio X70 Video Bar",               qty: 2,  unitCost: 5980, unitPrice: 8240, unit: "ea", parentLineItemId: null       },
-  { id: "li-q1-2L", sectionId: "s-001-1", type: "labor",   catalogItemId: null,    description: "Installation — Poly Studio X70",          qty: 4,  unitCost: 55,   unitPrice: 85,  unit: "hr",  parentLineItemId: "li-q1-2"  },
-  { id: "li-q1-3",  sectionId: "s-001-1", type: "product", catalogItemId: "bc-4",  description: "Shure MXA920 Ceiling Array Mic",          qty: 2,  unitCost: 4520, unitPrice: 6480, unit: "ea", parentLineItemId: null       },
-  { id: "li-q1-4",  sectionId: "s-001-1", type: "product", catalogItemId: "bc-6",  description: "Biamp Nexia PL-60 Conferencing DSP",      qty: 1,  unitCost: 2240, unitPrice: 3380, unit: "ea", parentLineItemId: null       },
-  { id: "li-q1-5",  sectionId: "s-001-2", type: "labor",   catalogItemId: null,    description: "AV Overtime Labor",                       qty: 24, unitCost: 65,   unitPrice: 145, unit: "hr",  parentLineItemId: null       },
-  { id: "li-q1-6",  sectionId: "s-001-5", type: "custom",  catalogItemId: null,    description: "Rack Cabling Package",                    qty: 1,  unitCost: 380,  unitPrice: 850, unit: "lot", parentLineItemId: null       },
+const COMPANIES = [
+  "Vertex Capital Partners",
+  "Pinecrest Hospitality Group",
+  "Northbeam Architects",
+  "Helio Health Systems",
+  "Arden & Loom Studios",
+  "Halcyon Public Schools",
+  "Quay Residential",
+  "Cinder & Oak Hospitality",
 ];
 
-interface BuilderState {
-  sections: BuilderSection[];
-  lineItems: BuilderLineItem[];
-}
-
-function initBuilderState(quoteId: string): BuilderState {
-  if (quoteId === "q1") return { sections: Q1_SECTIONS, lineItems: Q1_ITEMS };
-  return { sections: [], lineItems: [] };
-}
-
-// ─── Status / activity config ────────────────────────────────────────────────
-
-const statusStyle = {
-  draft:    { icon: FileText,     cls: "bg-slate-500/15 text-slate-500",               label: "Draft" },
-  sent:     { icon: Clock,        cls: "bg-status-qualified/15 text-status-qualified", label: "Sent" },
-  viewed:   { icon: Eye,          cls: "bg-status-proposal/15 text-status-proposal",   label: "Viewed" },
-  accepted: { icon: CheckCircle2, cls: "bg-status-won/15 text-status-won",             label: "Accepted" },
-  expired:  { icon: XCircle,      cls: "bg-status-lost/15 text-status-lost",           label: "Expired" },
-} as const;
-
-const activityIcon: Record<QuoteActivity["type"], React.ComponentType<{ className?: string }>> = {
-  created:  FileText,
-  sent:     Send,
-  viewed:   Eye,
-  accepted: CheckCircle2,
-  note:     MessageSquare,
+const CONTACTS_BY_COMPANY: Record<string, string[]> = {
+  "Vertex Capital Partners":     ["Iris Wang", "Noor Saleh"],
+  "Pinecrest Hospitality Group": ["Marcus Bell"],
+  "Northbeam Architects":        ["Audrey Chen", "Caleb Ortiz"],
+  "Helio Health Systems":        ["Priya Anand"],
+  "Arden & Loom Studios":        ["Lena Romero"],
+  "Halcyon Public Schools":      ["Damon Reyes"],
+  "Quay Residential":            ["Theodore Fox"],
+  "Cinder & Oak Hospitality":    ["Hugo Albright"],
 };
 
-const activityColor: Record<QuoteActivity["type"], string> = {
-  created:  "text-muted-foreground",
-  sent:     "text-status-qualified",
-  viewed:   "text-status-proposal",
-  accepted: "text-status-won",
-  note:     "text-blue-500",
-};
+const OPPORTUNITIES = [
+  "AV-241 · Boardroom AV refresh — 14F",
+  "AV-238 · Lobby video wall (7×3 LED)",
+  "AV-235 · Surgical center A/V overhaul",
+  "AV-233 · Primary residence — full smart home",
+  "AV-230 · Sound stage 3 — control room",
+  "AV-229 · District-wide classroom standardization",
+  "AV-226 · Penthouse cinema build",
+  "AV-218 · Trading floor latency upgrade",
+];
+
+const TEAM_MEMBERS = [
+  "Justin Shader",
+  "Elise Morales",
+  "Tyler Brant",
+  "Sarah Chen",
+  "Damon Reyes",
+];
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function marginColor(m: number): string {
   if (m >= 30) return "text-status-won";
@@ -230,10 +223,7 @@ function CatalogSearchModal({ open, onClose, onAddItem }: CatalogSearchModalProp
                   <div className="text-[12.5px] font-medium truncate">{item.name}</div>
                   <div className="text-[11px] text-muted-foreground font-mono">{item.sku}</div>
                 </div>
-                <span className={cn(
-                  "shrink-0 rounded px-1.5 py-0.5 text-[10px] font-medium",
-                  "bg-primary/10 text-primary",
-                )}>
+                <span className="shrink-0 rounded px-1.5 py-0.5 text-[10px] font-medium bg-primary/10 text-primary">
                   {item.category}
                 </span>
                 <span className="shrink-0 font-mono text-[12px] text-muted-foreground tabular-nums w-20 text-right">
@@ -295,12 +285,7 @@ function LineItemRow({
     return field === "qty" ? String(v) : currency(v);
   }
 
-  function EditableCell({
-    field, className,
-  }: {
-    field: "qty" | "unitCost" | "unitPrice";
-    className?: string;
-  }) {
+  function EditableCell({ field, className }: { field: "qty" | "unitCost" | "unitPrice"; className?: string }) {
     if (isEditing(field)) {
       return (
         <input
@@ -343,13 +328,9 @@ function LineItemRow({
       "grid-cols-[1fr_64px_44px_88px_88px_88px_28px]",
       indented ? "bg-surface/30 pl-8" : "hover:bg-surface/40 transition-colors",
     )}>
-      {/* Description */}
       <div className={cn("min-w-0 pr-2", indented && "flex items-center gap-1.5")}>
         {indented && <span className="h-px w-3 shrink-0 bg-muted-foreground/30" />}
-        <span className={cn(
-          "text-[12px] truncate",
-          indented ? "text-muted-foreground" : "font-medium",
-        )}>
+        <span className={cn("text-[12px] truncate", indented ? "text-muted-foreground" : "font-medium")}>
           {item.description}
         </span>
         {item.type === "custom" && (
@@ -358,30 +339,18 @@ function LineItemRow({
           </span>
         )}
       </div>
-
-      {/* Qty */}
       <EditableCell field="qty" />
-
-      {/* Unit */}
       <span className={cn("text-center text-[11px]", indented ? "text-muted-foreground/60" : "text-muted-foreground")}>
         {item.unit}
       </span>
-
-      {/* Unit Cost */}
       <EditableCell field="unitCost" />
-
-      {/* Unit Price */}
       <EditableCell field="unitPrice" />
-
-      {/* Ext Price */}
       <span className={cn(
         "text-right font-mono text-[12px] tabular-nums font-medium px-1.5",
         indented ? "text-muted-foreground/70" : "text-foreground",
       )}>
         {currency(ext)}
       </span>
-
-      {/* Delete */}
       <button
         type="button"
         onClick={() => onDelete(item.id)}
@@ -424,7 +393,6 @@ function SectionBlock({
 
   return (
     <div className="rounded-lg border border-border overflow-hidden">
-      {/* Section header */}
       <div className="flex items-center justify-between bg-surface/60 px-3 py-2 border-b border-border">
         <div className="flex items-center gap-2">
           <span className="text-[12px] font-semibold">{section.name}</span>
@@ -447,7 +415,6 @@ function SectionBlock({
         </div>
       </div>
 
-      {/* Column header (only if there are items) */}
       {allSectionItems.length > 0 && (
         <div className="grid grid-cols-[1fr_64px_44px_88px_88px_88px_28px] gap-0 border-b border-border/40 bg-surface/20 px-3 py-1">
           <span className="text-[9.5px] uppercase tracking-wide text-muted-foreground/60">Description</span>
@@ -460,7 +427,6 @@ function SectionBlock({
         </div>
       )}
 
-      {/* Rows */}
       {sectionItems.map((item) => (
         <div key={item.id}>
           <LineItemRow
@@ -487,7 +453,6 @@ function SectionBlock({
         </div>
       ))}
 
-      {/* Empty state */}
       {allSectionItems.length === 0 && (
         <div className="px-4 py-3 text-[11.5px] text-muted-foreground/50 italic">
           No items — click "Add Item" to populate this section
@@ -497,36 +462,57 @@ function SectionBlock({
   );
 }
 
-// ─── QuoteBuilder ─────────────────────────────────────────────────────────────
+// ─── NewQuotePage ─────────────────────────────────────────────────────────────
 
-interface QuoteBuilderProps {
-  quoteId: string;
-}
+function NewQuotePage() {
+  const { setMeta } = useMeta();
+  const navigate = useNavigate();
+  const idCounter = useRef(0);
 
-function QuoteBuilder({ quoteId }: QuoteBuilderProps) {
-  const init = initBuilderState(quoteId);
-  const [sections, setSections] = useState<BuilderSection[]>(init.sections);
-  const [lineItems, setLineItems] = useState<BuilderLineItem[]>(init.lineItems);
+  // Form state
+  const today = new Date().toISOString().split("T")[0];
+  const thirtyDaysOut = new Date(Date.now() + 30 * 86400000).toISOString().split("T")[0];
+
+  const [title, setTitle] = useState("");
+  const [company, setCompany] = useState("");
+  const [contact, setContact] = useState("");
+  const [opportunity, setOpportunity] = useState("");
+  const [issueDate, setIssueDate] = useState(today);
+  const [validUntil, setValidUntil] = useState(thirtyDaysOut);
+  const [assignedTo, setAssignedTo] = useState("Justin Shader");
+  const [notes, setNotes] = useState("");
+  const [templateId, setTemplateId] = useState("");
+
+  // Builder state
+  const [sections, setSections] = useState<BuilderSection[]>([]);
+  const [lineItems, setLineItems] = useState<BuilderLineItem[]>([]);
   const [editingCell, setEditingCell] = useState<EditingCell>(null);
   const [modalSectionId, setModalSectionId] = useState<string | null>(null);
-  const [selectedTemplateId, setSelectedTemplateId] = useState<string>(BUILDER_TEMPLATES[0].id);
-  const idCounter = useRef(0);
+
+  useEffect(() => {
+    setMeta({
+      title: "New Quote",
+      subtitle: "Build & price a new quote",
+    });
+  }, [setMeta]);
+
+  function handleTemplateChange(id: string) {
+    setTemplateId(id);
+    if (id) {
+      const tpl = BUILDER_TEMPLATES.find((t) => t.id === id);
+      if (tpl) {
+        setSections(tpl.sections.map((s) => ({ ...s })));
+        setLineItems([]);
+      }
+    } else {
+      setSections([]);
+      setLineItems([]);
+    }
+  }
 
   function nextId(prefix: string): string {
     idCounter.current += 1;
-    return `${prefix}-${quoteId}-${idCounter.current}`;
-  }
-
-  function applyTemplate(templateId: string) {
-    const tpl = BUILDER_TEMPLATES.find((t) => t.id === templateId);
-    if (!tpl) return;
-    setSections(tpl.sections.map((s) => ({ ...s })));
-    setLineItems([]);
-  }
-
-  function startBlank() {
-    setSections([{ id: nextId("sec"), name: "Items", order: 1 }]);
-    setLineItems([]);
+    return `${prefix}-new-${idCounter.current}`;
   }
 
   function handleAddItem(sectionId: string, catalogItem: BuilderCatalogItem | null) {
@@ -588,7 +574,7 @@ function QuoteBuilder({ quoteId }: QuoteBuilderProps) {
   }
 
   function handleCellChange(draft: string) {
-    setEditingCell((prev) => prev ? { ...prev, draft } : null);
+    setEditingCell((prev) => (prev ? { ...prev, draft } : null));
   }
 
   function handleCellCommit() {
@@ -598,7 +584,9 @@ function QuoteBuilder({ quoteId }: QuoteBuilderProps) {
     if (!isNaN(parsed) && parsed >= 0) {
       setLineItems((prev) =>
         prev.map((item) =>
-          item.id === id ? { ...item, [field]: field === "qty" ? Math.max(0.01, parsed) : parsed } : item,
+          item.id === id
+            ? { ...item, [field]: field === "qty" ? Math.max(0.01, parsed) : parsed }
+            : item,
         ),
       );
     }
@@ -612,103 +600,235 @@ function QuoteBuilder({ quoteId }: QuoteBuilderProps) {
   // Totals
   const subtotal = lineItems.reduce((s, i) => s + i.qty * i.unitPrice, 0);
   const costTotal = lineItems.reduce((s, i) => s + i.qty * i.unitCost, 0);
-  const tax = 0;
-  const total = subtotal + tax;
+  const total = subtotal;
   const margin = total > 0 ? ((total - costTotal) / total) * 100 : 0;
 
-  // ── Template selector (empty state) ─────────────────────────────────────────
-
-  if (sections.length === 0) {
-    return (
-      <div className="space-y-4">
-        <div className="rounded-lg border border-border bg-card p-5">
-          <div className="flex items-center gap-2 mb-3">
-            <FileText className="h-4 w-4 text-muted-foreground/50" />
-            <span className="text-[13px] font-medium">Apply a template to get started</span>
-          </div>
-          <p className="text-[12px] text-muted-foreground mb-4 leading-relaxed">
-            Templates define the section structure of your quote. You can add items to each section after applying.
-          </p>
-          <div className="flex items-center gap-2">
-            <div className="relative">
-              <select
-                value={selectedTemplateId}
-                onChange={(e) => setSelectedTemplateId(e.target.value)}
-                className="h-8 rounded-md border border-border bg-surface pl-3 pr-8 text-[12.5px] appearance-none focus:outline-none focus:ring-1 focus:ring-primary"
-              >
-                {BUILDER_TEMPLATES.map((t) => (
-                  <option key={t.id} value={t.id}>{t.name}</option>
-                ))}
-              </select>
-              <ChevronDown className="pointer-events-none absolute right-2 top-2 h-4 w-4 text-muted-foreground" />
-            </div>
-            <button
-              type="button"
-              onClick={() => applyTemplate(selectedTemplateId)}
-              className="h-8 rounded-md bg-primary px-3 text-[12.5px] font-medium text-primary-foreground hover:opacity-90 transition-opacity"
-            >
-              Apply Template
-            </button>
-            <button
-              type="button"
-              onClick={startBlank}
-              className="h-8 rounded-md border border-border bg-surface px-3 text-[12.5px] text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
-            >
-              Start blank
-            </button>
-          </div>
-        </div>
-      </div>
-    );
+  function handleSaveDraft() {
+    // Local state only — navigate back to list after saving
+    navigate({ to: "/quotes" });
   }
 
-  // ── Builder ──────────────────────────────────────────────────────────────────
+  const contacts = company ? (CONTACTS_BY_COMPANY[company] ?? []) : [];
+
+  const inputCls =
+    "w-full h-8 rounded-md border border-border bg-surface px-2.5 text-[12.5px] focus:outline-none focus:ring-1 focus:ring-primary placeholder:text-muted-foreground/50";
+  const selectCls =
+    "w-full h-8 rounded-md border border-border bg-surface px-2 text-[12.5px] focus:outline-none focus:ring-1 focus:ring-primary";
+  const labelCls = "block text-[10px] uppercase tracking-wider text-muted-foreground mb-1";
 
   return (
-    <div className="space-y-3">
-      {/* Sections */}
-      {[...sections].sort((a, b) => a.order - b.order).map((section) => (
-        <SectionBlock
-          key={section.id}
-          section={section}
-          allItems={lineItems}
-          editingCell={editingCell}
-          onCellClick={handleCellClick}
-          onCellChange={handleCellChange}
-          onCellCommit={handleCellCommit}
-          onDeleteItem={handleDeleteItem}
-          onAddItem={(sid) => setModalSectionId(sid)}
-        />
-      ))}
+    <div className="flex flex-1 flex-col min-h-0 overflow-hidden">
+      {/* ── Scrollable content ──────────────────────────────────────── */}
+      <div className="flex-1 overflow-y-auto px-5 py-5 space-y-5">
 
-      {/* Totals */}
-      <div className="rounded-lg border border-border overflow-hidden">
-        <div className="divide-y divide-border">
-          <div className="flex justify-between px-4 py-2.5 text-[12.5px] text-muted-foreground">
-            <span>Subtotal</span>
-            <span className="font-mono tabular-nums">{currency(subtotal)}</span>
+        {/* Back link */}
+        <div>
+          <Link
+            to="/quotes"
+            className="inline-flex items-center gap-1.5 text-[12px] text-muted-foreground hover:text-foreground transition-colors"
+          >
+            <ArrowLeft className="h-3.5 w-3.5" />
+            Quotes & Estimates
+          </Link>
+        </div>
+
+        {/* Header form */}
+        <div className="rounded-lg border border-border bg-card p-5">
+          <p className="text-[10px] uppercase tracking-wider text-muted-foreground mb-4">Quote Details</p>
+          <div className="grid grid-cols-2 gap-x-5 gap-y-4">
+
+            {/* Title — full width */}
+            <div className="col-span-2">
+              <label className={labelCls}>Quote Title *</label>
+              <input
+                className={inputCls}
+                placeholder="e.g. PCSS-2026-0042"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                autoFocus
+              />
+            </div>
+
+            {/* Company */}
+            <div>
+              <label className={labelCls}>Customer *</label>
+              <select
+                className={selectCls}
+                value={company}
+                onChange={(e) => { setCompany(e.target.value); setContact(""); }}
+              >
+                <option value="">Select company…</option>
+                {COMPANIES.map((c) => <option key={c} value={c}>{c}</option>)}
+              </select>
+            </div>
+
+            {/* Contact */}
+            <div>
+              <label className={labelCls}>Contact</label>
+              <select
+                className={selectCls}
+                value={contact}
+                onChange={(e) => setContact(e.target.value)}
+                disabled={!company}
+              >
+                <option value="">{company ? "Select contact…" : "Select a company first"}</option>
+                {contacts.map((c) => <option key={c} value={c}>{c}</option>)}
+              </select>
+            </div>
+
+            {/* Opportunity — full width */}
+            <div className="col-span-2">
+              <label className={labelCls}>Linked Opportunity</label>
+              <select
+                className={selectCls}
+                value={opportunity}
+                onChange={(e) => setOpportunity(e.target.value)}
+              >
+                <option value="">Select opportunity…</option>
+                {OPPORTUNITIES.map((o) => <option key={o} value={o}>{o}</option>)}
+              </select>
+            </div>
+
+            {/* Issue Date */}
+            <div>
+              <label className={labelCls}>Issue Date *</label>
+              <input
+                type="date"
+                className={inputCls}
+                value={issueDate}
+                onChange={(e) => setIssueDate(e.target.value)}
+              />
+            </div>
+
+            {/* Valid Until */}
+            <div>
+              <label className={labelCls}>Valid Until *</label>
+              <input
+                type="date"
+                className={inputCls}
+                value={validUntil}
+                onChange={(e) => setValidUntil(e.target.value)}
+              />
+            </div>
+
+            {/* Assigned To */}
+            <div>
+              <label className={labelCls}>Assigned To</label>
+              <select
+                className={selectCls}
+                value={assignedTo}
+                onChange={(e) => setAssignedTo(e.target.value)}
+              >
+                {TEAM_MEMBERS.map((m) => <option key={m} value={m}>{m}</option>)}
+              </select>
+            </div>
+
+            {/* Template */}
+            <div>
+              <label className={labelCls}>Template *</label>
+              <div className="relative">
+                <select
+                  className={cn(selectCls, "pr-8 appearance-none")}
+                  value={templateId}
+                  onChange={(e) => handleTemplateChange(e.target.value)}
+                >
+                  <option value="">Select a template…</option>
+                  {BUILDER_TEMPLATES.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
+                </select>
+                <ChevronDown className="pointer-events-none absolute right-2 top-2 h-4 w-4 text-muted-foreground" />
+              </div>
+            </div>
+
+            {/* Notes — full width */}
+            <div className="col-span-2">
+              <label className={labelCls}>Notes</label>
+              <textarea
+                rows={3}
+                className="w-full resize-none rounded-md border border-border bg-surface px-2.5 py-2 text-[12.5px] placeholder:text-muted-foreground/50 focus:outline-none focus:ring-1 focus:ring-primary"
+                placeholder="Add notes…"
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+              />
+            </div>
           </div>
-          <div className="flex justify-between px-4 py-2.5 text-[12.5px] text-muted-foreground">
-            <span>Tax</span>
-            <span className="font-mono tabular-nums">{currency(tax)}</span>
+        </div>
+
+        {/* Builder section */}
+        <div>
+          <p className="text-[10px] uppercase tracking-wider text-muted-foreground mb-2.5">Line Items</p>
+
+          {sections.length === 0 ? (
+            <div className="rounded-lg border border-dashed border-border bg-card/50 px-5 py-8 flex flex-col items-center gap-2 text-center">
+              <FileText className="h-6 w-6 text-muted-foreground/25" />
+              <p className="text-[12.5px] text-muted-foreground">
+                Select a quote template above to begin adding items
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {[...sections].sort((a, b) => a.order - b.order).map((section) => (
+                <SectionBlock
+                  key={section.id}
+                  section={section}
+                  allItems={lineItems}
+                  editingCell={editingCell}
+                  onCellClick={handleCellClick}
+                  onCellChange={handleCellChange}
+                  onCellCommit={handleCellCommit}
+                  onDeleteItem={handleDeleteItem}
+                  onAddItem={(sid) => setModalSectionId(sid)}
+                />
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Bottom padding so content clears the sticky footer */}
+        <div className="h-2" />
+      </div>
+
+      {/* ── Sticky footer ───────────────────────────────────────────── */}
+      <div className="shrink-0 border-t border-border bg-background/95 backdrop-blur-sm px-5 py-3 flex items-center gap-5">
+        {/* Totals summary */}
+        <div className="flex items-center gap-5 text-[12px]">
+          <div className="flex items-center gap-1.5">
+            <span className="text-muted-foreground">Subtotal</span>
+            <span className="font-mono font-semibold tabular-nums">{currency(subtotal)}</span>
           </div>
-          <div className="flex justify-between px-4 py-3 text-[15px] font-semibold">
-            <span>Total</span>
-            <span className="font-mono tabular-nums">{currency(total)}</span>
+          <span className="text-border">|</span>
+          <div className="flex items-center gap-1.5">
+            <span className="text-muted-foreground">Total</span>
+            <span className="font-mono font-semibold tabular-nums">{currency(total)}</span>
           </div>
-          <div className="flex justify-between px-4 py-2 bg-surface/30">
-            <span className="text-[11.5px] text-muted-foreground">Cost</span>
-            <span className="font-mono text-[11.5px] text-muted-foreground tabular-nums">{currency(costTotal)}</span>
-          </div>
-          <div className="flex justify-between px-4 py-2 bg-surface/30">
-            <span className="text-[11.5px] text-muted-foreground">Gross Margin</span>
-            <span className={cn("font-mono text-[11.5px] font-medium tabular-nums", marginColor(margin))}>
+          <span className="text-border">|</span>
+          <div className="flex items-center gap-1.5">
+            <span className="text-muted-foreground">Margin</span>
+            <span className={cn("font-mono font-semibold tabular-nums", marginColor(margin))}>
               {margin.toFixed(1)}%
             </span>
           </div>
         </div>
+
+        <div className="flex-1" />
+
+        {/* Actions */}
+        <button
+          type="button"
+          onClick={() => navigate({ to: "/quotes" })}
+          className="h-8 rounded-md border border-border px-3 text-[12.5px] text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
+        >
+          Cancel
+        </button>
+        <button
+          type="button"
+          onClick={handleSaveDraft}
+          className="h-8 rounded-md bg-primary px-4 text-[12.5px] font-medium text-primary-foreground hover:opacity-90 transition-opacity"
+        >
+          Save as Draft
+        </button>
       </div>
 
+      {/* Catalog modal */}
       <CatalogSearchModal
         open={modalSectionId !== null}
         onClose={() => setModalSectionId(null)}
@@ -716,154 +836,6 @@ function QuoteBuilder({ quoteId }: QuoteBuilderProps) {
           if (modalSectionId) handleAddItem(modalSectionId, item);
         }}
       />
-    </div>
-  );
-}
-
-// ─── Detail page ─────────────────────────────────────────────────────────────
-
-function QuoteDetailPage() {
-  const { quoteId } = Route.useParams();
-  const { setMeta } = useMeta();
-
-  const quote = quotes.find((q) => q.id === quoteId);
-
-  useEffect(() => {
-    if (quote) setMeta({ title: quote.project, subtitle: quote.number });
-  }, [setMeta, quote]);
-
-  if (!quote) {
-    return (
-      <div className="flex flex-col items-center justify-center py-24 text-center">
-        <FileText className="h-10 w-10 text-muted-foreground/40 mb-3" />
-        <p className="text-[14px] font-medium">Quote not found</p>
-        <p className="text-[12.5px] text-muted-foreground mt-1">The quote ID "{quoteId}" doesn't exist.</p>
-      </div>
-    );
-  }
-
-  const { icon: StatusIcon, cls: statusCls, label: statusLabel } = statusStyle[quote.status];
-
-  return (
-    <div className="flex flex-1 min-h-0 overflow-hidden">
-      {/* ── Main column ──────────────────────────────────────────── */}
-      <div className="flex-1 min-w-0 overflow-y-auto px-5 py-5 space-y-5">
-
-        {/* Header */}
-        <section>
-          <div className="flex items-center gap-2.5 mb-2">
-            <span className="font-mono text-[11px] text-muted-foreground">{quote.number}</span>
-            <span className={cn("inline-flex items-center gap-1.5 rounded px-1.5 py-0.5 text-[10.5px] font-medium", statusCls)}>
-              <StatusIcon className="h-3 w-3" />
-              {statusLabel}
-            </span>
-          </div>
-          <h1 className="text-[18px] font-semibold tracking-tight leading-snug">{quote.project}</h1>
-          <p className="mt-1 text-[13px] text-muted-foreground">
-            {quote.company}
-            {quote.contactName && <> · <span className="text-foreground">{quote.contactName}</span></>}
-          </p>
-          {quote.linkedOpportunity && (
-            <p className="mt-0.5 text-[12px] text-blue-500 hover:underline cursor-pointer">
-              {quote.linkedOpportunity}
-            </p>
-          )}
-          <div className="mt-2.5 flex flex-wrap gap-x-6 gap-y-1 text-[11.5px] text-muted-foreground">
-            {quote.sent !== "—" && (
-              <span>Sent: <span className="text-foreground">{quote.sent}</span></span>
-            )}
-            {quote.expiryDate !== "—" && (
-              <span>Expires: <span className="text-foreground">{quote.expiryDate}</span></span>
-            )}
-            <span>Created: <span className="text-foreground">{quote.createdDate}</span></span>
-          </div>
-        </section>
-
-        {/* Builder */}
-        <section>
-          <p className="text-[10px] uppercase tracking-wider text-muted-foreground mb-2.5">Line Items</p>
-          <QuoteBuilder quoteId={quoteId} />
-        </section>
-      </div>
-
-      {/* ── Right sidebar ────────────────────────────────────────── */}
-      <aside className="w-[268px] shrink-0 border-l border-border overflow-y-auto px-4 py-5 space-y-4">
-
-        <div className="rounded-lg border border-border bg-card p-4 space-y-2">
-          <p className="text-[10px] uppercase tracking-wider text-muted-foreground mb-3">Actions</p>
-          <button className="flex w-full items-center justify-center gap-2 h-8 rounded-md bg-primary text-primary-foreground text-[12.5px] font-medium hover:opacity-90 transition-opacity">
-            <Send className="h-3.5 w-3.5" />
-            Send to Client
-          </button>
-          <button className="flex w-full items-center justify-center gap-2 h-8 rounded-md border border-border bg-surface text-[12.5px] text-foreground hover:bg-accent transition-colors">
-            <Download className="h-3.5 w-3.5" />
-            Download PDF
-          </button>
-          {quote.status === "accepted" && (
-            <button className="flex w-full items-center justify-center gap-2 h-8 rounded-md border border-border bg-surface text-[12.5px] text-foreground hover:bg-accent transition-colors">
-              <FolderKanban className="h-3.5 w-3.5" />
-              Convert to Project
-            </button>
-          )}
-        </div>
-
-        <div className="rounded-lg border border-border bg-card p-4">
-          <p className="text-[10px] uppercase tracking-wider text-muted-foreground mb-3">Details</p>
-          <div className="space-y-2.5 text-[12px]">
-            <div>
-              <p className="text-[10px] text-muted-foreground mb-0.5">Created</p>
-              <p className="text-foreground">{quote.createdDate}</p>
-            </div>
-            {quote.sent !== "—" && (
-              <div>
-                <p className="text-[10px] text-muted-foreground mb-0.5">Sent</p>
-                <p className="text-foreground">{quote.sent}</p>
-              </div>
-            )}
-            {quote.expiryDate !== "—" && (
-              <div>
-                <p className="text-[10px] text-muted-foreground mb-0.5">Expiry Date</p>
-                <p className="text-foreground">{quote.expiryDate}</p>
-              </div>
-            )}
-            {quote.linkedOpportunity && (
-              <div>
-                <p className="text-[10px] text-muted-foreground mb-0.5">Linked Opportunity</p>
-                <p className="text-blue-500 hover:underline cursor-pointer leading-snug">{quote.linkedOpportunity}</p>
-              </div>
-            )}
-          </div>
-        </div>
-
-        <div className="rounded-lg border border-border bg-card p-4">
-          <p className="text-[10px] uppercase tracking-wider text-muted-foreground mb-2.5">Notes</p>
-          <textarea
-            rows={5}
-            placeholder="Add notes…"
-            className="w-full resize-none rounded-md border border-border bg-surface px-2.5 py-2 text-[12px] text-muted-foreground leading-relaxed placeholder:text-muted-foreground/50 focus:outline-none focus:ring-1 focus:ring-primary"
-          />
-        </div>
-
-        <div className="rounded-lg border border-border bg-card p-4">
-          <p className="text-[10px] uppercase tracking-wider text-muted-foreground mb-3">Activity</p>
-          <ul className="space-y-3">
-            {quote.activityFeed.map((a, i) => {
-              const Icon = activityIcon[a.type];
-              return (
-                <li key={i} className="flex gap-2.5 text-[12px]">
-                  <div className={cn("mt-0.5 shrink-0", activityColor[a.type])}>
-                    <Icon className="h-3.5 w-3.5" />
-                  </div>
-                  <div>
-                    <div className="leading-snug">{a.description}</div>
-                    <div className="mt-0.5 font-mono text-[10.5px] text-muted-foreground">{a.date}</div>
-                  </div>
-                </li>
-              );
-            })}
-          </ul>
-        </div>
-      </aside>
     </div>
   );
 }
