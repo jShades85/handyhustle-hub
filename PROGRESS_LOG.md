@@ -51,8 +51,8 @@ Before writing any code in a new session, read these files:
 
 **Next Session Goal:**
 
-- Vendors page (Inventory)
-- Purchase Orders page (Inventory)
+- Settings — Service Plan Tier Features config page (tenant-configurable per-tier inclusions: response time, visits, covered systems, extras — for internal reference and eventual client-facing use)
+- Then Vendors and Purchase Orders (Inventory)
 
 **Open Questions:**
 
