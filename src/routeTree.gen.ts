@@ -23,6 +23,7 @@ import { Route as ProjectsRouteImport } from './routes/projects'
 import { Route as PlannerRouteImport } from './routes/planner'
 import { Route as PaymentsRouteImport } from './routes/payments'
 import { Route as OpportunitiesRouteImport } from './routes/opportunities'
+import { Route as OperationsRouteImport } from './routes/operations'
 import { Route as LeadInboxRouteImport } from './routes/lead-inbox'
 import { Route as InvoicesRouteImport } from './routes/invoices'
 import { Route as InventoryRouteImport } from './routes/inventory'
@@ -114,6 +115,11 @@ const PaymentsRoute = PaymentsRouteImport.update({
 const OpportunitiesRoute = OpportunitiesRouteImport.update({
   id: '/opportunities',
   path: '/opportunities',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const OperationsRoute = OperationsRouteImport.update({
+  id: '/operations',
+  path: '/operations',
   getParentRoute: () => rootRouteImport,
 } as any)
 const LeadInboxRoute = LeadInboxRouteImport.update({
@@ -236,6 +242,7 @@ export interface FileRoutesByFullPath {
   '/inventory': typeof InventoryRouteWithChildren
   '/invoices': typeof InvoicesRoute
   '/lead-inbox': typeof LeadInboxRoute
+  '/operations': typeof OperationsRoute
   '/opportunities': typeof OpportunitiesRoute
   '/payments': typeof PaymentsRoute
   '/planner': typeof PlannerRouteWithChildren
@@ -272,6 +279,7 @@ export interface FileRoutesByTo {
   '/inbox': typeof InboxRoute
   '/invoices': typeof InvoicesRoute
   '/lead-inbox': typeof LeadInboxRoute
+  '/operations': typeof OperationsRoute
   '/opportunities': typeof OpportunitiesRoute
   '/payments': typeof PaymentsRoute
   '/purchase-orders': typeof PurchaseOrdersRoute
@@ -307,6 +315,7 @@ export interface FileRoutesById {
   '/inventory': typeof InventoryRouteWithChildren
   '/invoices': typeof InvoicesRoute
   '/lead-inbox': typeof LeadInboxRoute
+  '/operations': typeof OperationsRoute
   '/opportunities': typeof OpportunitiesRoute
   '/payments': typeof PaymentsRoute
   '/planner': typeof PlannerRouteWithChildren
@@ -347,6 +356,7 @@ export interface FileRouteTypes {
     | '/inventory'
     | '/invoices'
     | '/lead-inbox'
+    | '/operations'
     | '/opportunities'
     | '/payments'
     | '/planner'
@@ -383,6 +393,7 @@ export interface FileRouteTypes {
     | '/inbox'
     | '/invoices'
     | '/lead-inbox'
+    | '/operations'
     | '/opportunities'
     | '/payments'
     | '/purchase-orders'
@@ -417,6 +428,7 @@ export interface FileRouteTypes {
     | '/inventory'
     | '/invoices'
     | '/lead-inbox'
+    | '/operations'
     | '/opportunities'
     | '/payments'
     | '/planner'
@@ -456,6 +468,7 @@ export interface RootRouteChildren {
   InventoryRoute: typeof InventoryRouteWithChildren
   InvoicesRoute: typeof InvoicesRoute
   LeadInboxRoute: typeof LeadInboxRoute
+  OperationsRoute: typeof OperationsRoute
   OpportunitiesRoute: typeof OpportunitiesRoute
   PaymentsRoute: typeof PaymentsRoute
   PlannerRoute: typeof PlannerRouteWithChildren
@@ -570,6 +583,13 @@ declare module '@tanstack/react-router' {
       path: '/opportunities'
       fullPath: '/opportunities'
       preLoaderRoute: typeof OpportunitiesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/operations': {
+      id: '/operations'
+      path: '/operations'
+      fullPath: '/operations'
+      preLoaderRoute: typeof OperationsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/lead-inbox': {
@@ -834,6 +854,7 @@ const rootRouteChildren: RootRouteChildren = {
   InventoryRoute: InventoryRouteWithChildren,
   InvoicesRoute: InvoicesRoute,
   LeadInboxRoute: LeadInboxRoute,
+  OperationsRoute: OperationsRoute,
   OpportunitiesRoute: OpportunitiesRoute,
   PaymentsRoute: PaymentsRoute,
   PlannerRoute: PlannerRouteWithChildren,
