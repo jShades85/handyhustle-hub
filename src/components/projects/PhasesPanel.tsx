@@ -247,6 +247,26 @@ function getInitialFlatTasks(projectId: string): Task[] {
         mkTask("fw9-2", "Projector physical alignment",           "MO", "Jun 04",  2, 0, false),
         mkTask("fw9-3", "Screen & color calibration",             "MO", "Jun 04",  1, 0, false),
       ];
+    case "wo-0041":
+      return [
+        mkTask("wo41-1", "Assess existing DVR unit and cabling",        "RT", "May 29", 1, 1, true),
+        mkTask("wo41-2", "Remove old DVR and document layout",          "RT", "May 29", 1, 1, true),
+        mkTask("wo41-3", "Install and configure replacement DVR",       "RT", "May 29", 3, 3, true),
+        mkTask("wo41-4", "Test all camera feeds and client sign-off",   "RT", "May 29", 1, 1, true),
+      ];
+    case "wo-0042":
+      return [
+        mkTask("wo42-1", "Review access control event log",                  "AV", "Jun 06", 1, 1, true),
+        mkTask("wo42-2", "Test door controller board continuity",            "AV", "Jun 06", 1, 1, true),
+        mkTask("wo42-3", "Replace faulty relay module",                      "AV", "Jun 06", 1, 0, false),
+        mkTask("wo42-4", "Verify all access points and report to client",    "AV", "Jun 06", 1, 0, false),
+      ];
+    case "wo-0043":
+      return [
+        mkTask("wo43-1", "Rack mount and cable new managed switch",     "MO", "Jun 07", 3, 0, false),
+        mkTask("wo43-2", "Configure VLANs per network diagram",         "MO", "Jun 07", 2, 0, false),
+        mkTask("wo43-3", "Test all ports and update asset register",    "MO", "Jun 07", 1, 0, false),
+      ];
     default:
       return [];
   }

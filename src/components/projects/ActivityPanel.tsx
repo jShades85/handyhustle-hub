@@ -154,6 +154,89 @@ const SEED_ACTIVITIES: Record<string, ActivityItem[]> = {
       timestamp: "May 20, 2026",
     },
   ],
+  "wo-0041": [
+    {
+      id: "awo41-1",
+      type: "status_change",
+      actor: "Ravi Tate",
+      text: "Status changed from In Progress → Completed",
+      timestamp: "May 29, 2026",
+    },
+    {
+      id: "awo41-2",
+      type: "hours_logged",
+      actor: "Ravi Tate",
+      text: "6 hours logged — DVR Replacement complete",
+      timestamp: "May 29, 2026",
+    },
+    {
+      id: "awo41-3",
+      type: "note",
+      actor: "Ravi Tate",
+      text: "Old Hikvision DVR was completely unresponsive — confirmed hard drive failure. Replaced with new unit and re-associated all 8 cameras. Reviewed playback with client on-site. Client signed off at 2:30 PM.",
+      timestamp: "May 29, 2026",
+    },
+    {
+      id: "awo41-4",
+      type: "status_change",
+      actor: "Ravi Tate",
+      text: "Status changed from Scheduled → In Progress",
+      timestamp: "May 29, 2026",
+    },
+  ],
+  "wo-0042": [
+    {
+      id: "awo42-1",
+      type: "hours_logged",
+      actor: "Aman Verma",
+      text: "2 hours logged — diagnosis in progress",
+      timestamp: "2h ago",
+    },
+    {
+      id: "awo42-2",
+      type: "note",
+      actor: "Aman Verma",
+      text: "Confirmed faulty relay module on door 3 controller board. Replacement relay on order — arriving this afternoon. Will complete install and full access-point test once part arrives.",
+      timestamp: "3h ago",
+    },
+    {
+      id: "awo42-3",
+      type: "status_change",
+      actor: "Aman Verma",
+      text: "Status changed from Scheduled → In Progress",
+      timestamp: "Jun 6, 2026",
+    },
+    {
+      id: "awo42-4",
+      type: "member_added",
+      actor: "Maya Okafor",
+      text: "Work order assigned to Aman Verma (Lead Tech)",
+      timestamp: "Jun 5, 2026",
+    },
+  ],
+  "wo-0043": [
+    {
+      id: "awo43-1",
+      type: "part_added",
+      actor: "Maya Okafor",
+      text: "Part added: Cisco SG350-28 28-Port Managed Switch",
+      timestamp: "Jun 4, 2026",
+    },
+    {
+      id: "awo43-2",
+      type: "note",
+      actor: "Maya Okafor",
+      text: "Client confirmed 7:00 AM site access — use freight elevator at the rear of the building. Network diagram and VLAN config sheet attached to this work order. Coordinate with their IT contact, Derek S., before going live.",
+      timestamp: "Jun 4, 2026",
+    },
+    {
+      id: "awo43-3",
+      type: "status_change",
+      actor: "System",
+      text: "Work order created and scheduled for Jun 7, 2026",
+      timestamp: "Jun 3, 2026",
+    },
+  ],
 };
 
 function getDefaultActivity(projectId: string): ActivityItem[] {

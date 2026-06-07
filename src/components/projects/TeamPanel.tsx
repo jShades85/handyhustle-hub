@@ -91,6 +91,20 @@ function getInitialMembers(projectId: string): TeamMember[] {
         pm,
         { id: "tm6-2", initials: "RT", name: ownerNames.RT, role: "lead-tech",  phone: makePhone(1), email: makeEmail(ownerNames.RT) },
       ];
+    case "wo-0041":
+      return [
+        { id: "tmwo41-1", initials: "RT", name: ownerNames.RT, role: "lead-tech",  phone: makePhone(1), email: makeEmail(ownerNames.RT) },
+        { id: "tmwo41-2", initials: "SN", name: ownerNames.SN, role: "field-tech", phone: makePhone(3), email: makeEmail(ownerNames.SN) },
+      ];
+    case "wo-0042":
+      return [
+        { id: "tmwo42-1", initials: "AV", name: ownerNames.AV, role: "lead-tech", phone: makePhone(2), email: makeEmail(ownerNames.AV) },
+      ];
+    case "wo-0043":
+      return [
+        { id: "tmwo43-1", initials: "MO", name: ownerNames.MO, role: "lead-tech",  phone: makePhone(0), email: makeEmail(ownerNames.MO) },
+        { id: "tmwo43-2", initials: "RT", name: ownerNames.RT, role: "field-tech", phone: makePhone(1), email: makeEmail(ownerNames.RT) },
+      ];
     default:
       return pmKey ? [pm] : [];
   }

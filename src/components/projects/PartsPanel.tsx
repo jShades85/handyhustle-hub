@@ -95,6 +95,23 @@ function getInitialParts(projectId: string): Part[] {
         { id: "pp3-5", name: "Biamp Nexia PL-60 DSP",             phase: "Commission",  qty: 1,  unitCost: 2240,  source: "special-order", status: "installed", notes: "" },
         { id: "pp3-6", name: "Outdoor Burial Speaker Cable (ft)",  phase: "Install",     qty: 500, unitCost: 1.20, source: "stock",         status: "installed", notes: "Custom Belden" },
       ];
+    case "wo-0041":
+      return [
+        { id: "ppwo41-1", name: "Hikvision DS-7208HQHI-K2 DVR",      phase: "Install", qty: 1,  unitCost: 420, source: "stock",         status: "installed", notes: "" },
+        { id: "ppwo41-2", name: "CAT6 Patch Cable 3ft (10-pack)",    phase: "Install", qty: 1,  unitCost: 28,  source: "stock",         status: "installed", notes: "" },
+        { id: "ppwo41-3", name: "BNC Female Connector (50-pack)",    phase: "Install", qty: 1,  unitCost: 18,  source: "stock",         status: "installed", notes: "" },
+      ];
+    case "wo-0042":
+      return [
+        { id: "ppwo42-1", name: "HID Access Controller Relay Module", phase: "Install", qty: 1, unitCost: 185, source: "special-order", status: "received",  notes: "Ordered Jun 5" },
+        { id: "ppwo42-2", name: "24 AWG 2-Conductor Wire (50ft)",    phase: "Install", qty: 2, unitCost: 32,  source: "stock",         status: "received",  notes: "" },
+      ];
+    case "wo-0043":
+      return [
+        { id: "ppwo43-1", name: "Cisco SG350-28 28-Port Managed Switch", phase: "Install", qty: 1, unitCost: 680, source: "special-order", status: "received", notes: "" },
+        { id: "ppwo43-2", name: "CAT6 Patch Cable 1ft (25-pack)",       phase: "Install", qty: 1, unitCost: 42,  source: "stock",         status: "received", notes: "" },
+        { id: "ppwo43-3", name: "SFP Fiber Transceiver Module",         phase: "Install", qty: 2, unitCost: 95,  source: "stock",         status: "received", notes: "" },
+      ];
     default:
       return [];
   }
@@ -104,6 +121,13 @@ function getPhaseNames(projectId: string): string[] {
   switch (projectId) {
     case "pr3":
       return ["Design", "Install", "Commission", "Closeout"];
+    case "wo-0041":
+    case "wo-0042":
+    case "wo-0043":
+    case "pr8":
+    case "pr9":
+    case "pr11":
+      return ["Install"];
     case "pr1":
     case "pr2":
     case "pr5":
