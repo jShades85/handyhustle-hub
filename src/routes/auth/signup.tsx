@@ -2,18 +2,14 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import ThemeToggle from "@/components/ui/ThemeToggle";
-import { z } from "zod";
-
-const inviteSearchSchema = z.object({
-  invite:    z.string().optional(),
-  tenant_id: z.string().optional(),
-  role_name: z.string().optional(),
-  full_name: z.string().optional(),
-  email:     z.string().optional(),
-});
-
 export const Route = createFileRoute("/auth/signup")({
-  validateSearch: inviteSearchSchema,
+  validateSearch: (search: Record<string, unknown>) => ({
+    invite:    typeof search.invite    === "string" ? search.invite    : undefined,
+    tenant_id: typeof search.tenant_id === "string" ? search.tenant_id : undefined,
+    role_name: typeof search.role_name === "string" ? search.role_name : undefined,
+    full_name: typeof search.full_name === "string" ? search.full_name : undefined,
+    email:     typeof search.email     === "string" ? search.email     : undefined,
+  }),
   component: SignupPage,
 });
 
@@ -180,7 +176,7 @@ function AuthShell({ children }: { children: React.ReactNode }) {
       </div>
       <div className="w-full max-w-sm">
         <div className="mb-8 flex items-center gap-3">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-primary to-chart-2 text-[11px] font-bold text-primary-foreground shadow-glow">
+          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-linear-to-br from-primary to-chart-2 text-[11px] font-bold text-primary-foreground shadow-glow">
             BP
           </div>
           <span className="text-[14px] font-semibold tracking-tight">BearingPro</span>

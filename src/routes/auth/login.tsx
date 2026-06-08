@@ -75,7 +75,7 @@ function LoginPage() {
 
       <p className="mt-5 text-center text-[12px] text-muted-foreground">
         Don't have an account?{" "}
-        <Link to="/auth/signup" className="text-primary hover:underline">
+        <Link to="/auth/signup" search={{ invite: undefined, tenant_id: undefined, role_name: undefined, full_name: undefined, email: undefined }} className="text-primary hover:underline">
           Create one
         </Link>
       </p>
