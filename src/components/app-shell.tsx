@@ -100,7 +100,14 @@ function AppShellContent() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const navigate = useNavigate();
 
+  const [confirmSignOut, setConfirmSignOut] = useState(false);
+
   const handleSignOut = async () => {
+    if (!confirmSignOut) {
+      setConfirmSignOut(true);
+      setTimeout(() => setConfirmSignOut(false), 3000);
+      return;
+    }
     await signOut();
     navigate({ to: "/auth/login" });
   };
@@ -214,10 +221,15 @@ function AppShellContent() {
                   </button>
                   <button
                     onClick={handleSignOut}
-                    className="rounded p-0.5 text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
+                    className={cn(
+                      "rounded px-1 py-0.5 text-[10px] transition-colors",
+                      confirmSignOut
+                        ? "bg-red-500/15 text-red-500 hover:bg-red-500/25"
+                        : "p-0.5 text-muted-foreground hover:text-foreground hover:bg-accent"
+                    )}
                     aria-label="Sign out"
                   >
-                    <LogOut className="h-3.5 w-3.5" />
+                    {confirmSignOut ? "Confirm?" : <LogOut className="h-3.5 w-3.5" />}
                   </button>
                 </div>
               </>

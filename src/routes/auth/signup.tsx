@@ -1,6 +1,7 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
+import ThemeToggle from "@/components/ui/ThemeToggle";
 
 export const Route = createFileRoute("/auth/signup")({
   component: SignupPage,
@@ -148,6 +149,9 @@ function SignupPage() {
 function AuthShell({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
+      <div className="absolute right-4 top-4">
+        <ThemeToggle />
+      </div>
       <div className="w-full max-w-sm">
         <div className="mb-8 flex items-center gap-3">
           <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-primary to-chart-2 text-[11px] font-bold text-primary-foreground shadow-glow">
