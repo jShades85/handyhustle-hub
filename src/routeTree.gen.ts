@@ -13,38 +13,42 @@ import { Route as WorkOrdersRouteImport } from './routes/work-orders'
 import { Route as VendorsRouteImport } from './routes/vendors'
 import { Route as TeamRouteImport } from './routes/team'
 import { Route as SettingsRouteImport } from './routes/settings'
-import { Route as ServiceTicketsRouteImport } from './routes/service-tickets'
-import { Route as ServicePlansRouteImport } from './routes/service-plans'
+import { Route as ServiceRouteImport } from './routes/service'
 import { Route as SchedulingRouteImport } from './routes/scheduling'
 import { Route as ReportsRouteImport } from './routes/reports'
 import { Route as QuotesRouteImport } from './routes/quotes'
 import { Route as PurchaseOrdersRouteImport } from './routes/purchase-orders'
 import { Route as ProjectsRouteImport } from './routes/projects'
 import { Route as PlannerRouteImport } from './routes/planner'
-import { Route as PaymentsRouteImport } from './routes/payments'
 import { Route as OpportunitiesRouteImport } from './routes/opportunities'
 import { Route as OperationsRouteImport } from './routes/operations'
 import { Route as LeadInboxRouteImport } from './routes/lead-inbox'
-import { Route as InvoicesRouteImport } from './routes/invoices'
 import { Route as InventoryRouteImport } from './routes/inventory'
 import { Route as InboxRouteImport } from './routes/inbox'
+import { Route as FinanceRouteImport } from './routes/finance'
 import { Route as ContactsRouteImport } from './routes/contacts'
 import { Route as CompaniesRouteImport } from './routes/companies'
 import { Route as CatalogRouteImport } from './routes/catalog'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as WorkOrdersIndexRouteImport } from './routes/work-orders/index'
+import { Route as ServiceIndexRouteImport } from './routes/service/index'
 import { Route as QuotesIndexRouteImport } from './routes/quotes/index'
 import { Route as ProjectsIndexRouteImport } from './routes/projects/index'
 import { Route as PlannerIndexRouteImport } from './routes/planner/index'
 import { Route as InventoryIndexRouteImport } from './routes/inventory/index'
+import { Route as FinanceIndexRouteImport } from './routes/finance/index'
 import { Route as CompaniesIndexRouteImport } from './routes/companies/index'
 import { Route as WorkOrdersWorkOrderIdRouteImport } from './routes/work-orders/$workOrderId'
 import { Route as SettingsQuoteTemplatesRouteImport } from './routes/settings/quote-templates'
+import { Route as ServiceServiceTicketsRouteImport } from './routes/service/service-tickets'
+import { Route as ServiceServicePlansRouteImport } from './routes/service/service-plans'
 import { Route as QuotesNewRouteImport } from './routes/quotes/new'
 import { Route as QuotesQuoteIdRouteImport } from './routes/quotes/$quoteId'
 import { Route as ProjectsProjectIdRouteImport } from './routes/projects/$projectId'
 import { Route as InventoryStockRouteImport } from './routes/inventory/stock'
 import { Route as InventoryCatalogRouteImport } from './routes/inventory/catalog'
+import { Route as FinancePaymentsRouteImport } from './routes/finance/payments'
+import { Route as FinanceInvoicesRouteImport } from './routes/finance/invoices'
 import { Route as CompaniesCompanyIdRouteImport } from './routes/companies/$companyId'
 
 const WorkOrdersRoute = WorkOrdersRouteImport.update({
@@ -67,14 +71,9 @@ const SettingsRoute = SettingsRouteImport.update({
   path: '/settings',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ServiceTicketsRoute = ServiceTicketsRouteImport.update({
-  id: '/service-tickets',
-  path: '/service-tickets',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ServicePlansRoute = ServicePlansRouteImport.update({
-  id: '/service-plans',
-  path: '/service-plans',
+const ServiceRoute = ServiceRouteImport.update({
+  id: '/service',
+  path: '/service',
   getParentRoute: () => rootRouteImport,
 } as any)
 const SchedulingRoute = SchedulingRouteImport.update({
@@ -107,11 +106,6 @@ const PlannerRoute = PlannerRouteImport.update({
   path: '/planner',
   getParentRoute: () => rootRouteImport,
 } as any)
-const PaymentsRoute = PaymentsRouteImport.update({
-  id: '/payments',
-  path: '/payments',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const OpportunitiesRoute = OpportunitiesRouteImport.update({
   id: '/opportunities',
   path: '/opportunities',
@@ -127,11 +121,6 @@ const LeadInboxRoute = LeadInboxRouteImport.update({
   path: '/lead-inbox',
   getParentRoute: () => rootRouteImport,
 } as any)
-const InvoicesRoute = InvoicesRouteImport.update({
-  id: '/invoices',
-  path: '/invoices',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const InventoryRoute = InventoryRouteImport.update({
   id: '/inventory',
   path: '/inventory',
@@ -140,6 +129,11 @@ const InventoryRoute = InventoryRouteImport.update({
 const InboxRoute = InboxRouteImport.update({
   id: '/inbox',
   path: '/inbox',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const FinanceRoute = FinanceRouteImport.update({
+  id: '/finance',
+  path: '/finance',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ContactsRoute = ContactsRouteImport.update({
@@ -167,6 +161,11 @@ const WorkOrdersIndexRoute = WorkOrdersIndexRouteImport.update({
   path: '/',
   getParentRoute: () => WorkOrdersRoute,
 } as any)
+const ServiceIndexRoute = ServiceIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => ServiceRoute,
+} as any)
 const QuotesIndexRoute = QuotesIndexRouteImport.update({
   id: '/',
   path: '/',
@@ -187,6 +186,11 @@ const InventoryIndexRoute = InventoryIndexRouteImport.update({
   path: '/',
   getParentRoute: () => InventoryRoute,
 } as any)
+const FinanceIndexRoute = FinanceIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => FinanceRoute,
+} as any)
 const CompaniesIndexRoute = CompaniesIndexRouteImport.update({
   id: '/',
   path: '/',
@@ -201,6 +205,16 @@ const SettingsQuoteTemplatesRoute = SettingsQuoteTemplatesRouteImport.update({
   id: '/quote-templates',
   path: '/quote-templates',
   getParentRoute: () => SettingsRoute,
+} as any)
+const ServiceServiceTicketsRoute = ServiceServiceTicketsRouteImport.update({
+  id: '/service-tickets',
+  path: '/service-tickets',
+  getParentRoute: () => ServiceRoute,
+} as any)
+const ServiceServicePlansRoute = ServiceServicePlansRouteImport.update({
+  id: '/service-plans',
+  path: '/service-plans',
+  getParentRoute: () => ServiceRoute,
 } as any)
 const QuotesNewRoute = QuotesNewRouteImport.update({
   id: '/new',
@@ -227,6 +241,16 @@ const InventoryCatalogRoute = InventoryCatalogRouteImport.update({
   path: '/catalog',
   getParentRoute: () => InventoryRoute,
 } as any)
+const FinancePaymentsRoute = FinancePaymentsRouteImport.update({
+  id: '/payments',
+  path: '/payments',
+  getParentRoute: () => FinanceRoute,
+} as any)
+const FinanceInvoicesRoute = FinanceInvoicesRouteImport.update({
+  id: '/invoices',
+  path: '/invoices',
+  getParentRoute: () => FinanceRoute,
+} as any)
 const CompaniesCompanyIdRoute = CompaniesCompanyIdRouteImport.update({
   id: '/$companyId',
   path: '/$companyId',
@@ -238,38 +262,42 @@ export interface FileRoutesByFullPath {
   '/catalog': typeof CatalogRoute
   '/companies': typeof CompaniesRouteWithChildren
   '/contacts': typeof ContactsRoute
+  '/finance': typeof FinanceRouteWithChildren
   '/inbox': typeof InboxRoute
   '/inventory': typeof InventoryRouteWithChildren
-  '/invoices': typeof InvoicesRoute
   '/lead-inbox': typeof LeadInboxRoute
   '/operations': typeof OperationsRoute
   '/opportunities': typeof OpportunitiesRoute
-  '/payments': typeof PaymentsRoute
   '/planner': typeof PlannerRouteWithChildren
   '/projects': typeof ProjectsRouteWithChildren
   '/purchase-orders': typeof PurchaseOrdersRoute
   '/quotes': typeof QuotesRouteWithChildren
   '/reports': typeof ReportsRoute
   '/scheduling': typeof SchedulingRoute
-  '/service-plans': typeof ServicePlansRoute
-  '/service-tickets': typeof ServiceTicketsRoute
+  '/service': typeof ServiceRouteWithChildren
   '/settings': typeof SettingsRouteWithChildren
   '/team': typeof TeamRoute
   '/vendors': typeof VendorsRoute
   '/work-orders': typeof WorkOrdersRouteWithChildren
   '/companies/$companyId': typeof CompaniesCompanyIdRoute
+  '/finance/invoices': typeof FinanceInvoicesRoute
+  '/finance/payments': typeof FinancePaymentsRoute
   '/inventory/catalog': typeof InventoryCatalogRoute
   '/inventory/stock': typeof InventoryStockRoute
   '/projects/$projectId': typeof ProjectsProjectIdRoute
   '/quotes/$quoteId': typeof QuotesQuoteIdRoute
   '/quotes/new': typeof QuotesNewRoute
+  '/service/service-plans': typeof ServiceServicePlansRoute
+  '/service/service-tickets': typeof ServiceServiceTicketsRoute
   '/settings/quote-templates': typeof SettingsQuoteTemplatesRoute
   '/work-orders/$workOrderId': typeof WorkOrdersWorkOrderIdRoute
   '/companies/': typeof CompaniesIndexRoute
+  '/finance/': typeof FinanceIndexRoute
   '/inventory/': typeof InventoryIndexRoute
   '/planner/': typeof PlannerIndexRoute
   '/projects/': typeof ProjectsIndexRoute
   '/quotes/': typeof QuotesIndexRoute
+  '/service/': typeof ServiceIndexRoute
   '/work-orders/': typeof WorkOrdersIndexRoute
 }
 export interface FileRoutesByTo {
@@ -277,32 +305,34 @@ export interface FileRoutesByTo {
   '/catalog': typeof CatalogRoute
   '/contacts': typeof ContactsRoute
   '/inbox': typeof InboxRoute
-  '/invoices': typeof InvoicesRoute
   '/lead-inbox': typeof LeadInboxRoute
   '/operations': typeof OperationsRoute
   '/opportunities': typeof OpportunitiesRoute
-  '/payments': typeof PaymentsRoute
   '/purchase-orders': typeof PurchaseOrdersRoute
   '/reports': typeof ReportsRoute
   '/scheduling': typeof SchedulingRoute
-  '/service-plans': typeof ServicePlansRoute
-  '/service-tickets': typeof ServiceTicketsRoute
   '/settings': typeof SettingsRouteWithChildren
   '/team': typeof TeamRoute
   '/vendors': typeof VendorsRoute
   '/companies/$companyId': typeof CompaniesCompanyIdRoute
+  '/finance/invoices': typeof FinanceInvoicesRoute
+  '/finance/payments': typeof FinancePaymentsRoute
   '/inventory/catalog': typeof InventoryCatalogRoute
   '/inventory/stock': typeof InventoryStockRoute
   '/projects/$projectId': typeof ProjectsProjectIdRoute
   '/quotes/$quoteId': typeof QuotesQuoteIdRoute
   '/quotes/new': typeof QuotesNewRoute
+  '/service/service-plans': typeof ServiceServicePlansRoute
+  '/service/service-tickets': typeof ServiceServiceTicketsRoute
   '/settings/quote-templates': typeof SettingsQuoteTemplatesRoute
   '/work-orders/$workOrderId': typeof WorkOrdersWorkOrderIdRoute
   '/companies': typeof CompaniesIndexRoute
+  '/finance': typeof FinanceIndexRoute
   '/inventory': typeof InventoryIndexRoute
   '/planner': typeof PlannerIndexRoute
   '/projects': typeof ProjectsIndexRoute
   '/quotes': typeof QuotesIndexRoute
+  '/service': typeof ServiceIndexRoute
   '/work-orders': typeof WorkOrdersIndexRoute
 }
 export interface FileRoutesById {
@@ -311,38 +341,42 @@ export interface FileRoutesById {
   '/catalog': typeof CatalogRoute
   '/companies': typeof CompaniesRouteWithChildren
   '/contacts': typeof ContactsRoute
+  '/finance': typeof FinanceRouteWithChildren
   '/inbox': typeof InboxRoute
   '/inventory': typeof InventoryRouteWithChildren
-  '/invoices': typeof InvoicesRoute
   '/lead-inbox': typeof LeadInboxRoute
   '/operations': typeof OperationsRoute
   '/opportunities': typeof OpportunitiesRoute
-  '/payments': typeof PaymentsRoute
   '/planner': typeof PlannerRouteWithChildren
   '/projects': typeof ProjectsRouteWithChildren
   '/purchase-orders': typeof PurchaseOrdersRoute
   '/quotes': typeof QuotesRouteWithChildren
   '/reports': typeof ReportsRoute
   '/scheduling': typeof SchedulingRoute
-  '/service-plans': typeof ServicePlansRoute
-  '/service-tickets': typeof ServiceTicketsRoute
+  '/service': typeof ServiceRouteWithChildren
   '/settings': typeof SettingsRouteWithChildren
   '/team': typeof TeamRoute
   '/vendors': typeof VendorsRoute
   '/work-orders': typeof WorkOrdersRouteWithChildren
   '/companies/$companyId': typeof CompaniesCompanyIdRoute
+  '/finance/invoices': typeof FinanceInvoicesRoute
+  '/finance/payments': typeof FinancePaymentsRoute
   '/inventory/catalog': typeof InventoryCatalogRoute
   '/inventory/stock': typeof InventoryStockRoute
   '/projects/$projectId': typeof ProjectsProjectIdRoute
   '/quotes/$quoteId': typeof QuotesQuoteIdRoute
   '/quotes/new': typeof QuotesNewRoute
+  '/service/service-plans': typeof ServiceServicePlansRoute
+  '/service/service-tickets': typeof ServiceServiceTicketsRoute
   '/settings/quote-templates': typeof SettingsQuoteTemplatesRoute
   '/work-orders/$workOrderId': typeof WorkOrdersWorkOrderIdRoute
   '/companies/': typeof CompaniesIndexRoute
+  '/finance/': typeof FinanceIndexRoute
   '/inventory/': typeof InventoryIndexRoute
   '/planner/': typeof PlannerIndexRoute
   '/projects/': typeof ProjectsIndexRoute
   '/quotes/': typeof QuotesIndexRoute
+  '/service/': typeof ServiceIndexRoute
   '/work-orders/': typeof WorkOrdersIndexRoute
 }
 export interface FileRouteTypes {
@@ -352,38 +386,42 @@ export interface FileRouteTypes {
     | '/catalog'
     | '/companies'
     | '/contacts'
+    | '/finance'
     | '/inbox'
     | '/inventory'
-    | '/invoices'
     | '/lead-inbox'
     | '/operations'
     | '/opportunities'
-    | '/payments'
     | '/planner'
     | '/projects'
     | '/purchase-orders'
     | '/quotes'
     | '/reports'
     | '/scheduling'
-    | '/service-plans'
-    | '/service-tickets'
+    | '/service'
     | '/settings'
     | '/team'
     | '/vendors'
     | '/work-orders'
     | '/companies/$companyId'
+    | '/finance/invoices'
+    | '/finance/payments'
     | '/inventory/catalog'
     | '/inventory/stock'
     | '/projects/$projectId'
     | '/quotes/$quoteId'
     | '/quotes/new'
+    | '/service/service-plans'
+    | '/service/service-tickets'
     | '/settings/quote-templates'
     | '/work-orders/$workOrderId'
     | '/companies/'
+    | '/finance/'
     | '/inventory/'
     | '/planner/'
     | '/projects/'
     | '/quotes/'
+    | '/service/'
     | '/work-orders/'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -391,32 +429,34 @@ export interface FileRouteTypes {
     | '/catalog'
     | '/contacts'
     | '/inbox'
-    | '/invoices'
     | '/lead-inbox'
     | '/operations'
     | '/opportunities'
-    | '/payments'
     | '/purchase-orders'
     | '/reports'
     | '/scheduling'
-    | '/service-plans'
-    | '/service-tickets'
     | '/settings'
     | '/team'
     | '/vendors'
     | '/companies/$companyId'
+    | '/finance/invoices'
+    | '/finance/payments'
     | '/inventory/catalog'
     | '/inventory/stock'
     | '/projects/$projectId'
     | '/quotes/$quoteId'
     | '/quotes/new'
+    | '/service/service-plans'
+    | '/service/service-tickets'
     | '/settings/quote-templates'
     | '/work-orders/$workOrderId'
     | '/companies'
+    | '/finance'
     | '/inventory'
     | '/planner'
     | '/projects'
     | '/quotes'
+    | '/service'
     | '/work-orders'
   id:
     | '__root__'
@@ -424,38 +464,42 @@ export interface FileRouteTypes {
     | '/catalog'
     | '/companies'
     | '/contacts'
+    | '/finance'
     | '/inbox'
     | '/inventory'
-    | '/invoices'
     | '/lead-inbox'
     | '/operations'
     | '/opportunities'
-    | '/payments'
     | '/planner'
     | '/projects'
     | '/purchase-orders'
     | '/quotes'
     | '/reports'
     | '/scheduling'
-    | '/service-plans'
-    | '/service-tickets'
+    | '/service'
     | '/settings'
     | '/team'
     | '/vendors'
     | '/work-orders'
     | '/companies/$companyId'
+    | '/finance/invoices'
+    | '/finance/payments'
     | '/inventory/catalog'
     | '/inventory/stock'
     | '/projects/$projectId'
     | '/quotes/$quoteId'
     | '/quotes/new'
+    | '/service/service-plans'
+    | '/service/service-tickets'
     | '/settings/quote-templates'
     | '/work-orders/$workOrderId'
     | '/companies/'
+    | '/finance/'
     | '/inventory/'
     | '/planner/'
     | '/projects/'
     | '/quotes/'
+    | '/service/'
     | '/work-orders/'
   fileRoutesById: FileRoutesById
 }
@@ -464,21 +508,19 @@ export interface RootRouteChildren {
   CatalogRoute: typeof CatalogRoute
   CompaniesRoute: typeof CompaniesRouteWithChildren
   ContactsRoute: typeof ContactsRoute
+  FinanceRoute: typeof FinanceRouteWithChildren
   InboxRoute: typeof InboxRoute
   InventoryRoute: typeof InventoryRouteWithChildren
-  InvoicesRoute: typeof InvoicesRoute
   LeadInboxRoute: typeof LeadInboxRoute
   OperationsRoute: typeof OperationsRoute
   OpportunitiesRoute: typeof OpportunitiesRoute
-  PaymentsRoute: typeof PaymentsRoute
   PlannerRoute: typeof PlannerRouteWithChildren
   ProjectsRoute: typeof ProjectsRouteWithChildren
   PurchaseOrdersRoute: typeof PurchaseOrdersRoute
   QuotesRoute: typeof QuotesRouteWithChildren
   ReportsRoute: typeof ReportsRoute
   SchedulingRoute: typeof SchedulingRoute
-  ServicePlansRoute: typeof ServicePlansRoute
-  ServiceTicketsRoute: typeof ServiceTicketsRoute
+  ServiceRoute: typeof ServiceRouteWithChildren
   SettingsRoute: typeof SettingsRouteWithChildren
   TeamRoute: typeof TeamRoute
   VendorsRoute: typeof VendorsRoute
@@ -515,18 +557,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SettingsRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/service-tickets': {
-      id: '/service-tickets'
-      path: '/service-tickets'
-      fullPath: '/service-tickets'
-      preLoaderRoute: typeof ServiceTicketsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/service-plans': {
-      id: '/service-plans'
-      path: '/service-plans'
-      fullPath: '/service-plans'
-      preLoaderRoute: typeof ServicePlansRouteImport
+    '/service': {
+      id: '/service'
+      path: '/service'
+      fullPath: '/service'
+      preLoaderRoute: typeof ServiceRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/scheduling': {
@@ -571,13 +606,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PlannerRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/payments': {
-      id: '/payments'
-      path: '/payments'
-      fullPath: '/payments'
-      preLoaderRoute: typeof PaymentsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/opportunities': {
       id: '/opportunities'
       path: '/opportunities'
@@ -599,13 +627,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LeadInboxRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/invoices': {
-      id: '/invoices'
-      path: '/invoices'
-      fullPath: '/invoices'
-      preLoaderRoute: typeof InvoicesRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/inventory': {
       id: '/inventory'
       path: '/inventory'
@@ -618,6 +639,13 @@ declare module '@tanstack/react-router' {
       path: '/inbox'
       fullPath: '/inbox'
       preLoaderRoute: typeof InboxRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/finance': {
+      id: '/finance'
+      path: '/finance'
+      fullPath: '/finance'
+      preLoaderRoute: typeof FinanceRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/contacts': {
@@ -655,6 +683,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof WorkOrdersIndexRouteImport
       parentRoute: typeof WorkOrdersRoute
     }
+    '/service/': {
+      id: '/service/'
+      path: '/'
+      fullPath: '/service/'
+      preLoaderRoute: typeof ServiceIndexRouteImport
+      parentRoute: typeof ServiceRoute
+    }
     '/quotes/': {
       id: '/quotes/'
       path: '/'
@@ -683,6 +718,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof InventoryIndexRouteImport
       parentRoute: typeof InventoryRoute
     }
+    '/finance/': {
+      id: '/finance/'
+      path: '/'
+      fullPath: '/finance/'
+      preLoaderRoute: typeof FinanceIndexRouteImport
+      parentRoute: typeof FinanceRoute
+    }
     '/companies/': {
       id: '/companies/'
       path: '/'
@@ -703,6 +745,20 @@ declare module '@tanstack/react-router' {
       fullPath: '/settings/quote-templates'
       preLoaderRoute: typeof SettingsQuoteTemplatesRouteImport
       parentRoute: typeof SettingsRoute
+    }
+    '/service/service-tickets': {
+      id: '/service/service-tickets'
+      path: '/service-tickets'
+      fullPath: '/service/service-tickets'
+      preLoaderRoute: typeof ServiceServiceTicketsRouteImport
+      parentRoute: typeof ServiceRoute
+    }
+    '/service/service-plans': {
+      id: '/service/service-plans'
+      path: '/service-plans'
+      fullPath: '/service/service-plans'
+      preLoaderRoute: typeof ServiceServicePlansRouteImport
+      parentRoute: typeof ServiceRoute
     }
     '/quotes/new': {
       id: '/quotes/new'
@@ -739,6 +795,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof InventoryCatalogRouteImport
       parentRoute: typeof InventoryRoute
     }
+    '/finance/payments': {
+      id: '/finance/payments'
+      path: '/payments'
+      fullPath: '/finance/payments'
+      preLoaderRoute: typeof FinancePaymentsRouteImport
+      parentRoute: typeof FinanceRoute
+    }
+    '/finance/invoices': {
+      id: '/finance/invoices'
+      path: '/invoices'
+      fullPath: '/finance/invoices'
+      preLoaderRoute: typeof FinanceInvoicesRouteImport
+      parentRoute: typeof FinanceRoute
+    }
     '/companies/$companyId': {
       id: '/companies/$companyId'
       path: '/$companyId'
@@ -762,6 +832,21 @@ const CompaniesRouteChildren: CompaniesRouteChildren = {
 const CompaniesRouteWithChildren = CompaniesRoute._addFileChildren(
   CompaniesRouteChildren,
 )
+
+interface FinanceRouteChildren {
+  FinanceInvoicesRoute: typeof FinanceInvoicesRoute
+  FinancePaymentsRoute: typeof FinancePaymentsRoute
+  FinanceIndexRoute: typeof FinanceIndexRoute
+}
+
+const FinanceRouteChildren: FinanceRouteChildren = {
+  FinanceInvoicesRoute: FinanceInvoicesRoute,
+  FinancePaymentsRoute: FinancePaymentsRoute,
+  FinanceIndexRoute: FinanceIndexRoute,
+}
+
+const FinanceRouteWithChildren =
+  FinanceRoute._addFileChildren(FinanceRouteChildren)
 
 interface InventoryRouteChildren {
   InventoryCatalogRoute: typeof InventoryCatalogRoute
@@ -819,6 +904,21 @@ const QuotesRouteChildren: QuotesRouteChildren = {
 const QuotesRouteWithChildren =
   QuotesRoute._addFileChildren(QuotesRouteChildren)
 
+interface ServiceRouteChildren {
+  ServiceServicePlansRoute: typeof ServiceServicePlansRoute
+  ServiceServiceTicketsRoute: typeof ServiceServiceTicketsRoute
+  ServiceIndexRoute: typeof ServiceIndexRoute
+}
+
+const ServiceRouteChildren: ServiceRouteChildren = {
+  ServiceServicePlansRoute: ServiceServicePlansRoute,
+  ServiceServiceTicketsRoute: ServiceServiceTicketsRoute,
+  ServiceIndexRoute: ServiceIndexRoute,
+}
+
+const ServiceRouteWithChildren =
+  ServiceRoute._addFileChildren(ServiceRouteChildren)
+
 interface SettingsRouteChildren {
   SettingsQuoteTemplatesRoute: typeof SettingsQuoteTemplatesRoute
 }
@@ -850,21 +950,19 @@ const rootRouteChildren: RootRouteChildren = {
   CatalogRoute: CatalogRoute,
   CompaniesRoute: CompaniesRouteWithChildren,
   ContactsRoute: ContactsRoute,
+  FinanceRoute: FinanceRouteWithChildren,
   InboxRoute: InboxRoute,
   InventoryRoute: InventoryRouteWithChildren,
-  InvoicesRoute: InvoicesRoute,
   LeadInboxRoute: LeadInboxRoute,
   OperationsRoute: OperationsRoute,
   OpportunitiesRoute: OpportunitiesRoute,
-  PaymentsRoute: PaymentsRoute,
   PlannerRoute: PlannerRouteWithChildren,
   ProjectsRoute: ProjectsRouteWithChildren,
   PurchaseOrdersRoute: PurchaseOrdersRoute,
   QuotesRoute: QuotesRouteWithChildren,
   ReportsRoute: ReportsRoute,
   SchedulingRoute: SchedulingRoute,
-  ServicePlansRoute: ServicePlansRoute,
-  ServiceTicketsRoute: ServiceTicketsRoute,
+  ServiceRoute: ServiceRouteWithChildren,
   SettingsRoute: SettingsRouteWithChildren,
   TeamRoute: TeamRoute,
   VendorsRoute: VendorsRoute,

@@ -22,7 +22,7 @@ import { PROJECTS } from "@/data/projects";
 
 // ─── Route ────────────────────────────────────────────────────────────────────
 
-export const Route = createFileRoute("/invoices")({
+export const Route = createFileRoute("/finance/invoices")({
   head: () => ({ meta: [{ title: "Invoices · Port City Sound & Security" }] }),
   component: InvoicesPage,
 });

@@ -53,8 +53,8 @@ const sections: { title?: string; items: NavItem[] }[] = [
   {
     title: "Service",
     items: [
-      { to: "/service-tickets", label: "Service Tickets", icon: Headphones },
-      { to: "/service-plans", label: "Service Plans", icon: ShieldCheck },
+      { to: "/service/service-tickets", label: "Service Tickets", icon: Headphones },
+      { to: "/service/service-plans", label: "Service Plans", icon: ShieldCheck },
     ],
   },
   {
@@ -69,8 +69,8 @@ const sections: { title?: string; items: NavItem[] }[] = [
   {
     title: "Finance",
     items: [
-      { to: "/invoices", label: "Invoices", icon: Receipt },
-      { to: "/payments", label: "Payments", icon: CreditCard },
+      { to: "/finance/invoices", label: "Invoices", icon: Receipt },
+      { to: "/finance/payments", label: "Payments", icon: CreditCard },
     ],
   },
   {

@@ -20,7 +20,7 @@ import {
   type TicketStatus,
 } from "@/data/service-tickets";
 
-export const Route = createFileRoute("/service-tickets")({
+export const Route = createFileRoute("/service/service-tickets")({
   head: () => ({ meta: [{ title: "Service Tickets · Port City Sound & Security" }] }),
   component: ServiceTicketsPage,
 });

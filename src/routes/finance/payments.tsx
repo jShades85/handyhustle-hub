@@ -19,7 +19,7 @@ import { INVOICES, type Invoice, type InvoiceStatus } from "@/data/invoices";
 
 // ─── Route ────────────────────────────────────────────────────────────────────
 
-export const Route = createFileRoute("/payments")({
+export const Route = createFileRoute("/finance/payments")({
   head: () => ({ meta: [{ title: "Payments · Port City Sound & Security" }] }),
   component: PaymentsPage,
 });

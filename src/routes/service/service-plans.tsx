@@ -17,7 +17,7 @@ import {
   type ServicePlan,
 } from "@/data/service-plans";
 
-export const Route = createFileRoute("/service-plans")({
+export const Route = createFileRoute("/service/service-plans")({
   head: () => ({ meta: [{ title: "Service Plans · Port City Sound & Security" }] }),
   component: ServicePlansPage,
 });
