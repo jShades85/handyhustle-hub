@@ -140,7 +140,7 @@ function AppShellContent() {
           collapsed ? "w-[60px]" : "w-[232px]",
         )}
       >
-        <div className="flex min-h-14 items-center gap-2 px-3 py-3 border-b border-sidebar-border">
+        <div className={cn("flex min-h-14 items-center gap-2 py-3 border-b border-sidebar-border", collapsed ? "justify-center px-0" : "px-3")}>
           <div className="flex h-6 w-6 items-center justify-center rounded-md bg-gradient-to-br from-primary to-chart-2 text-[10px] font-bold text-primary-foreground shadow-glow">
             {tenant?.name ? tenant.name.split(" ").map((w: string) => w[0]).join("").slice(0, 4).toUpperCase() : "BP"}
           </div>
