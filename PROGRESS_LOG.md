@@ -18,12 +18,72 @@ Before writing any code in a new session, read these files:
 ## Current Status
 
 **Phase:** Frontend UI Build
-**Last Updated:** Session 015
-**Last Session:** Session 015
+**Last Updated:** Session 016
+**Last Session:** Session 016
 
 ---
 
 ## Session Log
+
+---
+
+### Session 016 — Command Palette, Inbox Fix, Settings Module
+
+**Date:** June 8, 2026
+**Focus:** Command palette wiring, inbox layout fix, full Settings module build
+
+**Completed:**
+
+- **Command palette wired up (`src/components/command-palette.tsx`):**
+  - All 21 nav entries updated to current routes (stale Lovable routes replaced)
+  - Navigate group shows module group label (e.g. "Operations") as right-aligned secondary text
+  - Quick actions group: New Lead, Opportunity, Quote, Project, Work Order, Service Ticket, Invoice, Purchase Order
+  - Live demo data search: Companies (→ detail page), Projects (by name/code/customer), Contacts
+  - `⌘K / Ctrl K` hint added to topbar search button; button widened to `min-w-[220px]`
+
+- **Inbox page two-column alignment (`src/routes/inbox.tsx`):**
+  - Both columns unified to `space-y-3` (activity was `space-y-2`)
+  - Activity items: `min-h-[72px]`
+  - Request cards: `min-h-[156px]` with `flex flex-col` — exactly 2:1 ratio (2×72+12=156), first 4 request cards align perfectly with all 8 activity items
+  - Actions row changed from `mt-3` → `mt-auto pt-3` — pins to card bottom regardless of content
+
+- **Settings module (full build):**
+  - `settings.tsx`: replaced bare `<Outlet />` with two-column settings shell — left sub-nav (200px) + right content area
+  - Sub-nav sections: Workspace (Company Profile, Service Plan Tiers) / Sales (Quote Templates) / Integrations
+  - `settings/index.tsx`: redirects to `/settings/company`
+  - `settings/company.tsx`: Company Profile — logo placeholder, business info, trade type, timezone, contact details, address, invoice defaults (payment terms + default tax rate), save confirmation
+  - `settings/service-plan-tiers.tsx`: 4 editable tier cards (Essential / Standard / Professional / Elite) with colored left border — response time SLA, visits/year, covered systems chip picker (12 options, toggle active/inactive), add/remove extras per tier
+  - `settings/integrations.tsx`: 7 integration categories, 12 integrations total — Payments (Stripe), Accounting (QuickBooks, Xero), Communication (Resend, Twilio), Field Ops (Google Maps, Waze), Calendars (Google Calendar, Outlook), Storage (Google Drive, Dropbox), Automation (Zapier, Webhooks). Connected/available/coming-soon states with appropriate actions.
+  - Gear icon in sidebar user panel now navigates to `/settings/company`
+  - Settings section removed from main sidebar nav
+  - Command palette updated with all 4 settings pages
+
+**Design Decisions Made:**
+
+- Settings uses gear icon → `/settings` pattern (not a modal, not a sidebar section) — matches Linear/Vercel convention
+- Settings shell keeps app sidebar visible — users can navigate back to any module without losing context
+- User roles deferred until auth session — team member profiles (Team page) ≠ system access roles
+- Quote Builder and Planner deferred until backend — both are fundamentally data-driven; building them on demo data would require a full rebuild
+- Integrations page uses coming-soon opacity reduction — communicates roadmap without dead buttons
+
+**Next Session Goal:**
+
+- Reports module — placeholder with key report categories (or defer until backend)
+- Demo data consolidation into `src/data/index.ts` before backend work begins
+- Backend session: Supabase project + keys needed → client setup → schema + migrations → auth → replace demo data
+
+**Open Questions:**
+
+- Supabase project status — still needed before backend session
+- Demo data consolidation into single file before backend work
+- Reports: build pre-backend placeholder, or defer entirely?
+
+**Schema Notes (from Settings build):**
+- `tenants`: name, tagline, phone, email, website, address, city, state, zip, trade_type, timezone, default_tax_rate, default_payment_terms, logo_url
+- `service_plan_tiers`: id, tenant_id, name, response_time_hours, visits_per_year, covered_systems (jsonb array), extras (jsonb array), sort_order
+
+**Schema Changes This Session:** None (UI only)
+**New Env Variables This Session:** None
 
 ---
 
