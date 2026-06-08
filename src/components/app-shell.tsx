@@ -12,6 +12,7 @@ import { CommandPalette } from "./command-palette";
 import ThemeToggle from "./ui/ThemeToggle";
 import { PageMetaProvider, useMeta } from "@/contexts/PageMetaContext";
 import { requestItems } from "@/data/inbox-data";
+import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -100,14 +101,10 @@ function AppShellContent() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const navigate = useNavigate();
 
-  const [confirmSignOut, setConfirmSignOut] = useState(false);
+  const [signOutOpen, setSignOutOpen] = useState(false);
 
   const handleSignOut = async () => {
-    if (!confirmSignOut) {
-      setConfirmSignOut(true);
-      setTimeout(() => setConfirmSignOut(false), 3000);
-      return;
-    }
+    setSignOutOpen(false);
     await signOut();
     navigate({ to: "/auth/login" });
   };
@@ -219,18 +216,34 @@ function AppShellContent() {
                   >
                     <Settings className="h-3.5 w-3.5" />
                   </button>
-                  <button
-                    onClick={handleSignOut}
-                    className={cn(
-                      "rounded px-1 py-0.5 text-[10px] transition-colors",
-                      confirmSignOut
-                        ? "bg-red-500/15 text-red-500 hover:bg-red-500/25"
-                        : "p-0.5 text-muted-foreground hover:text-foreground hover:bg-accent"
-                    )}
-                    aria-label="Sign out"
-                  >
-                    {confirmSignOut ? "Confirm?" : <LogOut className="h-3.5 w-3.5" />}
-                  </button>
+                  <Popover open={signOutOpen} onOpenChange={setSignOutOpen}>
+                    <PopoverTrigger asChild>
+                      <button
+                        className="rounded p-0.5 text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
+                        aria-label="Sign out"
+                      >
+                        <LogOut className="h-3.5 w-3.5" />
+                      </button>
+                    </PopoverTrigger>
+                    <PopoverContent side="top" align="end" className="w-44 p-3">
+                      <p className="text-[12px] font-medium text-foreground">Sign out?</p>
+                      <p className="mt-0.5 text-[11px] text-muted-foreground">You'll need to sign back in.</p>
+                      <div className="mt-3 flex gap-2">
+                        <button
+                          onClick={() => setSignOutOpen(false)}
+                          className="flex-1 rounded-md border border-border px-2 py-1 text-[11px] text-muted-foreground hover:bg-accent transition-colors"
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          onClick={handleSignOut}
+                          className="flex-1 rounded-md bg-red-500 px-2 py-1 text-[11px] font-medium text-white hover:bg-red-600 transition-colors"
+                        >
+                          Sign out
+                        </button>
+                      </div>
+                    </PopoverContent>
+                  </Popover>
                 </div>
               </>
             )}
