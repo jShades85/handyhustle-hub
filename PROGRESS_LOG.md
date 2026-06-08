@@ -17,13 +17,62 @@ Before writing any code in a new session, read these files:
 
 ## Current Status
 
-**Phase:** Frontend UI Build
-**Last Updated:** Session 016
-**Last Session:** Session 016
+**Phase:** Frontend UI Build — Near Complete
+**Last Updated:** Session 017
+**Last Session:** Session 017
 
 ---
 
 ## Session Log
+
+---
+
+### Session 017 — Reports Placeholder
+
+**Date:** June 8, 2026
+**Focus:** Reports page — full catalog placeholder + custom report builder teaser
+
+**Completed:**
+
+- **`src/routes/reports.tsx`:** Replaced one-line placeholder with full page:
+  - Tab bar: All Reports + 6 category tabs (Finance, Sales, Operations, Service, Team, Inventory)
+  - 27 pre-built report definitions across all 6 categories — each with name and description that specifies exactly what the report needs to show (defines the backend query requirements)
+  - Report cards: "Coming soon" badge + reduced opacity on unavailable reports; available reports show a `>` chevron and hover state
+  - Custom Reports teaser section (visible on All tab): describes the builder vision (field picker, filter builder, chart types, saved reports, scheduled delivery), feature chips, "Post-launch" lock badge
+
+**Design Decisions Made:**
+
+- Custom report builder is a post-launch feature — teaser communicates the vision without blocking the page
+- Report catalog is the right pre-backend deliverable — the 27 report definitions now fully specify what queries and aggregations the backend needs to support
+- "Coming soon" reports use opacity reduction, not disabled buttons — communicates roadmap without dead interactions
+
+**Frontend Status: Near Complete**
+
+Remaining pre-backend frontend work:
+- Quote Builder (needs backend — deferred)
+- Planner / Gantt (needs backend — deferred)
+- Demo data consolidation into a single `src/data/index.ts`
+
+**Next Session Goal:**
+
+- Backend session: Supabase project + keys → client setup → schema design → migrations → auth → replace demo data module by module
+- Prerequisite: Supabase project URL and anon key in `.env.local`
+
+**Open Questions:**
+
+- Supabase project status — keys still needed before backend session can begin
+
+**Schema Notes (from Reports):**
+Reports defined here fully specify needed backend aggregations:
+- Finance: revenue time series, invoice aging buckets, payment ledger, job margin (revenue - direct costs), AR totals
+- Sales: opportunity pipeline by stage, lead source attribution, quote acceptance rate, rep performance
+- Operations: project status + budget burn, planned vs actual hours, on-time rates, scheduling density
+- Service: ticket volume/resolution time by category, MRR/ARR over time, plan churn, SLA compliance %
+- Team: scheduled vs available hours, hours logged per tech, job completion metrics
+- Inventory: stock movement rates, PO spend by vendor, parts-to-job mapping, stockout history
+
+**Schema Changes This Session:** None (UI only)
+**New Env Variables This Session:** None
 
 ---
 
