@@ -71,7 +71,7 @@ async function updateMember(id: string, patch: { role_id?: string | null; vehicl
 
 async function removeMember(id: string) {
   const supabase = createClient();
-  const { error } = await supabase.from("user_profiles").delete().eq("id", id);
+  const { error } = await supabase.from("user_profiles").update({ is_active: false }).eq("id", id);
   if (error) throw error;
 }
 
