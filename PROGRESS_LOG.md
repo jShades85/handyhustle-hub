@@ -6,8 +6,8 @@
 
 ## Current Status
 
-**Phase:** Backend — Foundation complete, auth live, first real data connections next
-**Last Updated:** Session 018
+**Phase:** Backend — Roles, team management, and invite flow live
+**Last Updated:** Session 020
 **Live URL:** https://bearingpro.tech (Vercel + Cloudflare DNS)
 **Supabase Project:** `erdtfwelbdlvammfdtgz`
 
@@ -15,9 +15,11 @@
 
 ## What's Next
 
-1. **Team / Users page** — wire Operations → Team to real `user_profiles` data; build invite flow (admin sends email, teammate joins existing tenant via `tenant_id` in metadata). `user_profiles` table is already live — no schema work needed first.
+1. **Wire Operations → Team** to real `user_profiles` data (Settings → Team Members is live; Operations → Team still uses demo data)
 2. **Schema sprint** — migrations for all remaining modules (companies, contacts, projects, etc.)
 3. **Replace demo data module by module** — starting with CRM after schema is in place
+4. **Invite URL cleanup** — `/join/$slug` route using tenant slug (deferred; current base64 token works)
+5. **Soft delete UI** — "Deactivated Members" view + reactivate button (deferred pre-launch)
 
 ---
 
@@ -49,6 +51,8 @@
 | Finance (Invoices, Payments) | 🟡 Demo data | Full UI built |
 | Reports | 🟡 Placeholder | 27-report catalog defined, all coming soon |
 | Settings (Company, Tiers, Integrations) | ✅ Company live | Company Profile reads/writes `tenants` table; Tiers + Integrations still demo |
+| Settings → Roles | ✅ Live | Full CRUD, module-level read/write permissions, color picker, expandable permission grid |
+| Settings → Team Members | ✅ Live | Member list, edit panel (role/vehicle), invite flow (base64 token link), soft delete |
 | Quote Builder | ⏸ Deferred | Needs backend |
 | Planner / Gantt | ⏸ Deferred | Needs backend |
 
@@ -56,12 +60,22 @@
 
 ## Backend Schema (Migrations Applied)
 
-| Migration | Tables | Status |
+| Migration | Tables / Changes | Status |
 |---|---|---|
 | `20260608000001_init` | `tenants`, `user_profiles`, `current_tenant_id()` RLS helper | ✅ Live |
 | `20260608000002_auth_trigger` | `handle_new_user()` trigger on `auth.users` | ✅ Live |
+| `20260608000003_roles_vehicles_locations` | `roles`, `vehicles`, `inventory_locations`, `seed_default_roles()` | ✅ Live |
+| `20260608000004_role_permissions` | `role_permissions`, `app_module` enum, 9 default roles with module permissions | ✅ Live |
+| `20260608000005_user_profiles_email` | `email` column on `user_profiles`, updated trigger | ✅ Live |
+| `20260608000006_user_profiles_delete_policy` | DELETE RLS policy on `user_profiles` | ✅ Live |
+| `20260608000007_soft_delete_members` | `is_active` column, updated SELECT/UPDATE policies, upsert in trigger | ✅ Live |
+| `20260608000008_fix_update_policy` | Consolidated UPDATE policy to `tenant_id = current_tenant_id()` | ✅ Live |
+| `20260608000009_deactivate_member_fn` | `deactivate_member(uuid)` security definer RPC | ✅ Live |
+| `20260608000010_grant_deactivate_member` | `GRANT EXECUTE` on `deactivate_member` to `authenticated` | ✅ Live |
 
-**Trigger logic:** New signup → creates `tenants` row + `user_profiles` row (role: admin). Invited user (has `tenant_id` in metadata) → joins existing tenant instead.
+**Trigger logic:** New signup → creates `tenants` row + `user_profiles` row (Owner role). Invited user (has `tenant_id` in metadata) → joins existing tenant with assigned role. Upserts on conflict so re-inviting a removed user reactivates their profile.
+
+**Key pattern learned:** Every security definer function callable from the frontend needs `GRANT EXECUTE ON FUNCTION ... TO authenticated` or PostgREST silently drops the call with no error.
 
 ---
 
@@ -129,3 +143,23 @@ Session 017: Reports page — 27-report catalog across 6 categories + custom rep
 
 - Removed duplicate search button from sidebar (top bar only)
 - Sidebar company name and initials badge now read from `tenants` table (shares `["tenant"]` cache with Company Profile — no extra fetch)
+
+---
+
+## Session 020 — Roles, Team Members, Invite Flow
+
+**Date:** June 8, 2026
+
+**Completed:**
+
+- **Settings → Roles** (live): full CRUD against `roles` + `role_permissions` tables; inline rename (blur to save); color picker (12 swatches); expandable module permission grid (8 modules, 3-state none/read/write toggle); optimistic updates via `setQueryData`
+- **Settings → Team Members** (live): member table with avatar (name-based gradient, 8 options), role badge, vehicle, joined date; click row → edit panel (role + vehicle assignment); invite panel generates base64-encoded link (`?t=TOKEN`) — hides tenant UUID, pre-fills name/email on signup form
+- **Invite flow** (`/auth/signup?t=BASE64`): `validateSearch` decodes token, hides company field, shows "Join your team / You've been invited as {role}", passes `{ tenant_id, role_name }` in signup metadata
+- **Soft delete**: `is_active` column on `user_profiles`; removing a member sets `is_active=false` via `deactivate_member()` RPC; RLS SELECT filters inactive users; `handle_new_user` trigger upserts so re-invite reactivates the profile automatically
+- **RLS fixes**: added DELETE policy, consolidated UPDATE policy, added `GRANT EXECUTE` to `deactivate_member` (PostgREST requires explicit grant for security definer functions)
+- **routeTree.gen.ts**: manually added both new settings routes (TanStack Router CLI unavailable due to missing prettier)
+
+**Deferred:**
+- Invite URL cleanup: `/join/$slug` with tenant slug in path (current base64 token works fine)
+- Deactivated Members UI: view/reactivate removed users (pre-launch task)
+- Hard delete (auth.users): requires service-role Edge Function; use Supabase dashboard for now
