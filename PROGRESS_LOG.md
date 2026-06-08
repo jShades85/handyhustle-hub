@@ -18,12 +18,55 @@ Before writing any code in a new session, read these files:
 ## Current Status
 
 **Phase:** Frontend UI Build
-**Last Updated:** Session 013
-**Last Session:** Session 013
+**Last Updated:** Session 014
+**Last Session:** Session 014
 
 ---
 
 ## Session Log
+
+---
+
+### Session 014 — Finance Module: Payments
+
+**Date:** June 8, 2026
+**Focus:** Full build of the Payments page (Finance module)
+
+**Completed:**
+
+- **`src/routes/payments.tsx`:** Full build from the placeholder — three-tab layout:
+  - **Outstanding tab:** AR aging view, overdue invoices sorted first (then by due date asc). Stat bar: Total Outstanding / Overdue (red-accented, amount + count) / Partial Remaining / Open Invoices. Table: Invoice # / Customer / Project / Total / Paid / Balance Due (red + days overdue on overdue rows) / Due Date / Status / Collect button. "Collect →" per row jumps to Collect tab with invoice pre-selected.
+  - **All Payments tab:** Ledger of all payment records derived from invoice history. Stat bar: Total Collected / This Month / Last Month / Payment Count. Filter bar: search (invoice #, customer, reference) + method dropdown. Table: Date / Invoice # / Customer / Method (color-coded badge) / Reference / Amount (green `+$`). Sorted newest-first.
+  - **Collect Payment tab:** Stripe-first payment collection form. Invoice combobox (outstanding invoices only, with status badge and balance in dropdown). Invoice summary card once selected (customer, total/paid/balance). Amount field pre-filled to balance due with partial-payment warning when editing. Four method cards: Stripe (Recommended badge), Check, Wire, Cash. Stripe panel shows Stripe brand color, fee disclosure (2.9% + 30¢ card / 0.8% ACH), email field, Copy Link + Send via Email buttons with distinct success screens. Check/Wire show date + reference number fields. All non-Stripe paths show a "Payment Recorded" confirmation screen.
+- **Payment processor decision: Stripe** — handles card + ACH in one integration, payment links for remote commercial clients, Stripe Terminal for future on-site collection. Best fit for AV/security integrators billing commercial NET 30 accounts.
+- **Dev environment fix:** `node_modules` was missing in Codespaces — ran `npm install --legacy-peer-deps`. TypeScript passes clean with zero errors.
+
+**Design Decisions Made:**
+
+- Stripe is the recommended payment processor — framed as "Recommended" in the method selector
+- "Collect →" in the Outstanding table is the primary AR action — drives users to the Collect tab with context
+- Stripe + Check + Wire + Cash are the four collection methods — matches how AV/security integrators actually get paid (links for commercial clients, checks from institutions, wire for large projects)
+- Collect Payment form is a single centered column — mirrors Stripe's own payment link creation flow, more focused than a two-column layout
+- Partial payment shows a warning with remaining balance — prevents accidental under-collection
+
+**Next Session Goal:**
+
+- Settings module — Service Plan Tier Features config page (tenant-configurable per-tier inclusions: response time, visits, covered systems, extras)
+- Or Reports module — placeholder with key report categories
+
+**Open Questions:**
+
+- Supabase project status — still needed before backend session
+- Demo data consolidation into single demo-data.ts before backend work
+- Route structure inconsistency — flat vs nested routes — reconcile in consistency pass
+
+**Schema Notes:**
+
+- payments: id, tenant_id, invoice_id, date, amount, method, reference, notes, recorded_by
+- (invoice_payments already partially modeled in invoices schema from Session 013)
+
+**Schema Changes This Session:** None (UI only)
+**New Env Variables This Session:** None
 
 ---
 
@@ -698,7 +741,7 @@ Before writing any code in a new session, read these files:
 | Inventory — Purchase Orders           | Complete                    | Full page — stat bar, table, view/edit drawer, comboboxes |
 | Inventory — Vendors                   | Complete                    | Stat bar, card/list view, Sheet drawer, new modal   |
 | Finance — Invoices                    | Complete                    | Stat bar, tabs, filters, table, Sheet drawer, modal |
-| Finance — Payments                    | Placeholder                 | Coming soon — next session                          |
+| Finance — Payments                    | Complete                    | Outstanding AR / ledger / Stripe-first collect form |
 | Reports                               | Placeholder                 | Coming soon page                                    |
 
 ---
