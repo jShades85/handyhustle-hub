@@ -56,6 +56,35 @@ export type Database = {
           },
         ]
       }
+      role_permissions: {
+        Row: {
+          can_write: boolean
+          id: string
+          module: Database["public"]["Enums"]["app_module"]
+          role_id: string
+        }
+        Insert: {
+          can_write?: boolean
+          id?: string
+          module: Database["public"]["Enums"]["app_module"]
+          role_id: string
+        }
+        Update: {
+          can_write?: boolean
+          id?: string
+          module?: Database["public"]["Enums"]["app_module"]
+          role_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "role_permissions_role_id_fkey"
+            columns: ["role_id"]
+            isOneToOne: false
+            referencedRelation: "roles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       roles: {
         Row: {
           color: string
@@ -64,7 +93,6 @@ export type Database = {
           is_default: boolean
           name: string
           tenant_id: string
-          tier: Database["public"]["Enums"]["permission_tier"]
         }
         Insert: {
           color?: string
@@ -73,7 +101,6 @@ export type Database = {
           is_default?: boolean
           name: string
           tenant_id: string
-          tier: Database["public"]["Enums"]["permission_tier"]
         }
         Update: {
           color?: string
@@ -82,7 +109,6 @@ export type Database = {
           is_default?: boolean
           name?: string
           tenant_id?: string
-          tier?: Database["public"]["Enums"]["permission_tier"]
         }
         Relationships: [
           {
@@ -253,14 +279,16 @@ export type Database = {
       seed_default_roles: { Args: { p_tenant_id: string }; Returns: undefined }
     }
     Enums: {
+      app_module:
+        | "crm"
+        | "sales"
+        | "finance"
+        | "operations"
+        | "service"
+        | "inventory"
+        | "reports"
+        | "settings"
       location_type: "warehouse" | "vehicle" | "other"
-      permission_tier:
-        | "owner"
-        | "admin"
-        | "office"
-        | "field"
-        | "warehouse"
-        | "readonly"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -388,15 +416,17 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      location_type: ["warehouse", "vehicle", "other"],
-      permission_tier: [
-        "owner",
-        "admin",
-        "office",
-        "field",
-        "warehouse",
-        "readonly",
+      app_module: [
+        "crm",
+        "sales",
+        "finance",
+        "operations",
+        "service",
+        "inventory",
+        "reports",
+        "settings",
       ],
+      location_type: ["warehouse", "vehicle", "other"],
     },
   },
 } as const
