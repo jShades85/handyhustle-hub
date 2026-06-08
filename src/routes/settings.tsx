@@ -1,5 +1,5 @@
 import { createFileRoute, Outlet, Link, useRouterState } from "@tanstack/react-router";
-import { Building2, FileText, Layers, Puzzle } from "lucide-react";
+import { Building2, FileText, Layers, Puzzle, ShieldCheck, Users } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/settings")({
@@ -15,6 +15,13 @@ const sections = [
     items: [
       { to: "/settings/company",            label: "Company Profile",    icon: Building2 },
       { to: "/settings/service-plan-tiers", label: "Service Plan Tiers", icon: Layers    },
+    ],
+  },
+  {
+    title: "Team",
+    items: [
+      { to: "/settings/team-members", label: "Team Members", icon: Users       },
+      { to: "/settings/roles",        label: "Roles",        icon: ShieldCheck },
     ],
   },
   {

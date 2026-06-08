@@ -31,6 +31,7 @@ import { Route as SettingsServicePlanTiersRouteImport } from './routes/settings/
 import { Route as SettingsQuoteTemplatesRouteImport } from './routes/settings/quote-templates'
 import { Route as SettingsIntegrationsRouteImport } from './routes/settings/integrations'
 import { Route as SettingsCompanyRouteImport } from './routes/settings/company'
+import { Route as SettingsRolesRouteImport } from './routes/settings/roles'
 import { Route as ServiceServiceTicketsRouteImport } from './routes/service/service-tickets'
 import { Route as ServiceServicePlansRouteImport } from './routes/service/service-plans'
 import { Route as SalesQuotesRouteImport } from './routes/sales/quotes'
@@ -171,6 +172,11 @@ const SettingsIntegrationsRoute = SettingsIntegrationsRouteImport.update({
 const SettingsCompanyRoute = SettingsCompanyRouteImport.update({
   id: '/company',
   path: '/company',
+  getParentRoute: () => SettingsRoute,
+} as any)
+const SettingsRolesRoute = SettingsRolesRouteImport.update({
+  id: '/roles',
+  path: '/roles',
   getParentRoute: () => SettingsRoute,
 } as any)
 const ServiceServiceTicketsRoute = ServiceServiceTicketsRouteImport.update({
@@ -362,6 +368,7 @@ export interface FileRoutesByFullPath {
   '/settings/company': typeof SettingsCompanyRoute
   '/settings/integrations': typeof SettingsIntegrationsRoute
   '/settings/quote-templates': typeof SettingsQuoteTemplatesRoute
+  '/settings/roles': typeof SettingsRolesRoute
   '/settings/service-plan-tiers': typeof SettingsServicePlanTiersRoute
   '/crm/': typeof CrmIndexRoute
   '/finance/': typeof FinanceIndexRoute
@@ -404,6 +411,7 @@ export interface FileRoutesByTo {
   '/settings/company': typeof SettingsCompanyRoute
   '/settings/integrations': typeof SettingsIntegrationsRoute
   '/settings/quote-templates': typeof SettingsQuoteTemplatesRoute
+  '/settings/roles': typeof SettingsRolesRoute
   '/settings/service-plan-tiers': typeof SettingsServicePlanTiersRoute
   '/crm': typeof CrmIndexRoute
   '/finance': typeof FinanceIndexRoute
@@ -459,6 +467,7 @@ export interface FileRoutesById {
   '/settings/company': typeof SettingsCompanyRoute
   '/settings/integrations': typeof SettingsIntegrationsRoute
   '/settings/quote-templates': typeof SettingsQuoteTemplatesRoute
+  '/settings/roles': typeof SettingsRolesRoute
   '/settings/service-plan-tiers': typeof SettingsServicePlanTiersRoute
   '/crm/': typeof CrmIndexRoute
   '/finance/': typeof FinanceIndexRoute
@@ -515,6 +524,7 @@ export interface FileRouteTypes {
     | '/settings/company'
     | '/settings/integrations'
     | '/settings/quote-templates'
+    | '/settings/roles'
     | '/settings/service-plan-tiers'
     | '/crm/'
     | '/finance/'
@@ -557,6 +567,7 @@ export interface FileRouteTypes {
     | '/settings/company'
     | '/settings/integrations'
     | '/settings/quote-templates'
+    | '/settings/roles'
     | '/settings/service-plan-tiers'
     | '/crm'
     | '/finance'
@@ -611,6 +622,7 @@ export interface FileRouteTypes {
     | '/settings/company'
     | '/settings/integrations'
     | '/settings/quote-templates'
+    | '/settings/roles'
     | '/settings/service-plan-tiers'
     | '/crm/'
     | '/finance/'
@@ -799,6 +811,13 @@ declare module '@tanstack/react-router' {
       path: '/company'
       fullPath: '/settings/company'
       preLoaderRoute: typeof SettingsCompanyRouteImport
+      parentRoute: typeof SettingsRoute
+    }
+    '/settings/roles': {
+      id: '/settings/roles'
+      path: '/roles'
+      fullPath: '/settings/roles'
+      preLoaderRoute: typeof SettingsRolesRouteImport
       parentRoute: typeof SettingsRoute
     }
     '/service/service-tickets': {
@@ -1199,6 +1218,7 @@ interface SettingsRouteChildren {
   SettingsCompanyRoute: typeof SettingsCompanyRoute
   SettingsIntegrationsRoute: typeof SettingsIntegrationsRoute
   SettingsQuoteTemplatesRoute: typeof SettingsQuoteTemplatesRoute
+  SettingsRolesRoute: typeof SettingsRolesRoute
   SettingsServicePlanTiersRoute: typeof SettingsServicePlanTiersRoute
   SettingsIndexRoute: typeof SettingsIndexRoute
 }
@@ -1207,6 +1227,7 @@ const SettingsRouteChildren: SettingsRouteChildren = {
   SettingsCompanyRoute: SettingsCompanyRoute,
   SettingsIntegrationsRoute: SettingsIntegrationsRoute,
   SettingsQuoteTemplatesRoute: SettingsQuoteTemplatesRoute,
+  SettingsRolesRoute: SettingsRolesRoute,
   SettingsServicePlanTiersRoute: SettingsServicePlanTiersRoute,
   SettingsIndexRoute: SettingsIndexRoute,
 }
