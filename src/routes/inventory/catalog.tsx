@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -10,10 +10,10 @@ import { cn } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/client";
 import { Database } from "@/lib/supabase/types";
 import { TRADE_TEMPLATES, COLOR_PALETTE } from "@/data/trade-templates";
+import { ICON_MAP, ICON_GROUPS } from "@/data/catalog-icons";
 import {
   Camera, ChevronRight, ImagePlus, LayoutGrid, List,
-  Pencil, Plus, Shield, Thermometer, Droplets, Zap,
-  Building2, Volume2, X, Check,
+  Package2, Pencil, Plus, X, Check,
 } from "lucide-react";
 import { FilterBar, SearchInput, FilterSelect } from "@/components/ui/page-components";
 import {
@@ -86,17 +86,6 @@ const DEFAULT_FORM: ItemFormValues = {
 
 const UNIT_SUGGESTIONS = ["ea", "hr", "ft", "lot", "spl", "run", "box", "set"];
 
-// ─── Template icons ───────────────────────────────────────────────────────────
-
-const TEMPLATE_ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
-  av:       Volume2,
-  security: Shield,
-  hvac:     Thermometer,
-  plumbing: Droplets,
-  electrical: Zap,
-  general:  Building2,
-};
-
 // ─── CategorySetupModal ───────────────────────────────────────────────────────
 
 interface CategorySetupModalProps {
@@ -108,12 +97,14 @@ function CategorySetupModal({ open, onDone }: CategorySetupModalProps) {
   const qc = useQueryClient();
   const supabase = createClient();
 
-  const [selected, setSelected]           = useState<Set<string>>(new Set());
-  const [customInput, setCustomInput]     = useState("");
-  const [customList, setCustomList]       = useState<string[]>([]);
+  const [selected, setSelected]       = useState<Set<string>>(new Set());
+  const [customInput, setCustomInput] = useState("");
+  const [customIcon, setCustomIcon]   = useState("Package2");
+  const [iconSearch, setIconSearch]   = useState("");
+  const [customList, setCustomList]   = useState<{ name: string; icon: string }[]>([]);
 
   const mutation = useMutation({
-    mutationFn: async (rows: { name: string; color: string; sort_order: number }[]) => {
+    mutationFn: async (rows: { name: string; icon: string; color: string; sort_order: number }[]) => {
       const tenantId = qc.getQueryData<{ id: string }>(["tenant"])?.id;
       const { error } = await supabase
         .from("categories")
@@ -136,48 +127,61 @@ function CategorySetupModal({ open, onDone }: CategorySetupModalProps) {
 
   function addCustom() {
     const trimmed = customInput.trim();
-    if (!trimmed || customList.includes(trimmed)) return;
-    setCustomList((prev) => [...prev, trimmed]);
+    if (!trimmed || customList.some((c) => c.name === trimmed)) return;
+    setCustomList((prev) => [...prev, { name: trimmed, icon: customIcon }]);
     setCustomInput("");
+    setCustomIcon("Package2");
+    setIconSearch("");
   }
 
   function removeCustom(name: string) {
-    setCustomList((prev) => prev.filter((c) => c !== name));
+    setCustomList((prev) => prev.filter((c) => c.name !== name));
   }
 
   function handleConfirm() {
-    // Collect categories from selected templates (deduped)
-    const names: string[] = [];
+    // Collect { name, icon } from selected templates (deduped by name)
+    const seen = new Map<string, string>(); // name → icon
     for (const templateId of selected) {
       const tpl = TRADE_TEMPLATES.find((t) => t.id === templateId);
       if (tpl) {
         for (const cat of tpl.categories) {
-          if (!names.includes(cat)) names.push(cat);
+          if (!seen.has(cat.name)) seen.set(cat.name, cat.icon);
         }
       }
     }
     for (const cat of customList) {
-      if (!names.includes(cat)) names.push(cat);
+      if (!seen.has(cat.name)) seen.set(cat.name, cat.icon);
     }
-    if (names.length === 0) return;
+    if (seen.size === 0) return;
 
-    mutation.mutate(
-      names.map((name, i) => ({
-        name,
-        color: COLOR_PALETTE[i % COLOR_PALETTE.length],
-        sort_order: i,
-      })),
-    );
+    const rows = [...seen.entries()].map(([name, icon], i) => ({
+      name,
+      icon,
+      color:      COLOR_PALETTE[i % COLOR_PALETTE.length],
+      sort_order: i,
+    }));
+    mutation.mutate(rows);
   }
 
   const totalCats = useMemo(() => {
-    const names = new Set<string>(customList);
+    const names = new Set<string>(customList.map((c) => c.name));
     for (const id of selected) {
       const tpl = TRADE_TEMPLATES.find((t) => t.id === id);
-      tpl?.categories.forEach((c) => names.add(c));
+      tpl?.categories.forEach((c) => names.add(c.name));
     }
     return names.size;
   }, [selected, customList]);
+
+  const filteredIconGroups = useMemo(() => {
+    const q = iconSearch.toLowerCase().trim();
+    if (!q) return ICON_GROUPS;
+    return ICON_GROUPS.map((g) => ({
+      ...g,
+      icons: g.icons.filter((i) => i.toLowerCase().includes(q)),
+    })).filter((g) => g.icons.length > 0);
+  }, [iconSearch]);
+
+  const SelectedIconCmp = ICON_MAP[customIcon] ?? Package2;
 
   return (
     <Dialog open={open}>
@@ -194,7 +198,7 @@ function CategorySetupModal({ open, onDone }: CategorySetupModalProps) {
           {/* Trade template grid */}
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
             {TRADE_TEMPLATES.map((tpl) => {
-              const Icon = TEMPLATE_ICONS[tpl.id] ?? Building2;
+              const FirstCatIcon = ICON_MAP[tpl.categories[0]?.icon ?? ""] ?? Package2;
               const isSelected = selected.has(tpl.id);
               return (
                 <button
@@ -213,17 +217,21 @@ function CategorySetupModal({ open, onDone }: CategorySetupModalProps) {
                       <Check className="h-3 w-3 text-primary-foreground" />
                     </div>
                   )}
-                  <Icon className={cn("h-5 w-5 mb-2.5", isSelected ? "text-primary" : "text-muted-foreground")} />
+                  <FirstCatIcon className={cn("h-5 w-5 mb-2.5", isSelected ? "text-primary" : "text-muted-foreground")} />
                   <p className={cn("text-[13px] font-semibold", isSelected ? "text-primary" : "text-foreground")}>
                     {tpl.name}
                   </p>
                   <p className="text-[11px] text-muted-foreground mt-0.5 leading-snug">{tpl.description}</p>
                   <div className="mt-3 flex flex-wrap gap-1">
-                    {tpl.categories.slice(0, 4).map((c) => (
-                      <span key={c} className="inline-flex items-center rounded px-1.5 py-0.5 text-[10px] bg-muted text-muted-foreground">
-                        {c}
-                      </span>
-                    ))}
+                    {tpl.categories.slice(0, 4).map((c) => {
+                      const CatIcon = ICON_MAP[c.icon] ?? Package2;
+                      return (
+                        <span key={c.name} className="inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] bg-muted text-muted-foreground">
+                          <CatIcon className="h-2.5 w-2.5" />
+                          {c.name}
+                        </span>
+                      );
+                    })}
                     {tpl.categories.length > 4 && (
                       <span className="inline-flex items-center rounded px-1.5 py-0.5 text-[10px] bg-muted text-muted-foreground">
                         +{tpl.categories.length - 4} more
@@ -236,10 +244,55 @@ function CategorySetupModal({ open, onDone }: CategorySetupModalProps) {
           </div>
 
           {/* Custom categories */}
-          <div>
-            <p className="text-[11px] uppercase tracking-wider text-muted-foreground font-medium mb-2.5">
+          <div className="space-y-3">
+            <p className="text-[11px] uppercase tracking-wider text-muted-foreground font-medium">
               Add custom categories
             </p>
+
+            {/* Icon picker */}
+            <div className="rounded-lg border border-border bg-surface/40 p-3 space-y-2">
+              <div className="flex items-center gap-2">
+                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-border bg-background">
+                  <SelectedIconCmp className="h-4 w-4 text-muted-foreground" />
+                </div>
+                <input
+                  value={iconSearch}
+                  onChange={(e) => setIconSearch(e.target.value)}
+                  placeholder="Search icons…"
+                  className="h-7 flex-1 rounded border border-input bg-background px-2 text-[12px] focus:outline-none focus:ring-1 focus:ring-ring"
+                />
+              </div>
+              <div className="max-h-40 overflow-y-auto space-y-2 pr-1">
+                {filteredIconGroups.map((group) => (
+                  <div key={group.label}>
+                    <p className="text-[9.5px] uppercase tracking-wider text-muted-foreground/60 font-medium mb-1">{group.label}</p>
+                    <div className="flex flex-wrap gap-1">
+                      {group.icons.map((iconName) => {
+                        const Icon = ICON_MAP[iconName] ?? Package2;
+                        return (
+                          <button
+                            key={iconName}
+                            type="button"
+                            title={iconName}
+                            onClick={() => setCustomIcon(iconName)}
+                            className={cn(
+                              "flex h-7 w-7 items-center justify-center rounded transition-colors",
+                              customIcon === iconName
+                                ? "bg-primary text-primary-foreground"
+                                : "bg-background border border-border text-muted-foreground hover:text-foreground hover:border-primary/40",
+                            )}
+                          >
+                            <Icon className="h-3.5 w-3.5" />
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Name input + add */}
             <div className="flex gap-2">
               <input
                 value={customInput}
@@ -257,16 +310,21 @@ function CategorySetupModal({ open, onDone }: CategorySetupModalProps) {
                 Add
               </button>
             </div>
+
             {customList.length > 0 && (
-              <div className="mt-2.5 flex flex-wrap gap-1.5">
-                {customList.map((cat) => (
-                  <span key={cat} className="inline-flex items-center gap-1 rounded-full border border-border bg-surface px-2.5 py-1 text-[12px]">
-                    {cat}
-                    <button type="button" onClick={() => removeCustom(cat)} className="text-muted-foreground hover:text-foreground transition-colors">
-                      <X className="h-3 w-3" />
-                    </button>
-                  </span>
-                ))}
+              <div className="flex flex-wrap gap-1.5">
+                {customList.map((cat) => {
+                  const Icon = ICON_MAP[cat.icon] ?? Package2;
+                  return (
+                    <span key={cat.name} className="inline-flex items-center gap-1.5 rounded-full border border-border bg-surface px-2.5 py-1 text-[12px]">
+                      <Icon className="h-3 w-3 text-muted-foreground" />
+                      {cat.name}
+                      <button type="button" onClick={() => removeCustom(cat.name)} className="text-muted-foreground hover:text-foreground transition-colors">
+                        <X className="h-3 w-3" />
+                      </button>
+                    </span>
+                  );
+                })}
               </div>
             )}
           </div>
@@ -299,12 +357,7 @@ interface CategoryCardProps {
 }
 
 function CategoryCard({ category, itemCount, onClick }: CategoryCardProps) {
-  const initials = category.name
-    .split(" ")
-    .map((w) => w[0])
-    .join("")
-    .slice(0, 2)
-    .toUpperCase();
+  const Icon = ICON_MAP[category.icon] ?? Package2;
 
   return (
     <button
@@ -317,12 +370,10 @@ function CategoryCard({ category, itemCount, onClick }: CategoryCardProps) {
         className="flex items-center justify-center h-32 w-full relative"
         style={{ backgroundColor: `${category.color}18` }}
       >
-        <span
-          className="text-[36px] font-black select-none leading-none"
-          style={{ color: `${category.color}60` }}
-        >
-          {initials}
-        </span>
+        <Icon
+          className="h-10 w-10"
+          style={{ color: `${category.color}90` }}
+        />
         <ChevronRight className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/20 group-hover:text-muted-foreground/50 transition-colors" />
       </div>
 

@@ -1,8 +1,13 @@
+export interface TemplateCategory {
+  name: string;
+  icon: string;
+}
+
 export interface TradeTemplate {
   id: string;
   name: string;
   description: string;
-  categories: string[];
+  categories: TemplateCategory[];
 }
 
 export const TRADE_TEMPLATES: TradeTemplate[] = [
@@ -10,37 +15,78 @@ export const TRADE_TEMPLATES: TradeTemplate[] = [
     id: "av",
     name: "Audio/Visual",
     description: "Conference rooms, displays, AV distribution, and control systems",
-    categories: ["Displays & Projection", "Audio Equipment", "Video Distribution", "Control Systems", "Structured Cabling", "Labor"],
+    categories: [
+      { name: "Displays & Projection", icon: "Monitor" },
+      { name: "Audio Equipment",       icon: "Volume2" },
+      { name: "Video Distribution",    icon: "Video" },
+      { name: "Control Systems",       icon: "Settings2" },
+      { name: "Structured Cabling",    icon: "Cable" },
+      { name: "Labor",                 icon: "Wrench" },
+    ],
   },
   {
     id: "security",
     name: "Security",
     description: "Surveillance cameras, access control, and intrusion detection",
-    categories: ["Cameras", "Access Control", "Intrusion Detection", "Video Management", "Intercoms & Gates", "Labor"],
+    categories: [
+      { name: "Cameras",            icon: "Camera" },
+      { name: "Access Control",     icon: "KeyRound" },
+      { name: "Intrusion Detection",icon: "ShieldAlert" },
+      { name: "Video Management",   icon: "Monitor" },
+      { name: "Intercoms & Gates",  icon: "Bell" },
+      { name: "Labor",              icon: "Wrench" },
+    ],
   },
   {
     id: "hvac",
     name: "HVAC",
     description: "Heating, cooling, ventilation, and environmental controls",
-    categories: ["Heating Equipment", "Cooling Equipment", "Controls & Thermostats", "Refrigerants", "Ductwork", "Labor"],
+    categories: [
+      { name: "Heating Equipment",     icon: "Flame" },
+      { name: "Cooling Equipment",     icon: "Snowflake" },
+      { name: "Controls & Thermostats",icon: "Thermometer" },
+      { name: "Refrigerants",          icon: "Droplets" },
+      { name: "Ductwork",              icon: "Wind" },
+      { name: "Labor",                 icon: "Wrench" },
+    ],
   },
   {
     id: "plumbing",
     name: "Plumbing",
     description: "Pipes, fixtures, water heaters, and pumps",
-    categories: ["Pipes & Fittings", "Valves & Controls", "Fixtures & Trim", "Water Heaters", "Pumps", "Labor"],
+    categories: [
+      { name: "Pipes & Fittings", icon: "Gauge" },
+      { name: "Valves & Controls",icon: "Settings" },
+      { name: "Fixtures & Trim",  icon: "Droplet" },
+      { name: "Water Heaters",    icon: "Flame" },
+      { name: "Pumps",            icon: "Zap" },
+      { name: "Labor",            icon: "Wrench" },
+    ],
   },
   {
     id: "electrical",
     name: "Electrical",
     description: "Wire, conduit, panels, fixtures, and devices",
-    categories: ["Wire & Conduit", "Panels & Breakers", "Fixtures & Lighting", "Devices & Switches", "Labor"],
+    categories: [
+      { name: "Wire & Conduit",     icon: "Zap" },
+      { name: "Panels & Breakers",  icon: "Cpu" },
+      { name: "Fixtures & Lighting",icon: "Lightbulb" },
+      { name: "Devices & Switches", icon: "ToggleLeft" },
+      { name: "Labor",              icon: "Wrench" },
+    ],
   },
   {
     id: "general",
     name: "General Contractor",
     description: "Framing, concrete, roofing, insulation, and finishes",
-    categories: ["Lumber & Framing", "Concrete & Masonry", "Roofing", "Insulation", "Doors & Windows", "Labor"],
+    categories: [
+      { name: "Lumber & Framing",  icon: "Hammer" },
+      { name: "Concrete & Masonry",icon: "Layers" },
+      { name: "Roofing",           icon: "Home" },
+      { name: "Insulation",        icon: "Box" },
+      { name: "Doors & Windows",   icon: "DoorOpen" },
+      { name: "Labor",             icon: "Wrench" },
+    ],
   },
 ];
 
