@@ -569,6 +569,70 @@ export type Database = {
           },
         ]
       }
+      role_permissions: {
+        Row: {
+          can_write: boolean
+          id: string
+          module: Database["public"]["Enums"]["app_module"]
+          role_id: string
+        }
+        Insert: {
+          can_write?: boolean
+          id?: string
+          module: Database["public"]["Enums"]["app_module"]
+          role_id: string
+        }
+        Update: {
+          can_write?: boolean
+          id?: string
+          module?: Database["public"]["Enums"]["app_module"]
+          role_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "role_permissions_role_id_fkey"
+            columns: ["role_id"]
+            isOneToOne: false
+            referencedRelation: "roles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      roles: {
+        Row: {
+          color: string
+          created_at: string
+          id: string
+          is_default: boolean
+          name: string
+          tenant_id: string
+        }
+        Insert: {
+          color?: string
+          created_at?: string
+          id?: string
+          is_default?: boolean
+          name: string
+          tenant_id: string
+        }
+        Update: {
+          color?: string
+          created_at?: string
+          id?: string
+          is_default?: boolean
+          name?: string
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "roles_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       service_tickets: {
         Row: {
           assigned_to: string | null
@@ -661,63 +725,135 @@ export type Database = {
           },
         ]
       }
-      role_permissions: {
+      stock_items: {
         Row: {
-          can_write: boolean
+          catalog_item_id: string | null
+          category: string
+          created_at: string
+          description: string
           id: string
-          module: Database["public"]["Enums"]["app_module"]
-          role_id: string
+          image_url: string | null
+          is_active: boolean
+          location_bin: string
+          manufacturer_name: string
+          max_stock_level: number
+          min_stock_level: number
+          name: string
+          qty_on_hand: number
+          sku: string
+          tenant_id: string
+          unit_cost: number
+          unit_of_measure: string
+          updated_at: string
         }
         Insert: {
-          can_write?: boolean
+          catalog_item_id?: string | null
+          category?: string
+          created_at?: string
+          description?: string
           id?: string
-          module: Database["public"]["Enums"]["app_module"]
-          role_id: string
+          image_url?: string | null
+          is_active?: boolean
+          location_bin?: string
+          manufacturer_name?: string
+          max_stock_level?: number
+          min_stock_level?: number
+          name: string
+          qty_on_hand?: number
+          sku?: string
+          tenant_id: string
+          unit_cost?: number
+          unit_of_measure?: string
+          updated_at?: string
         }
         Update: {
-          can_write?: boolean
+          catalog_item_id?: string | null
+          category?: string
+          created_at?: string
+          description?: string
           id?: string
-          module?: Database["public"]["Enums"]["app_module"]
-          role_id?: string
+          image_url?: string | null
+          is_active?: boolean
+          location_bin?: string
+          manufacturer_name?: string
+          max_stock_level?: number
+          min_stock_level?: number
+          name?: string
+          qty_on_hand?: number
+          sku?: string
+          tenant_id?: string
+          unit_cost?: number
+          unit_of_measure?: string
+          updated_at?: string
         }
         Relationships: [
           {
-            foreignKeyName: "role_permissions_role_id_fkey"
-            columns: ["role_id"]
+            foreignKeyName: "stock_items_catalog_item_id_fkey"
+            columns: ["catalog_item_id"]
             isOneToOne: false
-            referencedRelation: "roles"
+            referencedRelation: "catalog_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_items_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
             referencedColumns: ["id"]
           },
         ]
       }
-      roles: {
+      stock_movements: {
         Row: {
-          color: string
           created_at: string
+          created_by: string | null
           id: string
-          is_default: boolean
-          name: string
+          job_reference: string | null
+          note: string | null
+          qty_delta: number
+          stock_item_id: string
           tenant_id: string
+          type: string
         }
         Insert: {
-          color?: string
           created_at?: string
+          created_by?: string | null
           id?: string
-          is_default?: boolean
-          name: string
+          job_reference?: string | null
+          note?: string | null
+          qty_delta: number
+          stock_item_id: string
           tenant_id: string
+          type: string
         }
         Update: {
-          color?: string
           created_at?: string
+          created_by?: string | null
           id?: string
-          is_default?: boolean
-          name?: string
+          job_reference?: string | null
+          note?: string | null
+          qty_delta?: number
+          stock_item_id?: string
           tenant_id?: string
+          type?: string
         }
         Relationships: [
           {
-            foreignKeyName: "roles_tenant_id_fkey"
+            foreignKeyName: "stock_movements_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "user_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_movements_stock_item_id_fkey"
+            columns: ["stock_item_id"]
+            isOneToOne: false
+            referencedRelation: "stock_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_movements_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"

@@ -3,9 +3,13 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useMeta } from "@/contexts/PageMetaContext";
 import { currency } from "@/lib/demo-data";
 import { cn } from "@/lib/utils";
+import { createClient } from "@/lib/supabase/client";
+
+const supabase = createClient();
 import {
   AlertTriangle, ArrowDownToLine, ArrowUpFromLine, Camera,
   ChevronRight, ImagePlus, Info, LayoutGrid, List, Lock, MapPin, Pencil,
@@ -180,180 +184,72 @@ interface CatalogLookupItem {
   name: string;
   sku: string;
   manufacturerName: string;
-  category: Category;
   unitCost: number;
+  unitOfMeasure: string;
 }
 
-const CATALOG_LOOKUP: CatalogLookupItem[] = [
-  { id: "ci-101", name: "Axis P3245-V Fixed Dome Camera",       sku: "AX-P3245-V",    manufacturerName: "Axis Communications", category: "camera",         unitCost: 420  },
-  { id: "ci-102", name: "Axis A1001 Network Door Controller",   sku: "AX-A1001",       manufacturerName: "Axis Communications", category: "access_control", unitCost: 680  },
-  { id: "ci-103", name: "Axis M3106-L MkII Mini Dome",          sku: "AX-M3106L",      manufacturerName: "Axis Communications", category: "camera",         unitCost: 180  },
-  { id: "ci-201", name: "Verkada CD52 Indoor Dome Camera",      sku: "VK-CD52",        manufacturerName: "Verkada",             category: "camera",         unitCost: 590  },
-  { id: "ci-202", name: "Verkada AD31 Access Controller",       sku: "VK-AD31",        manufacturerName: "Verkada",             category: "access_control", unitCost: 890  },
-  { id: "ci-301", name: "Leviton GigaMax 5e QuickPort Jack",    sku: "LV-5G108-RW5",   manufacturerName: "Leviton",             category: "networking",     unitCost: 28   },
-  { id: "ci-302", name: 'Leviton 42" 2-Post Open Frame Rack',  sku: "LV-47612-FR",    manufacturerName: "Leviton",             category: "cable_hardware", unitCost: 285  },
-  { id: "ci-401", name: "Biamp Tesira Forte AVB VT4",           sku: "BA-TESIRA-VT4",  manufacturerName: "Biamp",               category: "audio_video",    unitCost: 2240 },
-  { id: "ci-402", name: "Biamp Parlé TCM-1 Ceiling Mic",        sku: "BA-PARLE-TCM1",  manufacturerName: "Biamp",               category: "audio_video",    unitCost: 890  },
-  { id: "ci-501", name: "Camera Install — per drop",            sku: "INT-CAM-DROP",   manufacturerName: "Internal / Custom",   category: "labor",          unitCost: 55   },
-  { id: "ci-502", name: "Low-Voltage Cable Run",                sku: "INT-LV-RUN",     manufacturerName: "Internal / Custom",   category: "cable_hardware", unitCost: 40   },
-];
+// ─── DB ↔ UI mappers ──────────────────────────────────────────────────────────
 
-// ─── Demo data ────────────────────────────────────────────────────────────────
+type DbStockItem = {
+  id: string;
+  catalog_item_id: string | null;
+  name: string;
+  sku: string;
+  category: string;
+  description: string;
+  unit_cost: number;
+  unit_of_measure: string;
+  manufacturer_name: string;
+  location_bin: string;
+  qty_on_hand: number;
+  min_stock_level: number;
+  max_stock_level: number;
+  image_url: string | null;
+  is_active: boolean;
+};
 
-const INITIAL_MANUFACTURERS: StockManufacturer[] = [
-  { id: "sm-1", name: "Axis Communications", logoInitials: "AX", categories: ["Camera", "Access Control"] },
-  { id: "sm-2", name: "Verkada",             logoInitials: "VK", categories: ["Camera", "Access Control"] },
-  { id: "sm-3", name: "Leviton",             logoInitials: "LV", categories: ["Networking", "Infrastructure"] },
-  { id: "sm-4", name: "Biamp",               logoInitials: "BA", categories: ["Audio/Video"] },
-  { id: "sm-5", name: "Misc / Consumables",  logoInitials: "MC", categories: ["Cable", "Hardware"] },
-];
+type DbStockMovement = {
+  id: string;
+  type: string;
+  qty_delta: number;
+  note: string | null;
+  job_reference: string | null;
+  created_at: string;
+  user_profiles: { full_name: string | null } | null;
+};
 
-const INITIAL_ITEMS: StockItem[] = [
-  {
-    id: "si-1", catalogItemId: "ci-101", name: "Axis P3245-V Fixed Dome Camera",
-    sku: "AX-P3245-V", category: "camera", manufacturerName: "Axis Communications",
-    description: "Fixed dome 1080p, WDR, IR to 10m, IP66/IK10.",
-    unitCost: 420, unitOfMeasure: "ea", locationBin: "Warehouse Shelf A1",
-    qtyOnHand: 14, minStockLevel: 5, maxStockLevel: 25, imageUrl: null, isActive: true,
-    movements: [
-      { id: "m-1-5", type: "adjusted", qtyDelta: +1,  note: "Cycle count — found one unit",             jobReference: null,                               createdAt: "Jun 8, 2026",  createdBy: "Justin Shader" },
-      { id: "m-1-4", type: "consumed", qtyDelta: -3,  note: null,                                       jobReference: "PRJ-0023 — Halcyon Schools Phase 1", createdAt: "Jun 5, 2026",  createdBy: "Tyler Brant"   },
-      { id: "m-1-3", type: "consumed", qtyDelta: -4,  note: null,                                       jobReference: "PRJ-0021 — Vertex Capital 14F",      createdAt: "Jun 3, 2026",  createdBy: "Justin Shader" },
-      { id: "m-1-2", type: "consumed", qtyDelta: -3,  note: null,                                       jobReference: "PRJ-0019 — Pinecrest Hospitality",   createdAt: "May 22, 2026", createdBy: "Tyler Brant"   },
-      { id: "m-1-1", type: "received", qtyDelta: +24, note: "Initial stock receipt",                    jobReference: "PO-1178",                            createdAt: "Jun 1, 2026",  createdBy: "System"        },
-    ],
-  },
-  {
-    id: "si-2", catalogItemId: "ci-103", name: "Axis M3106-L MkII Mini Dome",
-    sku: "AX-M3106L", category: "camera", manufacturerName: "Axis Communications",
-    description: "Compact 4MP fixed mini dome, 2.8mm lens, indoor ceiling.",
-    unitCost: 180, unitOfMeasure: "ea", locationBin: "Warehouse Shelf A1",
-    qtyOnHand: 3, minStockLevel: 8, maxStockLevel: 30, imageUrl: null, isActive: true,
-    movements: [
-      { id: "m-2-3", type: "consumed", qtyDelta: -4,  note: null,                   jobReference: "PRJ-0022 — Helio Health 3F",       createdAt: "Jun 2, 2026",  createdBy: "Elise Morales" },
-      { id: "m-2-2", type: "consumed", qtyDelta: -3,  note: null,                   jobReference: "PRJ-0019 — Pinecrest Hospitality", createdAt: "May 22, 2026", createdBy: "Tyler Brant"   },
-      { id: "m-2-1", type: "received", qtyDelta: +10, note: "Initial order receipt", jobReference: "PO-1176",                         createdAt: "May 15, 2026", createdBy: "System"        },
-    ],
-  },
-  {
-    id: "si-3", catalogItemId: "ci-102", name: "Axis A1001 Network Door Controller",
-    sku: "AX-A1001", category: "access_control", manufacturerName: "Axis Communications",
-    description: "2-door network controller, OSDP/Wiegand, PoE-powered.",
-    unitCost: 680, unitOfMeasure: "ea", locationBin: "Cage B",
-    qtyOnHand: 0, minStockLevel: 2, maxStockLevel: 10, imageUrl: null, isActive: true,
-    movements: [
-      { id: "m-3-3", type: "consumed", qtyDelta: -3, note: null,                   jobReference: "PRJ-0020 — Quay Residential Lobby", createdAt: "May 28, 2026", createdBy: "Tyler Brant"   },
-      { id: "m-3-2", type: "consumed", qtyDelta: -2, note: null,                   jobReference: "PRJ-0017 — Vertex Capital Lobby",   createdAt: "Apr 18, 2026", createdBy: "Justin Shader" },
-      { id: "m-3-1", type: "received", qtyDelta: +5, note: "Initial stock receipt", jobReference: "PO-1172",                          createdAt: "Apr 10, 2026", createdBy: "System"        },
-    ],
-  },
-  {
-    id: "si-4", catalogItemId: "ci-201", name: "Verkada CD52 Indoor Dome Camera",
-    sku: "VK-CD52", category: "camera", manufacturerName: "Verkada",
-    description: "5MP IR dome, cloud-managed, 30-day onboard storage, PoE.",
-    unitCost: 590, unitOfMeasure: "ea", locationBin: "Warehouse Shelf A2",
-    qtyOnHand: 8, minStockLevel: 4, maxStockLevel: 20, imageUrl: null, isActive: true,
-    movements: [
-      { id: "m-4-2", type: "consumed", qtyDelta: -4,  note: null,                   jobReference: "PRJ-0024 — Cinder & Oak", createdAt: "Jun 6, 2026", createdBy: "Elise Morales" },
-      { id: "m-4-1", type: "received", qtyDelta: +12, note: "Verkada bulk order",    jobReference: "PO-1179",                 createdAt: "Jun 3, 2026", createdBy: "System"        },
-    ],
-  },
-  {
-    id: "si-5", catalogItemId: null, name: "Verkada AD31 Access Controller",
-    sku: "VK-AD31", category: "access_control", manufacturerName: "Verkada",
-    description: "Cloud-based door controller, 2 readers, built-in Bluetooth.",
-    unitCost: 890, unitOfMeasure: "ea", locationBin: "Cage B",
-    qtyOnHand: 5, minStockLevel: 2, maxStockLevel: 12, imageUrl: null, isActive: true,
-    movements: [
-      { id: "m-5-3", type: "adjusted", qtyDelta: -1, note: "RMA — defective unit", jobReference: null,                          createdAt: "Jun 4, 2026",  createdBy: "Elise Morales" },
-      { id: "m-5-2", type: "consumed", qtyDelta: -2, note: null,                   jobReference: "PRJ-0022 — Helio Health 3F",  createdAt: "Jun 1, 2026",  createdBy: "Justin Shader" },
-      { id: "m-5-1", type: "received", qtyDelta: +8, note: "Verkada access order", jobReference: "PO-1177",                     createdAt: "May 28, 2026", createdBy: "System"        },
-    ],
-  },
-  {
-    id: "si-6", catalogItemId: "ci-301", name: "Leviton GigaMax Cat5e QuickPort Jack",
-    sku: "LV-5G108-RW5", category: "networking", manufacturerName: "Leviton",
-    description: "Cat5e QuickPort jack, 110-style termination, white. Pack of 25.",
-    unitCost: 28, unitOfMeasure: "box", locationBin: "Warehouse Shelf A3",
-    qtyOnHand: 48, minStockLevel: 10, maxStockLevel: 40, imageUrl: null, isActive: true,
-    movements: [
-      { id: "m-6-3", type: "consumed", qtyDelta: -7,  note: "Terminations — various projects", jobReference: null,      createdAt: "Jun 5, 2026",  createdBy: "Tyler Brant" },
-      { id: "m-6-2", type: "received", qtyDelta: +30, note: "Top-up order",                    jobReference: "PO-1180", createdAt: "May 20, 2026", createdBy: "System"      },
-      { id: "m-6-1", type: "received", qtyDelta: +25, note: "Bulk networking order",            jobReference: "PO-1175", createdAt: "Apr 5, 2026",  createdBy: "System"      },
-    ],
-  },
-  {
-    id: "si-7", catalogItemId: "ci-302", name: 'Leviton 42" 2-Post Open Frame Rack',
-    sku: "LV-47612-FR", category: "cable_hardware", manufacturerName: "Leviton",
-    description: "42U two-post open frame rack, 19-inch, 400 lb capacity.",
-    unitCost: 285, unitOfMeasure: "ea", locationBin: "Warehouse Shelf A4",
-    qtyOnHand: 2, minStockLevel: 1, maxStockLevel: 6, imageUrl: null, isActive: true,
-    movements: [
-      { id: "m-7-3", type: "consumed", qtyDelta: -1, note: null,         jobReference: "PRJ-0021 — Vertex Capital 14F",   createdAt: "Jun 4, 2026",  createdBy: "Tyler Brant"   },
-      { id: "m-7-2", type: "consumed", qtyDelta: -1, note: null,         jobReference: "PRJ-0018 — Northbeam Architects", createdAt: "Apr 22, 2026", createdBy: "Justin Shader" },
-      { id: "m-7-1", type: "received", qtyDelta: +4, note: "Rack order", jobReference: "PO-1171",                         createdAt: "Mar 12, 2026", createdBy: "System"        },
-    ],
-  },
-  {
-    id: "si-8", catalogItemId: "ci-401", name: "Biamp Tesira Forte AVB VT4",
-    sku: "BA-TESIRA-VT4", category: "audio_video", manufacturerName: "Biamp",
-    description: "Fixed I/O DSP, 4-in/4-out, AVB/DANTE, AEC, rackmount.",
-    unitCost: 2240, unitOfMeasure: "ea", locationBin: "Van 1",
-    qtyOnHand: 1, minStockLevel: 2, maxStockLevel: 8, imageUrl: null, isActive: true,
-    movements: [
-      { id: "m-8-3", type: "consumed", qtyDelta: -1, note: null,              jobReference: "PRJ-0021 — Vertex Capital 14F",  createdAt: "May 15, 2026", createdBy: "Elise Morales" },
-      { id: "m-8-2", type: "consumed", qtyDelta: -1, note: null,              jobReference: "PRJ-0019 — Pinecrest Boardroom", createdAt: "Apr 30, 2026", createdBy: "Justin Shader" },
-      { id: "m-8-1", type: "received", qtyDelta: +3, note: "Biamp DSP order", jobReference: "PO-1173",                        createdAt: "Mar 25, 2026", createdBy: "System"        },
-    ],
-  },
-  {
-    id: "si-9", catalogItemId: "ci-402", name: "Biamp Parlé TCM-1 Ceiling Mic",
-    sku: "BA-PARLE-TCM1", category: "audio_video", manufacturerName: "Biamp",
-    description: "Beamtracking ceiling microphone, 360° coverage, PoE.",
-    unitCost: 890, unitOfMeasure: "ea", locationBin: "Van 1",
-    qtyOnHand: 6, minStockLevel: 3, maxStockLevel: 16, imageUrl: null, isActive: true,
-    movements: [
-      { id: "m-9-2", type: "consumed", qtyDelta: -2, note: null,              jobReference: "PRJ-0019 — Pinecrest Boardroom", createdAt: "Apr 30, 2026", createdBy: "Justin Shader" },
-      { id: "m-9-1", type: "received", qtyDelta: +8, note: "Biamp mic order", jobReference: "PO-1174",                        createdAt: "Apr 1, 2026",  createdBy: "System"        },
-    ],
-  },
-  {
-    id: "si-10", catalogItemId: null, name: "Cat6 Cable 1000ft Bulk Box",
-    sku: "CAT6-BULK-1K", category: "networking", manufacturerName: "Misc / Consumables",
-    description: "Cat6 UTP 1000ft pull box, 23AWG, CMR-rated, blue.",
-    unitCost: 110, unitOfMeasure: "box", locationBin: "Warehouse Shelf A3",
-    qtyOnHand: 2, minStockLevel: 3, maxStockLevel: 12, imageUrl: null, isActive: true,
-    movements: [
-      { id: "m-10-3", type: "consumed", qtyDelta: -1, note: "Additional drops", jobReference: "PRJ-0023 — Halcyon Schools",  createdAt: "Jun 3, 2026",  createdBy: "Tyler Brant" },
-      { id: "m-10-2", type: "consumed", qtyDelta: -2, note: null,               jobReference: "PRJ-0022 — Helio Health 3F",  createdAt: "May 30, 2026", createdBy: "Tyler Brant" },
-      { id: "m-10-1", type: "received", qtyDelta: +5, note: "Bulk cable order", jobReference: "PO-1176",                     createdAt: "May 15, 2026", createdBy: "System"      },
-    ],
-  },
-  {
-    id: "si-11", catalogItemId: null, name: "HDMI 2.1 Cable 6ft",
-    sku: "HDMI-2-6FT", category: "audio_video", manufacturerName: "Misc / Consumables",
-    description: "HDMI 2.1 cable, 6ft, 48Gbps, supports 8K@60Hz.",
-    unitCost: 22, unitOfMeasure: "ea", locationBin: "Van 2",
-    qtyOnHand: 24, minStockLevel: 10, maxStockLevel: 50, imageUrl: null, isActive: true,
-    movements: [
-      { id: "m-11-4", type: "returned", qtyDelta: +1,  note: "Spare returned from site",  jobReference: "PRJ-0019",                      createdAt: "Jun 5, 2026",  createdBy: "Elise Morales" },
-      { id: "m-11-3", type: "consumed", qtyDelta: -2,  note: null,                         jobReference: "PRJ-0021 — Vertex Capital 14F",  createdAt: "Jun 4, 2026",  createdBy: "Tyler Brant"   },
-      { id: "m-11-2", type: "consumed", qtyDelta: -3,  note: null,                         jobReference: "PRJ-0019 — Pinecrest Boardroom", createdAt: "Apr 30, 2026", createdBy: "Justin Shader" },
-      { id: "m-11-1", type: "received", qtyDelta: +28, note: "Initial cable stock",        jobReference: "PO-1170",                        createdAt: "Feb 28, 2026", createdBy: "System"        },
-    ],
-  },
-  {
-    id: "si-12", catalogItemId: null, name: "Single-Gang Low-Voltage Mounting Plate",
-    sku: "MISC-SGMNT", category: "misc", manufacturerName: "Misc / Consumables",
-    description: "Low-voltage single-gang mounting bracket, ivory/white, clamshell pack of 10.",
-    unitCost: 3, unitOfMeasure: "ea", locationBin: "Warehouse Shelf A4",
-    qtyOnHand: 45, minStockLevel: 20, maxStockLevel: 100, imageUrl: null, isActive: true,
-    movements: [
-      { id: "m-12-2", type: "consumed", qtyDelta: -5,  note: "Various installs",   jobReference: null,      createdAt: "Jun 5, 2026", createdBy: "Tyler Brant" },
-      { id: "m-12-1", type: "received", qtyDelta: +50, note: "Bulk hardware order", jobReference: "PO-1175", createdAt: "Apr 5, 2026", createdBy: "System"      },
-    ],
-  },
-];
+function toStockItem(r: DbStockItem): StockItem {
+  return {
+    id:               r.id,
+    catalogItemId:    r.catalog_item_id,
+    name:             r.name,
+    sku:              r.sku,
+    category:         r.category as Category,
+    description:      r.description,
+    unitCost:         Number(r.unit_cost),
+    unitOfMeasure:    r.unit_of_measure,
+    manufacturerName: r.manufacturer_name,
+    locationBin:      r.location_bin,
+    qtyOnHand:        r.qty_on_hand,
+    minStockLevel:    r.min_stock_level,
+    maxStockLevel:    r.max_stock_level,
+    imageUrl:         r.image_url,
+    isActive:         r.is_active,
+    movements:        [],
+  };
+}
+
+function toStockMovement(r: DbStockMovement): StockMovement {
+  return {
+    id:           r.id,
+    type:         r.type as MovementType,
+    qtyDelta:     r.qty_delta,
+    note:         r.note,
+    jobReference: r.job_reference,
+    createdAt:    new Date(r.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }),
+    createdBy:    r.user_profiles?.full_name ?? "System",
+  };
+}
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -613,9 +509,12 @@ interface StockItemDrawerProps {
   onClose: () => void;
   onSwitchToEdit: () => void;
   onSave: (item: StockItem) => void;
+  movements: StockMovement[];
+  isLoadingMovements?: boolean;
+  catalogItems: CatalogLookupItem[];
 }
 
-function StockItemDrawer({ open, item, mode, onClose, onSwitchToEdit, onSave }: StockItemDrawerProps) {
+function StockItemDrawer({ open, item, mode, onClose, onSwitchToEdit, onSave, movements, isLoadingMovements, catalogItems }: StockItemDrawerProps) {
   const idRef = useRef(0);
 
   const defaultValues: StockItemFormValues = item
@@ -671,13 +570,13 @@ function StockItemDrawer({ open, item, mode, onClose, onSwitchToEdit, onSave }: 
   function handleCatalogLink(id: string) {
     form.setValue("catalogItemId", id || null);
     if (id) {
-      const cat = CATALOG_LOOKUP.find((c) => c.id === id);
+      const cat = catalogItems.find((c) => c.id === id);
       if (cat) {
         form.setValue("name",             cat.name);
         form.setValue("sku",              cat.sku);
         form.setValue("manufacturerName", cat.manufacturerName);
-        form.setValue("category",         cat.category);
         form.setValue("unitCost",         cat.unitCost);
+        form.setValue("unitOfMeasure",    cat.unitOfMeasure);
       }
     }
   }
@@ -716,7 +615,7 @@ function StockItemDrawer({ open, item, mode, onClose, onSwitchToEdit, onSave }: 
   }
 
   const linkedCatalogItem = watchedCatalogId
-    ? CATALOG_LOOKUP.find((c) => c.id === watchedCatalogId)
+    ? catalogItems.find((c) => c.id === watchedCatalogId)
     : null;
 
   // ── View mode ────────────────────────────────────────────────────────────────
@@ -726,7 +625,7 @@ function StockItemDrawer({ open, item, mode, onClose, onSwitchToEdit, onSave }: 
     const status = stockStatus(item);
     const sm = stockStatusMeta[status];
     const valueOnHand = item.qtyOnHand * item.unitCost;
-    const sortedMovements = [...item.movements].sort((a, b) =>
+    const sortedMovements = [...movements].sort((a, b) =>
       new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
     );
 
@@ -799,7 +698,10 @@ function StockItemDrawer({ open, item, mode, onClose, onSwitchToEdit, onSave }: 
           {/* Movement log */}
           <fieldset className="space-y-2">
             <legend className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium mb-2">Movement Log</legend>
-            <MovementLog movements={sortedMovements} />
+            {isLoadingMovements
+              ? <p className="text-[11.5px] text-muted-foreground/60 italic">Loading movements…</p>
+              : <MovementLog movements={sortedMovements} />
+            }
           </fieldset>
         </div>
 
@@ -852,7 +754,7 @@ function StockItemDrawer({ open, item, mode, onClose, onSwitchToEdit, onSave }: 
                     className="h-8 w-full rounded-md border border-input bg-background px-3 text-[13px] focus:outline-none focus:ring-1 focus:ring-ring"
                   >
                     <option value="">Select catalog item…</option>
-                    {CATALOG_LOOKUP.map((c) => (
+                    {catalogItems.map((c) => (
                       <option key={c.id} value={c.id}>{c.name} — {c.sku}</option>
                     ))}
                   </select>
@@ -941,7 +843,9 @@ function StockItemDrawer({ open, item, mode, onClose, onSwitchToEdit, onSave }: 
                         <Input {...field} list="mfr-suggestions" placeholder="e.g. Axis Communications" className="h-8 text-[13px]" />
                       </FormControl>
                       <datalist id="mfr-suggestions">
-                        {INITIAL_MANUFACTURERS.map((m) => <option key={m.id} value={m.name} />)}
+                        {Array.from(new Set(catalogItems.map((c) => c.manufacturerName).filter(Boolean))).map((name) => (
+                          <option key={name} value={name} />
+                        ))}
                       </datalist>
                       <FormMessage className="text-[11px]" />
                     </FormItem>
@@ -1305,9 +1209,42 @@ type StatusFilterValue = "all" | StockStatus | "needs_attention";
 
 function StockPage() {
   const { setMeta } = useMeta();
+  const qc = useQueryClient();
 
-  const [manufacturers] = useState<StockManufacturer[]>(INITIAL_MANUFACTURERS);
-  const [items, setItems] = useState<StockItem[]>(INITIAL_ITEMS);
+  // ── Queries ────────────────────────────────────────────────────────────────
+
+  const { data: items = [], isLoading: itemsLoading } = useQuery({
+    queryKey: ["stock-items"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("stock_items")
+        .select("*")
+        .order("name");
+      if (error) throw error;
+      return (data as DbStockItem[]).map(toStockItem);
+    },
+  });
+
+  const { data: catalogItems = [] } = useQuery({
+    queryKey: ["catalog-items-for-stock"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("catalog_items")
+        .select("id, name, sku, manufacturer, cost, unit_of_measure")
+        .eq("is_active", true)
+        .order("name");
+      if (error) throw error;
+      type Row = { id: string; name: string; sku: string | null; manufacturer: string | null; cost: number; unit_of_measure: string };
+      return (data ?? [] as Row[]).map((r: Row): CatalogLookupItem => ({
+        id:               r.id,
+        name:             r.name,
+        sku:              r.sku ?? "",
+        manufacturerName: r.manufacturer ?? "",
+        unitCost:         Number(r.cost),
+        unitOfMeasure:    r.unit_of_measure,
+      }));
+    },
+  });
 
   const [view, setView] = useState<"grid" | "list">("grid");
   const [drillMfr, setDrillMfr] = useState<string | null>(null);
@@ -1324,6 +1261,107 @@ function StockPage() {
 
   const [bannerDismissed, setBannerDismissed] = useState(false);
 
+  // ── Movements per open item (lazy) ─────────────────────────────────────────
+
+  const { data: movements = [], isFetching: movementsLoading } = useQuery({
+    queryKey: ["stock-movements", drawerItem?.id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("stock_movements")
+        .select("id, type, qty_delta, note, job_reference, created_at, user_profiles!created_by(full_name)")
+        .eq("stock_item_id", drawerItem!.id)
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return (data as unknown as DbStockMovement[]).map(toStockMovement);
+    },
+    enabled: !!drawerItem && drawerOpen && drawerMode === "view",
+  });
+
+  // ── Mutations ──────────────────────────────────────────────────────────────
+
+  const saveMutation = useMutation({
+    mutationFn: async (saved: StockItem) => {
+      const tenantId = qc.getQueryData<{ id: string }>(["tenant"])?.id;
+      const payload = {
+        catalog_item_id:  saved.catalogItemId,
+        name:             saved.name,
+        sku:              saved.sku,
+        category:         saved.category,
+        description:      saved.description,
+        unit_cost:        saved.unitCost,
+        unit_of_measure:  saved.unitOfMeasure,
+        manufacturer_name: saved.manufacturerName,
+        location_bin:     saved.locationBin,
+        qty_on_hand:      saved.qtyOnHand,
+        min_stock_level:  saved.minStockLevel,
+        max_stock_level:  saved.maxStockLevel,
+        is_active:        saved.isActive,
+      };
+      const isNew = !items.some((i) => i.id === saved.id);
+      if (isNew) {
+        const { data, error } = await supabase
+          .from("stock_items")
+          .insert({ ...payload, tenant_id: tenantId! })
+          .select()
+          .single();
+        if (error) throw error;
+        return { isNew: true, item: toStockItem(data as DbStockItem) };
+      } else {
+        const { data, error } = await supabase
+          .from("stock_items")
+          .update(payload)
+          .eq("id", saved.id)
+          .select()
+          .single();
+        if (error) throw error;
+        return { isNew: false, item: toStockItem(data as DbStockItem) };
+      }
+    },
+    onSuccess: ({ isNew, item }) => {
+      qc.setQueryData<StockItem[]>(["stock-items"], (prev = []) =>
+        isNew ? [...prev, item] : prev.map((i) => (i.id === item.id ? item : i)),
+      );
+      setDrawerOpen(false);
+    },
+  });
+
+  const adjustMutation = useMutation({
+    mutationFn: async ({ itemId, delta, type, jobRef, note }: {
+      itemId: string; delta: number; type: MovementType; jobRef: string; note: string;
+    }) => {
+      const tenantId = qc.getQueryData<{ id: string }>(["tenant"])?.id;
+      const { data: { user } } = await supabase.auth.getUser();
+      const currentItem = items.find((i) => i.id === itemId)!;
+      const newQty = Math.max(0, currentItem.qtyOnHand + delta);
+      const actualDelta = newQty - currentItem.qtyOnHand;
+
+      const { error: movErr } = await supabase.from("stock_movements").insert({
+        tenant_id:     tenantId!,
+        stock_item_id: itemId,
+        type,
+        qty_delta:     actualDelta,
+        note:          note.trim() || null,
+        job_reference: jobRef.trim() || null,
+        created_by:    user?.id ?? null,
+      });
+      if (movErr) throw movErr;
+
+      const { error: updErr } = await supabase
+        .from("stock_items")
+        .update({ qty_on_hand: newQty })
+        .eq("id", itemId);
+      if (updErr) throw updErr;
+
+      return { itemId, newQty };
+    },
+    onSuccess: ({ itemId, newQty }) => {
+      qc.setQueryData<StockItem[]>(["stock-items"], (prev = []) =>
+        prev.map((i) => (i.id === itemId ? { ...i, qtyOnHand: newQty } : i)),
+      );
+      qc.invalidateQueries({ queryKey: ["stock-movements", itemId] });
+    },
+  });
+
   const openNew = useCallback(() => {
     setDrawerItem(null);
     setDrawerMode("edit");
@@ -1338,6 +1376,22 @@ function StockPage() {
       onNew: openNew,
     });
   }, [setMeta, openNew]);
+
+  // ── Derived manufacturers from live items ──────────────────────────────────
+
+  const manufacturers = useMemo<StockManufacturer[]>(() => {
+    const seen = new Map<string, Set<string>>();
+    for (const item of items) {
+      if (!seen.has(item.manufacturerName)) seen.set(item.manufacturerName, new Set());
+      seen.get(item.manufacturerName)!.add(categoryMeta[item.category]?.label ?? item.category);
+    }
+    return Array.from(seen.entries()).map(([name, cats], idx) => ({
+      id:           `mfr-${idx}`,
+      name,
+      logoInitials: name.split(" ").map((w) => w[0]).join("").slice(0, 2).toUpperCase(),
+      categories:   Array.from(cats),
+    }));
+  }, [items]);
 
   const alertItems = useMemo(
     () => items.filter((i) => stockStatus(i) === "out_of_stock" || stockStatus(i) === "low_stock"),
@@ -1400,34 +1454,11 @@ function StockPage() {
   const activeMfr = manufacturers.find((m) => m.id === drillMfr);
 
   function handleSave(saved: StockItem) {
-    setItems((prev) =>
-      prev.some((i) => i.id === saved.id)
-        ? prev.map((i) => (i.id === saved.id ? saved : i))
-        : [...prev, saved],
-    );
-    setDrawerOpen(false);
+    saveMutation.mutate(saved);
   }
 
   function handleAdjust(itemId: string, delta: number, type: MovementType, jobRef: string, note: string) {
-    setItems((prev) =>
-      prev.map((item) => {
-        if (item.id !== itemId) return item;
-        const newMovement: StockMovement = {
-          id: `mov-${Date.now()}`,
-          type,
-          qtyDelta: delta,
-          note: note.trim() || null,
-          jobReference: jobRef.trim() || null,
-          createdAt: new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }),
-          createdBy: "Justin Shader",
-        };
-        return {
-          ...item,
-          qtyOnHand: Math.max(0, item.qtyOnHand + delta),
-          movements: [newMovement, ...item.movements],
-        };
-      }),
-    );
+    adjustMutation.mutate({ itemId, delta, type, jobRef, note });
   }
 
   function clearDrill() {
@@ -1548,7 +1579,7 @@ function StockPage() {
       )}
 
       {/* ── Body ─────────────────────────────────────────────────── */}
-      <div className="flex-1 overflow-y-auto p-4">
+      <div className={cn("flex-1 overflow-y-auto p-4", itemsLoading && "opacity-50")}>
 
         {view === "grid" && !drillMfr && (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
@@ -1591,21 +1622,12 @@ function StockPage() {
         onClose={() => setDrawerOpen(false)}
         onSwitchToEdit={() => setDrawerMode("edit")}
         onSave={handleSave}
+        movements={movements}
+        isLoadingMovements={movementsLoading}
+        catalogItems={catalogItems}
       />
     </div>
   );
 }
 
 export default StockPage;
-
-/*
-  SCHEMA NOTES — stock_items table
-  id, tenant_id, catalog_item_id (nullable FK → catalog_items.id), name, sku, category,
-  description, unit_cost, unit_of_measure, manufacturer_name,
-  location_bin, qty_on_hand, min_stock_level, max_stock_level,
-  image_url, is_active, created_at, updated_at
-
-  stock_movements table
-  id, tenant_id, stock_item_id (FK → stock_items.id), type (received|consumed|adjusted|returned),
-  qty_delta, note, job_reference, created_by, created_at
-*/
