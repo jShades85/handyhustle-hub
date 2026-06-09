@@ -8,6 +8,7 @@ import {
 } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { createClient } from "@/lib/supabase/client";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 export const Route = createFileRoute("/crm/companies/$companyId")({
   component: CompanyDetailPage,
@@ -109,6 +110,7 @@ function CompanyDetailPage() {
     enabled: !!company,
   });
 
+  const [editOpen, setEditOpen] = useState(false);
   const [editingNotes, setEditingNotes] = useState(false);
   const [notesText, setNotesText] = useState("");
   const notesInitialized = useRef(false);
@@ -187,6 +189,12 @@ function CompanyDetailPage() {
             <div className="flex items-center gap-2.5 flex-wrap">
               <h1 className="text-[17px] font-semibold">{company.name}</h1>
               <StageBadge stage={company.stage} />
+              <button
+                onClick={() => setEditOpen(true)}
+                className="ml-auto flex items-center gap-1.5 rounded-md border border-border px-2.5 py-1 text-[11.5px] text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
+              >
+                <Pencil className="h-3 w-3" /> Edit
+              </button>
             </div>
             <p className="text-[12.5px] text-muted-foreground mt-0.5">
               {[company.industry, company.city && company.state ? `${company.city}, ${company.state}` : company.city ?? company.state].filter(Boolean).join(" · ")}
@@ -350,6 +358,154 @@ function CompanyDetailPage() {
           </div>
         </aside>
       </div>
+
+      {/* Edit company modal */}
+      <Dialog open={editOpen} onOpenChange={setEditOpen}>
+        <EditCompanyModal
+          company={company}
+          onClose={() => setEditOpen(false)}
+          onSaved={(updated) => {
+            qc.setQueryData<DbCompany>(["company", companyId], updated);
+            setMeta({ title: updated.name, subtitle: updated.industry ?? undefined });
+            setEditOpen(false);
+          }}
+        />
+      </Dialog>
     </div>
+  );
+}
+
+// ─── Edit company modal ───────────────────────────────────────────────────────
+
+function EditCompanyModal({
+  company,
+  onClose,
+  onSaved,
+}: {
+  company: DbCompany;
+  onClose: () => void;
+  onSaved: (updated: DbCompany) => void;
+}) {
+  const inputCls  = "w-full h-8 rounded-md border border-border bg-surface px-2.5 text-[12.5px] focus:outline-none focus:ring-1 focus:ring-primary placeholder:text-muted-foreground/50";
+  const selectCls = "w-full h-8 rounded-md border border-border bg-surface px-2 text-[12.5px] focus:outline-none focus:ring-1 focus:ring-primary";
+  const labelCls  = "block text-[10px] uppercase tracking-wider text-muted-foreground mb-1";
+
+  const [form, setForm] = useState({
+    name:            company.name,
+    industry:        company.industry        ?? "",
+    stage:           company.stage,
+    phone:           company.phone           ?? "",
+    email:           company.email           ?? "",
+    website:         company.website         ?? "",
+    city:            company.city            ?? "",
+    state:           company.state           ?? "",
+    billing_address: company.billing_address ?? "",
+    service_address: company.service_address ?? "",
+  });
+
+  const set = (k: keyof typeof form) => (
+    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
+  ) => setForm((f) => ({ ...f, [k]: e.target.value }));
+
+  const { mutate, isPending } = useMutation({
+    mutationFn: async () => {
+      const supabase = createClient();
+      const { data, error } = await supabase
+        .from("companies")
+        .update({
+          name:            form.name.trim(),
+          industry:        form.industry.trim()        || null,
+          stage:           form.stage,
+          phone:           form.phone.trim()           || null,
+          email:           form.email.trim()           || null,
+          website:         form.website.trim()         || null,
+          city:            form.city.trim()            || null,
+          state:           form.state.trim()           || null,
+          billing_address: form.billing_address.trim() || null,
+          service_address: form.service_address.trim() || null,
+        })
+        .eq("id", company.id)
+        .select("id, name, industry, stage, phone, email, website, city, state, billing_address, service_address, notes")
+        .single();
+      if (error) throw error;
+      return data as DbCompany;
+    },
+    onSuccess: onSaved,
+  });
+
+  return (
+    <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+      <DialogHeader>
+        <DialogTitle>Edit Company</DialogTitle>
+      </DialogHeader>
+
+      <div className="mt-1 grid grid-cols-2 gap-3">
+        <div className="col-span-2">
+          <label className={labelCls}>Company Name <span className="text-rose-500">*</span></label>
+          <input className={inputCls} value={form.name} onChange={set("name")} />
+        </div>
+
+        <div>
+          <label className={labelCls}>Industry</label>
+          <input className={inputCls} value={form.industry} onChange={set("industry")} placeholder="e.g. Healthcare" />
+        </div>
+        <div>
+          <label className={labelCls}>Stage</label>
+          <select className={selectCls} value={form.stage} onChange={set("stage")}>
+            <option value="prospect">Prospect</option>
+            <option value="active">Active</option>
+            <option value="inactive">Inactive</option>
+          </select>
+        </div>
+
+        <div>
+          <label className={labelCls}>Phone</label>
+          <input className={inputCls} value={form.phone} onChange={set("phone")} placeholder="(555) 000-0000" type="tel" />
+        </div>
+        <div>
+          <label className={labelCls}>Email</label>
+          <input className={inputCls} value={form.email} onChange={set("email")} placeholder="info@company.com" type="email" />
+        </div>
+
+        <div className="col-span-2">
+          <label className={labelCls}>Website</label>
+          <input className={inputCls} value={form.website} onChange={set("website")} placeholder="https://example.com" type="url" />
+        </div>
+
+        <div>
+          <label className={labelCls}>City</label>
+          <input className={inputCls} value={form.city} onChange={set("city")} placeholder="Chicago" />
+        </div>
+        <div>
+          <label className={labelCls}>State</label>
+          <input className={inputCls} value={form.state} onChange={set("state")} placeholder="IL" />
+        </div>
+
+        <div className="col-span-2">
+          <label className={labelCls}>Billing Address</label>
+          <input className={inputCls} value={form.billing_address} onChange={set("billing_address")} placeholder="123 Main St, Chicago, IL 60601" />
+        </div>
+        <div className="col-span-2">
+          <label className={labelCls}>Service Address</label>
+          <input className={inputCls} value={form.service_address} onChange={set("service_address")} placeholder="Same as billing or different location" />
+        </div>
+      </div>
+
+      <div className="mt-3 flex justify-end gap-2">
+        <button
+          onClick={onClose}
+          className="h-8 rounded-md border border-border px-3 text-[12.5px] text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
+        >
+          Cancel
+        </button>
+        <button
+          onClick={() => mutate()}
+          disabled={!form.name.trim() || isPending}
+          className="h-8 rounded-md bg-primary px-4 text-[12.5px] font-medium text-primary-foreground hover:opacity-90 transition-opacity disabled:opacity-50"
+        >
+          {isPending ? "Saving…" : "Save Changes"}
+        </button>
+      </div>
+    </DialogContent>
   );
 }
