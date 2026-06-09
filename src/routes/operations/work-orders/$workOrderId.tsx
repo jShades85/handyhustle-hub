@@ -1,6 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { createClient } from "@/lib/supabase/client";
 import { useMeta } from "@/contexts/PageMetaContext";
 import { Avatar } from "@/components/ui-bits";
@@ -28,6 +29,21 @@ export const Route = createFileRoute("/operations/work-orders/$workOrderId")({
 
 type WOTabId = "tasks" | "parts" | "team" | "activity";
 type WOStatus = "scheduled" | "in-progress" | "on-hold" | "completed" | "cancelled";
+
+interface TeamMember {
+  id: string;
+  full_name: string | null;
+}
+
+type WOUpdateFields = {
+  name: string;
+  site_address: string | null;
+  scheduled_date: string | null;
+  assigned_to: string | null;
+  contract_value: number | null;
+  budgeted_hours: number | null;
+  notes: string | null;
+};
 
 interface DbWorkOrder {
   id: string;
@@ -77,6 +93,22 @@ async function fetchWorkOrderById(id: string): Promise<DbWorkOrder | null> {
 async function updateWorkOrderStatus(id: string, status: WOStatus): Promise<void> {
   const supabase = createClient();
   const { error } = await supabase.from("work_orders").update({ status }).eq("id", id).select().single();
+  if (error) throw error;
+}
+
+async function fetchTeamMembers(): Promise<TeamMember[]> {
+  const supabase = createClient();
+  const { data } = await supabase
+    .from("user_profiles")
+    .select("id, full_name")
+    .eq("is_active", true)
+    .order("full_name");
+  return (data ?? []) as TeamMember[];
+}
+
+async function updateWorkOrder(id: string, fields: WOUpdateFields): Promise<void> {
+  const supabase = createClient();
+  const { error } = await supabase.from("work_orders").update(fields).eq("id", id).select().single();
   if (error) throw error;
 }
 
@@ -151,11 +183,25 @@ export default function WorkOrderDetailPage() {
   const { setMeta } = useMeta();
   const qc = useQueryClient();
   const [tab, setTab] = useState<WOTabId>("tasks");
+  const [editOpen, setEditOpen] = useState(false);
   const statusInitialized = useRef(false);
 
   const { data: wo } = useQuery({
     queryKey: ["work-order", workOrderId],
     queryFn: () => fetchWorkOrderById(workOrderId),
+  });
+
+  const { data: teamMembers = [] } = useQuery({
+    queryKey: ["team-members-basic"],
+    queryFn: fetchTeamMembers,
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: (fields: WOUpdateFields) => updateWorkOrder(workOrderId, fields),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["work-order", workOrderId] });
+      setEditOpen(false);
+    },
   });
 
   const [status, setStatus] = useState<WOStatus>("scheduled");
@@ -273,7 +319,7 @@ export default function WorkOrderDetailPage() {
           </dl>
 
           <div className="flex items-center gap-2 shrink-0">
-            <button type="button" className="flex h-7 items-center gap-1.5 rounded-md border border-border bg-surface px-2.5 text-[12px] text-muted-foreground hover:text-foreground hover:border-primary/40 transition-colors">
+            <button type="button" onClick={() => setEditOpen(true)} className="flex h-7 items-center gap-1.5 rounded-md border border-border bg-surface px-2.5 text-[12px] text-muted-foreground hover:text-foreground hover:border-primary/40 transition-colors">
               <Pencil className="h-3.5 w-3.5" />
               Edit
             </button>
@@ -332,6 +378,126 @@ export default function WorkOrderDetailPage() {
         {tab === "team"     && <TeamPanel projectId={wo.id} />}
         {tab === "activity" && <ActivityPanel projectId={wo.id} />}
       </div>
+
+      <WorkOrderEditDrawer
+        open={editOpen}
+        onClose={() => setEditOpen(false)}
+        wo={wo}
+        teamMembers={teamMembers}
+        onSave={(fields) => updateMutation.mutate(fields)}
+        saving={updateMutation.isPending}
+      />
     </div>
+  );
+}
+
+// ─── Edit drawer ──────────────────────────────────────────────────────────────
+
+function WorkOrderEditDrawer({
+  open, onClose, wo, teamMembers, onSave, saving,
+}: {
+  open: boolean;
+  onClose: () => void;
+  wo: DbWorkOrder;
+  teamMembers: TeamMember[];
+  onSave: (fields: WOUpdateFields) => void;
+  saving: boolean;
+}) {
+  const [name, setName] = useState(wo.name);
+  const [siteAddress, setSiteAddress] = useState(wo.site_address ?? "");
+  const [scheduledDate, setScheduledDate] = useState(wo.scheduled_date ?? "");
+  const [assignedTo, setAssignedTo] = useState(wo.assignee?.id ?? "");
+  const [contractValue, setContractValue] = useState(wo.contract_value?.toString() ?? "");
+  const [budgetedHours, setBudgetedHours] = useState(wo.budgeted_hours?.toString() ?? "");
+  const [notes, setNotes] = useState(wo.notes ?? "");
+
+  useEffect(() => {
+    if (open) {
+      setName(wo.name);
+      setSiteAddress(wo.site_address ?? "");
+      setScheduledDate(wo.scheduled_date ?? "");
+      setAssignedTo(wo.assignee?.id ?? "");
+      setContractValue(wo.contract_value?.toString() ?? "");
+      setBudgetedHours(wo.budgeted_hours?.toString() ?? "");
+      setNotes(wo.notes ?? "");
+    }
+  }, [open, wo]);
+
+  const fieldCls = "w-full rounded-md border border-input bg-background px-3 py-1.5 text-[13px] focus:outline-none focus:ring-1 focus:ring-ring";
+  const labelCls = "text-[12px] font-medium text-muted-foreground";
+
+  return (
+    <Sheet open={open} onOpenChange={(o) => { if (!o) onClose(); }}>
+      <SheetContent className="sm:max-w-[460px] flex flex-col p-0 gap-0">
+        <SheetHeader className="border-b border-border px-5 py-4">
+          <SheetTitle className="text-[15px] font-semibold">Edit Work Order</SheetTitle>
+        </SheetHeader>
+
+        <div className="flex-1 overflow-y-auto px-5 py-5 space-y-4">
+          <div className="space-y-1.5">
+            <label className={labelCls}>Work Order Name</label>
+            <input value={name} onChange={(e) => setName(e.target.value)} className={fieldCls} />
+          </div>
+
+          <div className="space-y-1.5">
+            <label className={labelCls}>Site Address</label>
+            <input value={siteAddress} onChange={(e) => setSiteAddress(e.target.value)} className={fieldCls} />
+          </div>
+
+          <div className="space-y-1.5">
+            <label className={labelCls}>Scheduled Date</label>
+            <input type="date" value={scheduledDate} onChange={(e) => setScheduledDate(e.target.value)} className={fieldCls} />
+          </div>
+
+          <div className="space-y-1.5">
+            <label className={labelCls}>Assigned To</label>
+            <select value={assignedTo} onChange={(e) => setAssignedTo(e.target.value)} className={fieldCls}>
+              <option value="">Unassigned</option>
+              {teamMembers.map((m) => (
+                <option key={m.id} value={m.id}>{m.full_name ?? "—"}</option>
+              ))}
+            </select>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1.5">
+              <label className={labelCls}>Estimated Value ($)</label>
+              <input type="number" min="0" step="0.01" value={contractValue} onChange={(e) => setContractValue(e.target.value)} className={fieldCls} />
+            </div>
+            <div className="space-y-1.5">
+              <label className={labelCls}>Budgeted Hours</label>
+              <input type="number" min="0" step="0.5" value={budgetedHours} onChange={(e) => setBudgetedHours(e.target.value)} className={fieldCls} />
+            </div>
+          </div>
+
+          <div className="space-y-1.5">
+            <label className={labelCls}>Notes</label>
+            <textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={4} className={cn(fieldCls, "resize-none")} />
+          </div>
+        </div>
+
+        <div className="border-t border-border px-5 py-4 flex justify-end gap-2">
+          <button type="button" onClick={onClose} className="rounded-md border border-border px-3 py-1.5 text-[13px] hover:bg-accent transition-colors">
+            Cancel
+          </button>
+          <button
+            type="button"
+            disabled={saving || !name.trim()}
+            onClick={() => onSave({
+              name: name.trim(),
+              site_address: siteAddress.trim() || null,
+              scheduled_date: scheduledDate || null,
+              assigned_to: assignedTo || null,
+              contract_value: contractValue ? parseFloat(contractValue) : null,
+              budgeted_hours: budgetedHours ? parseFloat(budgetedHours) : null,
+              notes: notes.trim() || null,
+            })}
+            className="rounded-md bg-primary px-3 py-1.5 text-[13px] font-medium text-primary-foreground hover:opacity-90 transition-opacity disabled:opacity-60"
+          >
+            {saving ? "Saving…" : "Save Changes"}
+          </button>
+        </div>
+      </SheetContent>
+    </Sheet>
   );
 }

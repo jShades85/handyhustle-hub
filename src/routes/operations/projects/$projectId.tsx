@@ -13,6 +13,7 @@ import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem,
   DropdownMenuSeparator, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import {
   statusMeta, STATUS_OPTIONS,
   type ProjectStatus, type ProjectRecord,
@@ -30,6 +31,23 @@ export const Route = createFileRoute("/operations/projects/$projectId")({
 
 type TabId = "overview" | "phases" | "parts" | "team" | "activity" | "files";
 type DetailSection = "Projects" | "Work Orders";
+
+interface TeamMember {
+  id: string;
+  full_name: string | null;
+}
+
+type ProjectUpdateFields = {
+  name: string;
+  site_address: string | null;
+  start_date: string | null;
+  target_end_date: string | null;
+  pm_id: string | null;
+  contract_value: number | null;
+  budgeted_cost: number | null;
+  budgeted_hours: number | null;
+  notes: string | null;
+};
 
 interface DbProject {
   id: string;
@@ -81,6 +99,22 @@ async function fetchProjectById(id: string): Promise<DbProject | null> {
 async function updateProjectStatus(id: string, status: ProjectStatus): Promise<void> {
   const supabase = createClient();
   const { error } = await supabase.from("projects").update({ status }).eq("id", id).select().single();
+  if (error) throw error;
+}
+
+async function fetchTeamMembers(): Promise<TeamMember[]> {
+  const supabase = createClient();
+  const { data } = await supabase
+    .from("user_profiles")
+    .select("id, full_name")
+    .eq("is_active", true)
+    .order("full_name");
+  return (data ?? []) as TeamMember[];
+}
+
+async function updateProject(id: string, fields: ProjectUpdateFields): Promise<void> {
+  const supabase = createClient();
+  const { error } = await supabase.from("projects").update(fields).eq("id", id).select().single();
   if (error) throw error;
 }
 
@@ -222,11 +256,25 @@ export function ProjectDetailView({
   const { setMeta } = useMeta();
   const qc = useQueryClient();
   const [tab, setTab] = useState<TabId>("overview");
+  const [editOpen, setEditOpen] = useState(false);
   const statusInitialized = useRef(false);
 
   const { data: dbProject } = useQuery({
     queryKey: ["project", projectId],
     queryFn: () => fetchProjectById(projectId),
+  });
+
+  const { data: teamMembers = [] } = useQuery({
+    queryKey: ["team-members-basic"],
+    queryFn: fetchTeamMembers,
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: (fields: ProjectUpdateFields) => updateProject(projectId, fields),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["project", projectId] });
+      setEditOpen(false);
+    },
   });
 
   const project = useMemo(
@@ -359,7 +407,7 @@ export function ProjectDetailView({
           </dl>
 
           <div className="flex items-center gap-2 shrink-0">
-            <button type="button" className="flex h-7 items-center gap-1.5 rounded-md border border-border bg-surface px-2.5 text-[12px] text-muted-foreground hover:text-foreground hover:border-primary/40 transition-colors">
+            <button type="button" onClick={() => setEditOpen(true)} className="flex h-7 items-center gap-1.5 rounded-md border border-border bg-surface px-2.5 text-[12px] text-muted-foreground hover:text-foreground hover:border-primary/40 transition-colors">
               <Pencil className="h-3.5 w-3.5" />
               Edit
             </button>
@@ -426,6 +474,17 @@ export function ProjectDetailView({
           </div>
         )}
       </div>
+
+      {dbProject && (
+        <ProjectEditDrawer
+          open={editOpen}
+          onClose={() => setEditOpen(false)}
+          dbProject={dbProject}
+          teamMembers={teamMembers}
+          onSave={(fields) => updateMutation.mutate(fields)}
+          saving={updateMutation.isPending}
+        />
+      )}
     </div>
   );
 }
@@ -435,6 +494,134 @@ export function ProjectDetailView({
 function ProjectDetailPage() {
   const { projectId } = Route.useParams();
   return <ProjectDetailView projectId={projectId} section="Projects" />;
+}
+
+// ─── Edit drawer ──────────────────────────────────────────────────────────────
+
+function ProjectEditDrawer({
+  open, onClose, dbProject, teamMembers, onSave, saving,
+}: {
+  open: boolean;
+  onClose: () => void;
+  dbProject: DbProject;
+  teamMembers: TeamMember[];
+  onSave: (fields: ProjectUpdateFields) => void;
+  saving: boolean;
+}) {
+  const [name, setName] = useState(dbProject.name);
+  const [siteAddress, setSiteAddress] = useState(dbProject.site_address ?? "");
+  const [startDate, setStartDate] = useState(dbProject.start_date ?? "");
+  const [targetEndDate, setTargetEndDate] = useState(dbProject.target_end_date ?? "");
+  const [pmId, setPmId] = useState(dbProject.pm?.id ?? "");
+  const [contractValue, setContractValue] = useState(dbProject.contract_value?.toString() ?? "");
+  const [budgetedCost, setBudgetedCost] = useState(dbProject.budgeted_cost?.toString() ?? "");
+  const [budgetedHours, setBudgetedHours] = useState(dbProject.budgeted_hours?.toString() ?? "");
+  const [notes, setNotes] = useState(dbProject.notes ?? "");
+
+  useEffect(() => {
+    if (open) {
+      setName(dbProject.name);
+      setSiteAddress(dbProject.site_address ?? "");
+      setStartDate(dbProject.start_date ?? "");
+      setTargetEndDate(dbProject.target_end_date ?? "");
+      setPmId(dbProject.pm?.id ?? "");
+      setContractValue(dbProject.contract_value?.toString() ?? "");
+      setBudgetedCost(dbProject.budgeted_cost?.toString() ?? "");
+      setBudgetedHours(dbProject.budgeted_hours?.toString() ?? "");
+      setNotes(dbProject.notes ?? "");
+    }
+  }, [open, dbProject]);
+
+  const fieldCls = "w-full rounded-md border border-input bg-background px-3 py-1.5 text-[13px] focus:outline-none focus:ring-1 focus:ring-ring";
+  const labelCls = "text-[12px] font-medium text-muted-foreground";
+
+  return (
+    <Sheet open={open} onOpenChange={(o) => { if (!o) onClose(); }}>
+      <SheetContent className="sm:max-w-[460px] flex flex-col p-0 gap-0">
+        <SheetHeader className="border-b border-border px-5 py-4">
+          <SheetTitle className="text-[15px] font-semibold">Edit Project</SheetTitle>
+        </SheetHeader>
+
+        <div className="flex-1 overflow-y-auto px-5 py-5 space-y-4">
+          <div className="space-y-1.5">
+            <label className={labelCls}>Project Name</label>
+            <input value={name} onChange={(e) => setName(e.target.value)} className={fieldCls} />
+          </div>
+
+          <div className="space-y-1.5">
+            <label className={labelCls}>Site Address</label>
+            <input value={siteAddress} onChange={(e) => setSiteAddress(e.target.value)} className={fieldCls} />
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1.5">
+              <label className={labelCls}>Start Date</label>
+              <input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} className={fieldCls} />
+            </div>
+            <div className="space-y-1.5">
+              <label className={labelCls}>Target End</label>
+              <input type="date" value={targetEndDate} onChange={(e) => setTargetEndDate(e.target.value)} className={fieldCls} />
+            </div>
+          </div>
+
+          <div className="space-y-1.5">
+            <label className={labelCls}>Project Manager</label>
+            <select value={pmId} onChange={(e) => setPmId(e.target.value)} className={fieldCls}>
+              <option value="">Unassigned</option>
+              {teamMembers.map((m) => (
+                <option key={m.id} value={m.id}>{m.full_name ?? "—"}</option>
+              ))}
+            </select>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1.5">
+              <label className={labelCls}>Contract Value ($)</label>
+              <input type="number" min="0" step="0.01" value={contractValue} onChange={(e) => setContractValue(e.target.value)} className={fieldCls} />
+            </div>
+            <div className="space-y-1.5">
+              <label className={labelCls}>Budgeted Cost ($)</label>
+              <input type="number" min="0" step="0.01" value={budgetedCost} onChange={(e) => setBudgetedCost(e.target.value)} className={fieldCls} />
+            </div>
+          </div>
+
+          <div className="space-y-1.5">
+            <label className={labelCls}>Budgeted Hours</label>
+            <input type="number" min="0" step="0.5" value={budgetedHours} onChange={(e) => setBudgetedHours(e.target.value)} className={fieldCls} />
+          </div>
+
+          <div className="space-y-1.5">
+            <label className={labelCls}>Notes</label>
+            <textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={4} className={cn(fieldCls, "resize-none")} />
+          </div>
+        </div>
+
+        <div className="border-t border-border px-5 py-4 flex justify-end gap-2">
+          <button type="button" onClick={onClose} className="rounded-md border border-border px-3 py-1.5 text-[13px] hover:bg-accent transition-colors">
+            Cancel
+          </button>
+          <button
+            type="button"
+            disabled={saving || !name.trim()}
+            onClick={() => onSave({
+              name: name.trim(),
+              site_address: siteAddress.trim() || null,
+              start_date: startDate || null,
+              target_end_date: targetEndDate || null,
+              pm_id: pmId || null,
+              contract_value: contractValue ? parseFloat(contractValue) : null,
+              budgeted_cost: budgetedCost ? parseFloat(budgetedCost) : null,
+              budgeted_hours: budgetedHours ? parseFloat(budgetedHours) : null,
+              notes: notes.trim() || null,
+            })}
+            className="rounded-md bg-primary px-3 py-1.5 text-[13px] font-medium text-primary-foreground hover:opacity-90 transition-opacity disabled:opacity-60"
+          >
+            {saving ? "Saving…" : "Save Changes"}
+          </button>
+        </div>
+      </SheetContent>
+    </Sheet>
+  );
 }
 
 // ─── Overview tab ─────────────────────────────────────────────────────────────
