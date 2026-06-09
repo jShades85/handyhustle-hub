@@ -255,13 +255,14 @@ Session 017: Reports page — 27-report catalog across 6 categories + custom rep
 
 ---
 
-## Session 028 — Disable Stub Dropdown Actions
+## Session 028 — Lead Conversion Modal + Minor Bug Fixes
 
 **Date:** June 9, 2026
 
 **Completed:**
 
-- **Disabled unimplemented dropdown actions** on Project detail (`/operations/projects/$projectId`) and Work Order detail (`/operations/work-orders/$workOrderId`): Duplicate / Archive / Delete items had `onClick={() => console.log(...)}` stubs — replaced with `disabled` so they visually signal unavailability instead of silently doing nothing.
+- **Lead conversion modal** (`/crm/lead-inbox`): Convert button now opens a modal instead of converting immediately. Modal pre-fills with the lead's name, runs an ilike search against existing contacts, and shows up to 5 matches as radio options. User can link to an existing contact (skips contact insert, links opportunity directly) or choose "Create new contact" (default — preserves prior behavior). Prevents duplicate contacts when the same person submits a second lead.
+- **Disabled unimplemented dropdown actions** on Project detail and Work Order detail pages: Duplicate / Archive / Delete items had `onClick={() => console.log(...)}` stubs — replaced with `disabled` so they visually signal unavailability instead of silently doing nothing.
 
 ---
 
