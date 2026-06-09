@@ -1,5 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { createClient } from "@/lib/supabase/client";
 import { useMeta } from "@/contexts/PageMetaContext";
 import { currency } from "@/lib/demo-data";
 import { cn } from "@/lib/utils";
@@ -12,7 +14,7 @@ import {
   DropdownMenuSeparator, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
-  PROJECTS, statusMeta, STATUS_OPTIONS,
+  statusMeta, STATUS_OPTIONS,
   type ProjectStatus, type ProjectRecord,
 } from "@/data/projects";
 import { PhasesPanel } from "@/components/projects/PhasesPanel";
@@ -28,6 +30,23 @@ export const Route = createFileRoute("/operations/projects/$projectId")({
 
 type TabId = "overview" | "phases" | "parts" | "team" | "activity" | "files";
 type DetailSection = "Projects" | "Work Orders";
+
+interface DbProject {
+  id: string;
+  code: string | null;
+  name: string;
+  status: ProjectStatus;
+  site_address: string | null;
+  contract_value: number | null;
+  budgeted_cost: number | null;
+  budgeted_hours: number | null;
+  start_date: string | null;
+  target_end_date: string | null;
+  notes: string | null;
+  company: { id: string; name: string } | null;
+  pm: { id: string; full_name: string | null } | null;
+  opportunity: { id: string; title: string } | null;
+}
 
 // ─── Config ──────────────────────────────────────────────────────────────────
 
@@ -46,17 +65,52 @@ const ACTIVITY: Array<{ icon: typeof FileText; color: string; text: string; time
   { icon: FileText,     color: "text-blue-500",    text: "Quote Q-2026-0415 linked to this project",      time: "May 28" },
 ];
 
-// ─── Sub-components ───────────────────────────────────────────────────────────
+// ─── Data ─────────────────────────────────────────────────────────────────────
 
-function StatusBadge({ status }: { status: ProjectStatus }) {
-  const { label, cls } = statusMeta[status];
-  return (
-    <span className={cn("inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[10.5px] font-medium", cls)}>
-      <span className="h-1.5 w-1.5 rounded-full bg-current" />
-      {label}
-    </span>
-  );
+async function fetchProjectById(id: string): Promise<DbProject | null> {
+  const supabase = createClient();
+  const { data, error } = await supabase
+    .from("projects")
+    .select("id,code,name,status,site_address,contract_value,budgeted_cost,budgeted_hours,start_date,target_end_date,notes,company:companies(id,name),pm:user_profiles!pm_id(id,full_name),opportunity:opportunities(id,title)")
+    .eq("id", id)
+    .single();
+  if (error) return null;
+  return data as DbProject;
 }
+
+async function updateProjectStatus(id: string, status: ProjectStatus): Promise<void> {
+  const supabase = createClient();
+  const { error } = await supabase.from("projects").update({ status }).eq("id", id).select().single();
+  if (error) throw error;
+}
+
+function toProjectRecord(d: DbProject): ProjectRecord {
+  const pmName = d.pm?.full_name ?? "";
+  const pmInitials = pmName.split(" ").map((w) => w[0]).slice(0, 2).join("").toUpperCase() || "?";
+  return {
+    id: d.id,
+    code: d.code ?? "—",
+    name: d.name,
+    customer: d.company?.name ?? "—",
+    siteAddress: d.site_address ?? "—",
+    status: d.status,
+    type: "project",
+    contractValue: Number(d.contract_value ?? 0),
+    budgetedCost: Number(d.budgeted_cost ?? 0),
+    actualCost: 0,
+    budgetedHours: Number(d.budgeted_hours ?? 0),
+    loggedHours: 0,
+    tasksTotal: 0,
+    tasksDone: 0,
+    startDate: d.start_date ?? "—",
+    targetEndDate: d.target_end_date ?? "—",
+    pm: pmInitials,
+    sourceQuote: null,
+    opportunityRef: d.opportunity?.title ?? null,
+  };
+}
+
+// ─── Sub-components ───────────────────────────────────────────────────────────
 
 function TypeBadge({ type }: { type: ProjectRecord["type"] }) {
   return (
@@ -154,7 +208,7 @@ function StatBlock({
   );
 }
 
-// ─── Shared detail view (used by both /projects and /work-orders) ─────────────
+// ─── Shared detail view ───────────────────────────────────────────────────────
 
 export interface ProjectDetailViewProps {
   projectId: string;
@@ -166,10 +220,38 @@ export function ProjectDetailView({
   section = "Projects",
 }: ProjectDetailViewProps) {
   const { setMeta } = useMeta();
+  const qc = useQueryClient();
   const [tab, setTab] = useState<TabId>("overview");
+  const statusInitialized = useRef(false);
 
-  const project = PROJECTS.find((p) => p.id === projectId);
-  const [status, setStatus] = useState<ProjectStatus>(project?.status ?? "in-progress");
+  const { data: dbProject } = useQuery({
+    queryKey: ["project", projectId],
+    queryFn: () => fetchProjectById(projectId),
+  });
+
+  const project = dbProject ? toProjectRecord(dbProject) : null;
+
+  const [status, setStatus] = useState<ProjectStatus>("in-progress");
+
+  useEffect(() => {
+    if (dbProject && !statusInitialized.current) {
+      setStatus(dbProject.status);
+      statusInitialized.current = true;
+    }
+  }, [dbProject]);
+
+  const statusMutation = useMutation({
+    mutationFn: (s: ProjectStatus) => updateProjectStatus(projectId, s),
+    onMutate: (s) => {
+      setStatus(s);
+      qc.setQueryData(["project", projectId], (old: DbProject | null | undefined) =>
+        old ? { ...old, status: s } : old,
+      );
+    },
+    onError: () => {
+      if (dbProject) setStatus(dbProject.status);
+    },
+  });
 
   const backHref = section === "Work Orders" ? "/operations/work-orders" : "/operations/projects";
   const backLabel = section === "Work Orders" ? "All Work Orders" : "All Projects";
@@ -180,7 +262,7 @@ export function ProjectDetailView({
     }
   }, [setMeta, project, section]);
 
-  if (!project) {
+  if (!dbProject && dbProject !== undefined) {
     return (
       <div className="flex flex-col items-center justify-center py-24 text-center">
         <Briefcase className="h-10 w-10 text-muted-foreground/40 mb-3" />
@@ -198,6 +280,10 @@ export function ProjectDetailView({
         </Link>
       </div>
     );
+  }
+
+  if (!project) {
+    return <div className="flex items-center justify-center py-24 text-muted-foreground text-[13px]">Loading…</div>;
   }
 
   const margin = project.contractValue > 0
@@ -224,9 +310,7 @@ export function ProjectDetailView({
 
       {/* Header */}
       <div className="border-b border-border px-5 py-5 space-y-4">
-        {/* Row 1: title + right column */}
         <div className="flex items-start justify-between gap-6">
-          {/* Left: name / customer / address */}
           <div className="min-w-0">
             <div className="flex items-center gap-2 mb-1.5">
               <span className="font-mono text-[10.5px] text-muted-foreground">{project.code}</span>
@@ -240,15 +324,13 @@ export function ProjectDetailView({
             </div>
           </div>
 
-          {/* Right: status + value */}
           <div className="flex flex-col items-end gap-2 shrink-0">
-            <StatusDropdown status={status} onChange={setStatus} />
+            <StatusDropdown status={status} onChange={(s) => statusMutation.mutate(s)} />
             <p className="text-[22px] font-semibold tabular-nums">{currency(project.contractValue)}</p>
             <p className="text-[10.5px] text-muted-foreground">Contract Value</p>
           </div>
         </div>
 
-        {/* Row 2: meta fields + action buttons */}
         <div className="flex flex-wrap items-center justify-between gap-4">
           <dl className="flex flex-wrap gap-x-6 gap-y-2 text-[12px]">
             <div className="flex items-center gap-1.5">
@@ -273,30 +355,18 @@ export function ProjectDetailView({
             </div>
           </dl>
 
-          {/* Action buttons */}
           <div className="flex items-center gap-2 shrink-0">
-            <button
-              type="button"
-              className="flex h-7 items-center gap-1.5 rounded-md border border-border bg-surface px-2.5 text-[12px] text-muted-foreground hover:text-foreground hover:border-primary/40 transition-colors"
-            >
+            <button type="button" className="flex h-7 items-center gap-1.5 rounded-md border border-border bg-surface px-2.5 text-[12px] text-muted-foreground hover:text-foreground hover:border-primary/40 transition-colors">
               <Pencil className="h-3.5 w-3.5" />
               Edit
             </button>
-            <button
-              type="button"
-              onClick={() => console.log("log hours")}
-              className="flex h-7 items-center gap-1.5 rounded-md border border-border bg-surface px-2.5 text-[12px] text-muted-foreground hover:text-foreground hover:border-primary/40 transition-colors"
-            >
+            <button type="button" className="flex h-7 items-center gap-1.5 rounded-md border border-border bg-surface px-2.5 text-[12px] text-muted-foreground hover:text-foreground hover:border-primary/40 transition-colors">
               <Clock className="h-3.5 w-3.5" />
               Log Hours
             </button>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <button
-                  type="button"
-                  className="flex h-7 w-7 items-center justify-center rounded-md border border-border bg-surface text-muted-foreground hover:text-foreground hover:border-primary/40 transition-colors"
-                  aria-label="More options"
-                >
+                <button type="button" className="flex h-7 w-7 items-center justify-center rounded-md border border-border bg-surface text-muted-foreground hover:text-foreground hover:border-primary/40 transition-colors" aria-label="More options">
                   <MoreHorizontal className="h-4 w-4" />
                 </button>
               </DropdownMenuTrigger>
@@ -310,10 +380,7 @@ export function ProjectDetailView({
                   Archive
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem
-                  onClick={() => console.log("delete")}
-                  className="gap-2 text-destructive focus:text-destructive"
-                >
+                <DropdownMenuItem onClick={() => console.log("delete")} className="gap-2 text-destructive focus:text-destructive">
                   <Trash2 className="h-3.5 w-3.5" />
                   Delete
                 </DropdownMenuItem>
@@ -332,24 +399,18 @@ export function ProjectDetailView({
             onClick={() => setTab(t.id)}
             className={cn(
               "relative h-9 rounded-md px-2.5 text-[12.5px] transition-colors",
-              tab === t.id
-                ? "text-foreground"
-                : "text-muted-foreground hover:text-foreground",
+              tab === t.id ? "text-foreground" : "text-muted-foreground hover:text-foreground",
             )}
           >
             {t.label}
-            {tab === t.id && (
-              <span className="absolute inset-x-2 -bottom-px h-px bg-primary" />
-            )}
+            {tab === t.id && <span className="absolute inset-x-2 -bottom-px h-px bg-primary" />}
           </button>
         ))}
       </div>
 
       {/* Tab content */}
       <div className="flex-1">
-        {tab === "overview" && (
-          <OverviewTab project={project} margin={margin} completionPct={completionPct} />
-        )}
+        {tab === "overview" && <OverviewTab project={project} margin={margin} completionPct={completionPct} />}
         {tab === "phases"   && <PhasesPanel projectId={project.id} projectType={project.type} />}
         {tab === "parts"    && <PartsPanel projectId={project.id} />}
         {tab === "team"     && <TeamPanel projectId={project.id} />}
@@ -373,7 +434,7 @@ function ProjectDetailPage() {
   return <ProjectDetailView projectId={projectId} section="Projects" />;
 }
 
-// ─── Overview Tab ─────────────────────────────────────────────────────────────
+// ─── Overview tab ─────────────────────────────────────────────────────────────
 
 function OverviewTab({
   project,
@@ -392,22 +453,12 @@ function OverviewTab({
 
   return (
     <div className="px-5 py-5 space-y-6">
-      {/* Financials */}
       <section>
         <p className="text-[10px] uppercase tracking-wider text-muted-foreground mb-3">Financials</p>
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-          <StatBlock
-            label="Contract Value"
-            value={currency(project.contractValue)}
-          />
-          <StatBlock
-            label="Budgeted Cost"
-            value={currency(project.budgetedCost)}
-          />
-          <StatBlock
-            label="Actual Cost"
-            value={project.actualCost > 0 ? currency(project.actualCost) : "—"}
-          />
+          <StatBlock label="Contract Value" value={currency(project.contractValue)} />
+          <StatBlock label="Budgeted Cost" value={currency(project.budgetedCost)} />
+          <StatBlock label="Actual Cost" value={project.actualCost > 0 ? currency(project.actualCost) : "—"} />
           <StatBlock
             label="Margin"
             value={project.actualCost > 0 ? `${margin.toFixed(1)}%` : "—"}
@@ -417,14 +468,10 @@ function OverviewTab({
         </div>
       </section>
 
-      {/* Hours & Completion */}
       <section>
         <p className="text-[10px] uppercase tracking-wider text-muted-foreground mb-3">Progress</p>
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-          <StatBlock
-            label="Budgeted Hours"
-            value={project.budgetedHours > 0 ? `${project.budgetedHours} hrs` : "—"}
-          />
+          <StatBlock label="Budgeted Hours" value={project.budgetedHours > 0 ? `${project.budgetedHours} hrs` : "—"} />
           <StatBlock
             label="Logged Hours"
             value={project.loggedHours > 0 ? `${project.loggedHours} hrs` : "—"}
@@ -435,12 +482,9 @@ function OverviewTab({
           <StatBlock
             label="Completion"
             value={project.tasksTotal > 0 ? `${completionPct}%` : "—"}
-            sub={project.tasksTotal > 0
-              ? `${project.tasksDone} of ${project.tasksTotal} tasks done`
-              : "No tasks yet"}
+            sub={project.tasksTotal > 0 ? `${project.tasksDone} of ${project.tasksTotal} tasks done` : "No tasks yet"}
           />
         </div>
-        {/* Hours progress bar */}
         {project.budgetedHours > 0 && (
           <div className="mt-3 space-y-1">
             <div className="flex items-center justify-between text-[10.5px] text-muted-foreground">
@@ -457,7 +501,6 @@ function OverviewTab({
         )}
       </section>
 
-      {/* Recent Activity */}
       <section>
         <p className="text-[10px] uppercase tracking-wider text-muted-foreground mb-3">Recent Activity</p>
         <ul className="space-y-3">

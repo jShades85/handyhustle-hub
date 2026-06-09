@@ -51,7 +51,9 @@ interface Opportunity {
   id: string;
   title: string;
   company: string;
+  companyId: string | null;
   contact: string;
+  contactId: string | null;
   value: number;
   stage: OpportunityStage;
   closeDate: string;
@@ -125,7 +127,9 @@ function toUiOpp(d: DbOpportunity): Opportunity {
     id:           d.id,
     title:        d.title,
     company:      d.company?.name ?? "—",
+    companyId:    d.company?.id ?? null,
     contact:      d.contact?.full_name ?? "—",
+    contactId:    d.contact?.id ?? null,
     value:        Number(d.value ?? 0),
     stage:        d.stage,
     closeDate:    d.close_date ?? "—",
@@ -137,6 +141,46 @@ function toUiOpp(d: DbOpportunity): Opportunity {
     notes:        d.notes ?? "",
     activityFeed: [],
   };
+}
+
+async function convertToProject(opp: Opportunity): Promise<void> {
+  const supabase = createClient();
+  const { data: tenantRow } = await supabase.from("tenants").select("id").single();
+  if (!tenantRow) throw new Error("No tenant");
+  const { count } = await supabase.from("projects").select("*", { count: "exact", head: true });
+  const code = `AV-${new Date().getFullYear()}-${String((count ?? 0) + 1).padStart(3, "0")}`;
+  const { error } = await supabase.from("projects").insert({
+    tenant_id:      tenantRow.id,
+    code,
+    name:           opp.title,
+    company_id:     opp.companyId,
+    contact_id:     opp.contactId,
+    opportunity_id: opp.id,
+    contract_value: opp.value || null,
+    pm_id:          opp.repId || null,
+    status:         "scheduled",
+  });
+  if (error) throw error;
+}
+
+async function convertToWorkOrder(opp: Opportunity): Promise<void> {
+  const supabase = createClient();
+  const { data: tenantRow } = await supabase.from("tenants").select("id").single();
+  if (!tenantRow) throw new Error("No tenant");
+  const { count } = await supabase.from("work_orders").select("*", { count: "exact", head: true });
+  const code = `WO-${String((count ?? 0) + 1).padStart(4, "0")}`;
+  const { error } = await supabase.from("work_orders").insert({
+    tenant_id:      tenantRow.id,
+    code,
+    name:           opp.title,
+    company_id:     opp.companyId,
+    contact_id:     opp.contactId,
+    opportunity_id: opp.id,
+    contract_value: opp.value || null,
+    assigned_to:    opp.repId || null,
+    status:         "scheduled",
+  });
+  if (error) throw error;
 }
 
 async function fetchOpportunities(): Promise<DbOpportunity[]> {
@@ -299,6 +343,13 @@ function Opportunities() {
             onNotesChange={(notes) => {
               updateNotes(selected.id, notes);
               qc.invalidateQueries({ queryKey: ["opportunities"] });
+            }}
+            onConvert={async (type) => {
+              if (type === "project") await convertToProject(selected);
+              else await convertToWorkOrder(selected);
+              qc.invalidateQueries({ queryKey: ["projects"] });
+              qc.invalidateQueries({ queryKey: ["work-orders"] });
+              setSelected(null);
             }}
           />
         )}
@@ -525,8 +576,18 @@ function ListView({ opps, onSelect }: { opps: Opportunity[]; onSelect: (opp: Opp
 
 // ─── Opportunity detail drawer ────────────────────────────────────────────────
 
-function OpportunityDrawer({ opp, onNotesChange }: { opp: Opportunity; onNotesChange: (notes: string) => void }) {
+function OpportunityDrawer({
+  opp,
+  onNotesChange,
+  onConvert,
+}: {
+  opp: Opportunity;
+  onNotesChange: (notes: string) => void;
+  onConvert: (type: "project" | "work-order") => Promise<void>;
+}) {
   const [notes, setNotes] = useState(opp.notes);
+  const [converting, setConverting] = useState(false);
+  const [convertPicking, setConvertPicking] = useState(false);
 
   return (
     <SheetContent className="sm:max-w-[460px] flex flex-col p-0 gap-0">
@@ -623,10 +684,46 @@ function OpportunityDrawer({ opp, onNotesChange }: { opp: Opportunity; onNotesCh
       </div>
 
       <div className="border-t border-border px-5 py-4 space-y-2">
-        {opp.stage === "closed-won" && (
-          <button className="w-full h-8 rounded-md bg-primary text-[12.5px] font-medium text-primary-foreground hover:opacity-90 transition-opacity">
-            Convert to Project
+        {opp.stage === "closed-won" && !convertPicking && (
+          <button
+            onClick={() => setConvertPicking(true)}
+            className="w-full h-8 rounded-md bg-primary text-[12.5px] font-medium text-primary-foreground hover:opacity-90 transition-opacity"
+          >
+            Convert to Project / Work Order
           </button>
+        )}
+        {opp.stage === "closed-won" && convertPicking && (
+          <div className="rounded-md border border-border bg-surface/50 p-3 space-y-2">
+            <p className="text-[11px] text-muted-foreground text-center">What type of record is this?</p>
+            <div className="flex gap-2">
+              <button
+                disabled={converting}
+                onClick={async () => {
+                  setConverting(true);
+                  try { await onConvert("project"); } finally { setConverting(false); }
+                }}
+                className="flex-1 h-8 rounded-md bg-primary text-[12.5px] font-medium text-primary-foreground hover:opacity-90 disabled:opacity-50 transition-opacity"
+              >
+                Project
+              </button>
+              <button
+                disabled={converting}
+                onClick={async () => {
+                  setConverting(true);
+                  try { await onConvert("work-order"); } finally { setConverting(false); }
+                }}
+                className="flex-1 h-8 rounded-md border border-border text-[12.5px] text-muted-foreground hover:text-foreground hover:bg-accent disabled:opacity-50 transition-colors"
+              >
+                Work Order
+              </button>
+            </div>
+            <button
+              onClick={() => setConvertPicking(false)}
+              className="w-full text-center text-[11px] text-muted-foreground hover:text-foreground transition-colors"
+            >
+              Cancel
+            </button>
+          </div>
         )}
         <button className="w-full h-8 rounded-md border border-border text-[12.5px] text-muted-foreground hover:text-foreground hover:bg-accent transition-colors">
           Edit Opportunity

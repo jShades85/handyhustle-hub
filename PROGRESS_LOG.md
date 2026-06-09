@@ -6,8 +6,8 @@
 
 ## Current Status
 
-**Phase:** Backend — Opportunities + Lead Inbox live, Operations schema next
-**Last Updated:** Session 023
+**Phase:** Backend — Operations (Projects + Work Orders) live, Service/Inventory next
+**Last Updated:** Session 024
 **Live URL:** https://bearingpro.tech (Vercel + Cloudflare DNS)
 **Supabase Project:** `erdtfwelbdlvammfdtgz`
 
@@ -17,9 +17,9 @@
 
 **Start here next session:**
 
-1. **Operations schema** — `projects`, `work_orders` tables + wire Operations pages
-2. **Invite URL cleanup** — `/join/$slug` route using tenant slug (deferred; current base64 token works)
-3. **Soft delete UI** — "Deactivated Members" view + reactivate button (deferred pre-launch)
+1. **Service module** — `service_tickets` table + wire Service Tickets page
+2. **Operations → Project/WO detail edit** — "Edit" button on detail pages (project name, dates, PM, contract value)
+3. **Invite URL cleanup** — `/join/$slug` route using tenant slug (deferred; current base64 token works)
 
 ---
 
@@ -44,7 +44,7 @@
 | Vercel Deployment | ✅ Live | bearingpro.tech, nitro vercel preset |
 | CRM (Contacts/Companies/Lead Inbox) | ✅ Live | Schema + RLS live; all pages wired; Lead Inbox reads/writes `leads` table; Convert button creates Contact + Opportunity atomically |
 | Sales (Opps, Quotes) | ✅ Opps live | Opportunities reads/writes DB; kanban stage moves + new opp modal wired; Quotes still demo |
-| Operations (Projects, Work Orders, Team, Scheduling) | 🟡 Demo data | Full UI built |
+| Operations (Projects, Work Orders, Team, Scheduling) | ✅ Projects + WOs live | Schema + RLS live; list + detail pages read/write DB; status persists; Convert from Opportunity wired; Team + Scheduling still demo |
 | Service (Tickets, Plans) | 🟡 Demo data | Full UI built |
 | Inventory (Catalog, Stock, POs, Vendors) | 🟡 Demo data | Full UI built |
 | Finance (Invoices, Payments) | 🟡 Demo data | Full UI built |
@@ -76,6 +76,10 @@
 | `20260609000001_crm_seed` | 7 test companies + 13 test contacts | ✅ Live |
 | `20260609000002_user_seed` | 8 test auth users (one per default role), password `Test1234!` | ✅ Live |
 | `20260609000003_user_seed_profiles` | Full profile data for seed users (skills, certs, pay, phone, start date) | ✅ Live |
+| `20260610000003_opportunities` | `opportunities` table + full RLS | ✅ Live |
+| `20260610000004_leads` | `leads` table + full RLS | ✅ Live |
+| `20260610000005_fix_opportunity_priority` | Fixed priority check constraint `'med'` (was `'medium'`) | ✅ Live |
+| `20260610000006_projects_work_orders` | `projects` + `work_orders` tables + full RLS | ✅ Live |
 
 **Trigger logic:** New signup → creates `tenants` row + `user_profiles` row (Owner role). Invited user (has `tenant_id` in metadata) → joins existing tenant with assigned role. Upserts on conflict so re-inviting a removed user reactivates their profile.
 
@@ -197,6 +201,29 @@ Session 017: Reports page — 27-report catalog across 6 categories + custom rep
 - Contact edit form (drawer is view-only)
 - Company detail notes save
 - Assign seeded contacts to seeded team members
+
+---
+
+## Session 024 — Operations Pages Live (Projects + Work Orders)
+
+**Date:** June 9, 2026
+
+**Completed:**
+
+- **Migration 006**: `projects` + `work_orders` tables with full RLS (`select/insert/update/delete` scoped to `current_tenant_id()`)
+  - `projects`: code, name, company_id, contact_id, opportunity_id, site_address, status (quoted/scheduled/in-progress/on-hold/completed/cancelled), contract_value, budgeted_cost, budgeted_hours, start_date, target_end_date, pm_id, notes
+  - `work_orders`: same fields + project_id FK (nullable; child WOs link to a project), scheduled_date instead of start/target dates, assigned_to instead of pm_id; no `'quoted'` status
+- **TypeScript types regenerated** via `supabase gen types typescript`
+- **Projects list page** (`/operations/projects`): fully wired — reads from `projects` table with company + PM joins; "New Project" modal inserts to DB with auto-generated code (`AV-YYYY-NNN`); filter by status + search
+- **Work Orders list page** (`/operations/work-orders`): fully wired — reads from `work_orders` table with company + assignee joins; "New Work Order" modal inserts to DB with auto-generated code (`WO-NNNN`); filter by status + search
+- **Project detail page** (`/operations/projects/$projectId`): fetches by UUID from DB; maps DB → `ProjectRecord` shape for overview; status dropdown saves to DB on change (optimistic update); tab panels (Phases/Parts/Team/Activity) remain as stubs
+- **Work Order detail page** (`/operations/work-orders/$workOrderId`): same pattern; status saves to DB; assignee + scheduled date pulled from DB
+- **Convert to Project / Work Order** on Opportunity drawer (closed-won stage): "Convert to Project / Work Order" button → inline picker → "Project" or "Work Order" → inserts the record with opportunity_id FK, carries over title/company/contact/value/assignee; invalidates `["projects"]` or `["work-orders"]` cache; closes drawer after conversion
+
+**Patterns used:**
+- `useRef` initialized flag + optimistic `setQueryData` for status dropdown (no form reset on refetch)
+- Code generation: count existing records + 1, zero-pad (same RLS scope means count is tenant-scoped)
+- `work_orders.assigned_to` FK uses `user_profiles!assigned_to(id,full_name)` join alias
 
 ---
 

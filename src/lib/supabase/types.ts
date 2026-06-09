@@ -360,6 +360,102 @@ export type Database = {
           },
         ]
       }
+      projects: {
+        Row: {
+          budgeted_cost: number | null
+          budgeted_hours: number | null
+          code: string | null
+          company_id: string | null
+          contact_id: string | null
+          contract_value: number | null
+          created_at: string
+          id: string
+          name: string
+          notes: string | null
+          opportunity_id: string | null
+          pm_id: string | null
+          site_address: string | null
+          start_date: string | null
+          status: string
+          target_end_date: string | null
+          tenant_id: string
+        }
+        Insert: {
+          budgeted_cost?: number | null
+          budgeted_hours?: number | null
+          code?: string | null
+          company_id?: string | null
+          contact_id?: string | null
+          contract_value?: number | null
+          created_at?: string
+          id?: string
+          name: string
+          notes?: string | null
+          opportunity_id?: string | null
+          pm_id?: string | null
+          site_address?: string | null
+          start_date?: string | null
+          status?: string
+          target_end_date?: string | null
+          tenant_id: string
+        }
+        Update: {
+          budgeted_cost?: number | null
+          budgeted_hours?: number | null
+          code?: string | null
+          company_id?: string | null
+          contact_id?: string | null
+          contract_value?: number | null
+          created_at?: string
+          id?: string
+          name?: string
+          notes?: string | null
+          opportunity_id?: string | null
+          pm_id?: string | null
+          site_address?: string | null
+          start_date?: string | null
+          status?: string
+          target_end_date?: string | null
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "projects_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "projects_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "projects_opportunity_id_fkey"
+            columns: ["opportunity_id"]
+            isOneToOne: false
+            referencedRelation: "opportunities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "projects_pm_id_fkey"
+            columns: ["pm_id"]
+            isOneToOne: false
+            referencedRelation: "user_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "projects_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       role_permissions: {
         Row: {
           can_write: boolean
@@ -597,6 +693,109 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "vehicles_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      work_orders: {
+        Row: {
+          assigned_to: string | null
+          budgeted_cost: number | null
+          budgeted_hours: number | null
+          code: string | null
+          company_id: string | null
+          contact_id: string | null
+          contract_value: number | null
+          created_at: string
+          id: string
+          name: string
+          notes: string | null
+          opportunity_id: string | null
+          project_id: string | null
+          scheduled_date: string | null
+          site_address: string | null
+          status: string
+          tenant_id: string
+        }
+        Insert: {
+          assigned_to?: string | null
+          budgeted_cost?: number | null
+          budgeted_hours?: number | null
+          code?: string | null
+          company_id?: string | null
+          contact_id?: string | null
+          contract_value?: number | null
+          created_at?: string
+          id?: string
+          name: string
+          notes?: string | null
+          opportunity_id?: string | null
+          project_id?: string | null
+          scheduled_date?: string | null
+          site_address?: string | null
+          status?: string
+          tenant_id: string
+        }
+        Update: {
+          assigned_to?: string | null
+          budgeted_cost?: number | null
+          budgeted_hours?: number | null
+          code?: string | null
+          company_id?: string | null
+          contact_id?: string | null
+          contract_value?: number | null
+          created_at?: string
+          id?: string
+          name?: string
+          notes?: string | null
+          opportunity_id?: string | null
+          project_id?: string | null
+          scheduled_date?: string | null
+          site_address?: string | null
+          status?: string
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "work_orders_assigned_to_fkey"
+            columns: ["assigned_to"]
+            isOneToOne: false
+            referencedRelation: "user_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "work_orders_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "work_orders_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "work_orders_opportunity_id_fkey"
+            columns: ["opportunity_id"]
+            isOneToOne: false
+            referencedRelation: "opportunities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "work_orders_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "work_orders_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"
