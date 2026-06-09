@@ -6,8 +6,8 @@
 
 ## Current Status
 
-**Phase:** Backend — Service Plans live, POs/Vendors next
-**Last Updated:** Session 031
+**Phase:** Backend — POs/Vendors live, Finance next
+**Last Updated:** Session 032
 **Live URL:** https://bearingpro.tech (Vercel + Cloudflare DNS)
 **Supabase Project:** `erdtfwelbdlvammfdtgz`
 
@@ -17,7 +17,7 @@
 
 **Start here next session:**
 
-1. **Inventory → POs / Vendors** — next inventory module
+1. **Finance → Invoices / Payments** — next module to wire to backend
 
 ---
 
@@ -46,7 +46,7 @@
 | Service (Tickets, Plans) | ✅ Live | Tickets: status + notes + new ticket wired; Service Plans: schema + RLS live; 8 seed plans; all CRUD wired (tier/status inline, notes blur-save, Renew/Cancel, New Plan modal) |
 | Inventory → Catalog | ✅ Live | Schema + RLS live; category landing + item grid wired; tenant-defined categories with trade templates + icon picker; CategorySetupModal on first visit; New Category / New Item context-aware button |
 | Inventory → Stock | ✅ Live | Schema + RLS live; 12 seed items + 35 movements; all CRUD wired; Adjust popover writes to DB; movements lazy-loaded per item in drawer; manufacturers derived from live data |
-| Inventory → POs, Vendors | 🟡 Demo data | Full UI built |
+| Inventory → POs, Vendors | ✅ Live | Schema + RLS live; 7 vendors + 11 POs seeded; all CRUD wired; vendor stats derived from shared PO cache; Send PO + Mark All Received quick actions; linkedJobId encoded as p:/w: |
 | Finance (Invoices, Payments) | 🟡 Demo data | Full UI built |
 | Reports | 🟡 Placeholder | 27-report catalog defined, all coming soon |
 | Settings (Company, Tiers, Integrations) | ✅ Company live | Company Profile reads/writes `tenants` table; Tiers + Integrations still demo |
@@ -90,6 +90,9 @@
 | `20260610000016_stock_seed` | 12 seed stock items + 35 movements; links to catalog items by name ilike match | ✅ Live |
 | `20260610000017_service_plans` | `service_plans` table with full RLS, `set_updated_at` trigger | ✅ Live |
 | `20260610000018_service_plans_seed` | 8 seed service plans with activity jsonb; looks up companies + team members by name/offset | ✅ Live |
+| `20260610000019_vendors` | `vendors` table with full RLS; `set_vendors_updated_at` trigger | ✅ Live |
+| `20260610000020_purchase_orders` | `purchase_orders` + `po_line_items` tables with full RLS; `set_purchase_orders_updated_at` trigger | ✅ Live |
+| `20260610000021_vendors_pos_seed` | 7 vendors + 11 POs + 18 line items for test tenant; POs linked to seeded projects by code; line items linked to catalog items by SKU | ✅ Live |
 
 **Trigger logic:** New signup → creates `tenants` row + `user_profiles` row (Owner role). Invited user (has `tenant_id` in metadata) → joins existing tenant with assigned role. Upserts on conflict so re-inviting a removed user reactivates their profile.
 
@@ -360,3 +363,25 @@ Session 017: Reports page — 27-report catalog across 6 categories + custom rep
 - `TablesUpdate<"table">` from `@/lib/supabase/types` for typed partial-update patches
 - Account manager name via FK join: `user_profiles!account_manager_id(full_name)` in select + seed migration
 - `activity` column as `jsonb` — read-only in UI (no add-activity button yet); populated at seed time
+
+---
+
+## Session 032 — Inventory POs / Vendors Live
+
+**Date:** June 9, 2026
+
+**Completed:**
+
+- **Migration 20260610000019**: `vendors` table with full RLS; `set_vendors_updated_at` trigger
+- **Migration 20260610000020**: `purchase_orders` + `po_line_items` tables with full RLS; `set_purchase_orders_updated_at` trigger; `po_line_items` is insert/delete only on edit (no update policy needed — delete + reinsert on every save)
+- **Migration 20260610000021**: 7 vendors + 11 POs + 18 line items for test tenant; POs linked to seeded projects by code; line items linked to catalog items by SKU ilike
+- **Vendors page fully rewritten** (`/inventory/vendors`): live `useQuery(["vendors"])`; vendor stats (`ytdSpend`, `totalPOs`, `activePOs`, `lastOrderDate`) derived client-side from shared `["purchase-orders"]` cache using `useMemo`; `saveMutation` for edit; `createMutation` for new; card + list views
+- **Purchase Orders page fully rewritten** (`/inventory/purchase-orders`): 5 queries — POs (with `vendors`, `po_line_items`, `projects!linked_project_id`, `work_orders!linked_work_order_id` joins), vendors, projects-basic, work-orders-basic, catalog-items-po; `saveMutation` handles create (INSERT po + line items) and update (UPDATE header, DELETE old line items, re-INSERT new ones); `statusMutation` for Send PO / Mark All Received quick actions; `linkedJobId` encoded as `"p:uuid"` / `"w:uuid"` / `""` in UI, parsed to separate FK columns on save; date inputs use `type="date"` with `fmtDate(iso)` for display; `TablesUpdate<"purchase_orders">` for typed quick-status patches
+- **Fixed `src/lib/supabase/types.ts`**: removed stray `Initialising login role...` line from Supabase CLI output that was causing TS parse error
+
+**Patterns established:**
+- Vendor stats: always derive client-side from `["purchase-orders"]` cache in `useMemo` — vendors and PO pages share the same cache key
+- Linked FK encoding: `"p:uuid"` = project, `"w:uuid"` = work order, `""` = unlinked; parse with `startsWith("p:")` / `startsWith("w:")` to split back into separate DB columns
+- PO line item update strategy: DELETE WHERE `po_id = ?` then bulk INSERT; simpler than tracking individual adds/removes; acceptable since there are no external references to line item IDs
+- `projects!linked_project_id(id, code, name)` — Supabase `!column` syntax for FK joins where the FK column name differs from the default; result key matches the alias prefix
+- `catalog_items.is_active` (boolean) not `status` — use `.eq("is_active", true)` to filter active items
