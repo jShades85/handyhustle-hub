@@ -362,15 +362,23 @@ function ItemCard({ item, onView, onEdit }: ItemCardProps) {
     >
       {/* Image area */}
       <div
-        className="relative flex items-center justify-center h-36 shrink-0"
+        className="relative flex items-center justify-center h-36 shrink-0 overflow-hidden"
         style={{ backgroundColor: `${color}12` }}
       >
-        <span
-          className="text-[52px] font-black select-none leading-none"
-          style={{ color: `${color}28` }}
-        >
-          {(item.categories?.name ?? "?").slice(0, 1)}
-        </span>
+        {item.image_url ? (
+          <img
+            src={item.image_url}
+            alt={item.name}
+            className="h-full w-full object-contain p-3"
+          />
+        ) : (
+          <span
+            className="text-[52px] font-black select-none leading-none"
+            style={{ color: `${color}28` }}
+          >
+            {(item.categories?.name ?? "?").slice(0, 1)}
+          </span>
+        )}
 
         {/* Manufacturer badge */}
         <div
@@ -587,6 +595,16 @@ function ItemDrawer({
     return (
       <div className="flex flex-col flex-1 min-h-0">
         <div className="flex-1 overflow-y-auto px-5 py-4 space-y-5">
+
+          {/* Product image */}
+          {item.image_url && (
+            <div
+              className="flex items-center justify-center h-40 rounded-lg overflow-hidden"
+              style={{ backgroundColor: `${color}10` }}
+            >
+              <img src={item.image_url} alt={item.name} className="h-full w-full object-contain p-4" />
+            </div>
+          )}
 
           {/* Manufacturer + badges */}
           <div className="flex items-center gap-2 flex-wrap">
