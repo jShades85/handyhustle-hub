@@ -456,6 +456,98 @@ export type Database = {
           },
         ]
       }
+      service_tickets: {
+        Row: {
+          assigned_to: string | null
+          category: string
+          code: string | null
+          company_id: string | null
+          contact_id: string | null
+          contact_name: string | null
+          created_at: string
+          customer_name: string | null
+          due_date: string | null
+          id: string
+          issue: string
+          notes: string | null
+          on_service_plan: boolean
+          phone: string | null
+          priority: string
+          site_address: string | null
+          status: string
+          tenant_id: string
+        }
+        Insert: {
+          assigned_to?: string | null
+          category?: string
+          code?: string | null
+          company_id?: string | null
+          contact_id?: string | null
+          contact_name?: string | null
+          created_at?: string
+          customer_name?: string | null
+          due_date?: string | null
+          id?: string
+          issue: string
+          notes?: string | null
+          on_service_plan?: boolean
+          phone?: string | null
+          priority?: string
+          site_address?: string | null
+          status?: string
+          tenant_id: string
+        }
+        Update: {
+          assigned_to?: string | null
+          category?: string
+          code?: string | null
+          company_id?: string | null
+          contact_id?: string | null
+          contact_name?: string | null
+          created_at?: string
+          customer_name?: string | null
+          due_date?: string | null
+          id?: string
+          issue?: string
+          notes?: string | null
+          on_service_plan?: boolean
+          phone?: string | null
+          priority?: string
+          site_address?: string | null
+          status?: string
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "service_tickets_assigned_to_fkey"
+            columns: ["assigned_to"]
+            isOneToOne: false
+            referencedRelation: "user_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "service_tickets_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "service_tickets_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "service_tickets_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       role_permissions: {
         Row: {
           can_write: boolean

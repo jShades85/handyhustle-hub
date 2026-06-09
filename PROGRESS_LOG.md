@@ -6,8 +6,8 @@
 
 ## Current Status
 
-**Phase:** Backend — Operations (Projects + Work Orders) live, Service/Inventory next
-**Last Updated:** Session 024
+**Phase:** Backend — Service Tickets live, Inventory next
+**Last Updated:** Session 025
 **Live URL:** https://bearingpro.tech (Vercel + Cloudflare DNS)
 **Supabase Project:** `erdtfwelbdlvammfdtgz`
 
@@ -17,9 +17,9 @@
 
 **Start here next session:**
 
-1. **Service module** — `service_tickets` table + wire Service Tickets page
-2. **Operations → Project/WO detail edit** — "Edit" button on detail pages (project name, dates, PM, contract value)
-3. **Invite URL cleanup** — `/join/$slug` route using tenant slug (deferred; current base64 token works)
+1. **Operations → Project/WO detail edit** — "Edit" button on detail pages (project name, dates, PM, contract value)
+2. **Inventory module** — `catalog_items` + `stock_locations` tables + wire Inventory pages
+3. **Service Plans** — `service_plans` table + wire Service Plans page
 
 ---
 
@@ -45,7 +45,7 @@
 | CRM (Contacts/Companies/Lead Inbox) | ✅ Live | Schema + RLS live; all pages wired; Lead Inbox reads/writes `leads` table; Convert button creates Contact + Opportunity atomically |
 | Sales (Opps, Quotes) | ✅ Opps live | Opportunities reads/writes DB; kanban stage moves + new opp modal wired; Quotes still demo |
 | Operations (Projects, Work Orders, Team, Scheduling) | ✅ Projects + WOs live | Schema + RLS live; list + detail pages read/write DB; status persists; Convert from Opportunity wired; Team + Scheduling still demo |
-| Service (Tickets, Plans) | 🟡 Demo data | Full UI built |
+| Service (Tickets, Plans) | ✅ Tickets live | Schema + RLS live; list reads/writes DB; status updates + notes persist; New Ticket modal wired; Service Plans still demo |
 | Inventory (Catalog, Stock, POs, Vendors) | 🟡 Demo data | Full UI built |
 | Finance (Invoices, Payments) | 🟡 Demo data | Full UI built |
 | Reports | 🟡 Placeholder | 27-report catalog defined, all coming soon |
@@ -80,6 +80,9 @@
 | `20260610000004_leads` | `leads` table + full RLS | ✅ Live |
 | `20260610000005_fix_opportunity_priority` | Fixed priority check constraint `'med'` (was `'medium'`) | ✅ Live |
 | `20260610000006_projects_work_orders` | `projects` + `work_orders` tables + full RLS | ✅ Live |
+| `20260610000007_operations_seed` | 5 seed projects + 5 work orders for test tenant | ✅ Live |
+| `20260610000008_service_tickets` | `service_tickets` table + full RLS | ✅ Live |
+| `20260610000009_service_tickets_seed` | 6 seed service tickets for test tenant | ✅ Live |
 
 **Trigger logic:** New signup → creates `tenants` row + `user_profiles` row (Owner role). Invited user (has `tenant_id` in metadata) → joins existing tenant with assigned role. Upserts on conflict so re-inviting a removed user reactivates their profile.
 
