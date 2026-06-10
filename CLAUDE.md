@@ -71,6 +71,13 @@ src/
 - Use shadcn/ui components before building custom ones
 - Tailwind v4 only — CSS variables, no v3 config patterns
 
+### TanStack Query Keys (Critical)
+
+- **Same key = identical select shape.** If two pages query the same table with different columns, they MUST use different keys.
+- **Partial selects use a `-basic` suffix** — e.g. `["vendors-basic"]` for `select("id, name")` vs `["vendors"]` for `select("*")`.
+- Before adding a new `useQuery`, run `bun run check:keys` to catch collisions. This has caused three production crashes.
+- Safe to share a key across files only when the `select(...)` string is character-for-character identical (e.g. `["invoices"]` shared between invoices and payments pages uses the same full select).
+
 ### Never
 
 - `npm install` — use `bun add`

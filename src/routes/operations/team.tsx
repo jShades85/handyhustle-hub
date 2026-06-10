@@ -512,7 +512,7 @@ function TeamPage() {
   const [editingMember,  setEditingMember]  = useState<Member | null>(null);
 
   const { data: members = [], isLoading } = useQuery({ queryKey: ["team-members"], queryFn: fetchMembers });
-  const { data: roles   = [] }            = useQuery({ queryKey: ["roles"],        queryFn: fetchRoles  });
+  const { data: roles   = [] }            = useQuery({ queryKey: ["roles-basic"],   queryFn: fetchRoles  });
 
   const updateMutation = useMutation({
     mutationFn: ({ id, patch }: { id: string; patch: Parameters<typeof updateMember>[1] }) =>
