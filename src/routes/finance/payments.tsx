@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useMeta } from "@/contexts/PageMetaContext";
 import { currency } from "@/lib/demo-data";
 import { cn } from "@/lib/utils";
@@ -8,30 +9,82 @@ import {
   CreditCard, DollarSign, FileText, Landmark, Link2, Mail,
   Receipt, TrendingUp, X,
 } from "lucide-react";
-import {
-  Popover, PopoverContent, PopoverTrigger,
-} from "@/components/ui/popover";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
   Command, CommandEmpty, CommandGroup, CommandInput,
   CommandItem, CommandList, CommandSeparator,
 } from "@/components/ui/command";
-import { INVOICES, type Invoice, type InvoiceStatus } from "@/data/invoices";
 import {
   StatBar, StatItem, FilterBar, SearchInput, FilterSelect,
   PageTabs, PageTab,
 } from "@/components/ui/page-components";
-
-// ─── Route ────────────────────────────────────────────────────────────────────
+import { createClient } from "@/lib/supabase/client";
+import type { InvoiceStatus } from "./invoices";
 
 export const Route = createFileRoute("/finance/payments")({
-  head: () => ({ meta: [{ title: "Payments · Port City Sound & Security" }] }),
+  head: () => ({ meta: [{ title: "Payments · BearingPro" }] }),
   component: PaymentsPage,
 });
+
+const supabase = createClient();
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 type MainTab = "outstanding" | "all" | "collect";
 type CollectMethod = "stripe" | "check" | "wire" | "cash";
+
+type DbLineItem = { id: string; sort_order: number; [key: string]: unknown };
+type DbPaymentRow = {
+  id: string;
+  invoice_id: string;
+  date: string;
+  amount: number;
+  method: string;
+  reference: string;
+  created_at: string;
+};
+
+type DbInvoice = {
+  id: string;
+  invoice_number: string;
+  status: string;
+  company_name: string;
+  contact_name: string;
+  linked_project_id: string | null;
+  linked_work_order_id: string | null;
+  issued_date: string;
+  due_date: string;
+  payment_terms: string;
+  total: number;
+  amount_paid: number;
+  balance_due: number;
+  notes: string;
+  invoice_line_items: DbLineItem[];
+  invoice_payments: DbPaymentRow[];
+};
+
+interface Invoice {
+  id: string;
+  number: string;
+  status: InvoiceStatus;
+  companyName: string;
+  contactName: string;
+  dueDate: string;
+  total: number;
+  amountPaid: number;
+  balanceDue: number;
+}
+
+interface FlatPayment {
+  id: string;
+  invoiceId: string;
+  invoiceNumber: string;
+  companyName: string;
+  date: string;
+  amount: number;
+  method: string;
+  reference: string;
+}
 
 // ─── Config ───────────────────────────────────────────────────────────────────
 
@@ -55,33 +108,35 @@ const METHOD_META: Record<string, { label: string; cls: string }> = {
 const labelCls = "block text-[10.5px] uppercase tracking-wider text-muted-foreground font-medium mb-1";
 const inputCls = "w-full rounded-md border border-border bg-background px-3 py-1.5 text-[12.5px] focus:outline-none focus:ring-1 focus:ring-primary placeholder:text-muted-foreground/50";
 
-// ─── Derived data ─────────────────────────────────────────────────────────────
-
-const OUTSTANDING = INVOICES
-  .filter((i) => i.status === "sent" || i.status === "partial" || i.status === "overdue")
-  .sort((a, b) => {
-    const aOv = a.status === "overdue";
-    const bOv = b.status === "overdue";
-    if (aOv !== bOv) return aOv ? -1 : 1;
-    return new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime();
-  });
-
-const ALL_PAYMENTS = INVOICES.flatMap((inv) =>
-  inv.payments.map((p) => ({
-    ...p,
-    invoiceId: inv.id,
-    invoiceNumber: inv.number,
-    companyName: inv.companyName,
-  }))
-).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-
-const TODAY = new Date("2026-06-08");
-
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-function daysOverdue(dueDateStr: string): number {
-  const diff = Math.floor((TODAY.getTime() - new Date(dueDateStr).getTime()) / 86400000);
+function fmtDate(iso: string): string {
+  const [y, m, d] = iso.split("-").map(Number);
+  const months = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+  return `${months[m - 1]} ${d}, ${y}`;
+}
+
+function today(): string {
+  return new Date().toISOString().split("T")[0];
+}
+
+function daysOverdue(dueDateIso: string): number {
+  const diff = Math.floor((Date.now() - new Date(dueDateIso).getTime()) / 86400000);
   return Math.max(0, diff);
+}
+
+function toInvoice(r: DbInvoice): Invoice {
+  return {
+    id:          r.id,
+    number:      r.invoice_number,
+    status:      r.status as InvoiceStatus,
+    companyName: r.company_name,
+    contactName: r.contact_name,
+    dueDate:     r.due_date,
+    total:       Number(r.total),
+    amountPaid:  Number(r.amount_paid),
+    balanceDue:  Number(r.balance_due),
+  };
 }
 
 // ─── StatusBadge ──────────────────────────────────────────────────────────────
@@ -105,7 +160,6 @@ function MethodBadge({ method }: { method: string }) {
     </span>
   );
 }
-
 
 // ─── InvoiceCombobox ──────────────────────────────────────────────────────────
 
@@ -142,16 +196,16 @@ function InvoiceCombobox({
           <ChevronsUpDown className="h-3.5 w-3.5 shrink-0 text-muted-foreground/50 ml-auto" />
         </button>
       </PopoverTrigger>
-      <PopoverContent className="w-[480px] p-0" align="start">
+      <PopoverContent className="w-120 p-0" align="start">
         <Command
           filter={(itemValue, search) => {
             if (itemValue === "__clear__") return 1;
             const inv = invoices.find((i) => i.id === itemValue);
             if (!inv) return 0;
-            return `${inv.number} ${inv.companyName} ${inv.projectName ?? ""}`.toLowerCase().includes(search.toLowerCase()) ? 1 : 0;
+            return `${inv.number} ${inv.companyName}`.toLowerCase().includes(search.toLowerCase()) ? 1 : 0;
           }}
         >
-          <CommandInput placeholder="Search by invoice #, customer, project…" />
+          <CommandInput placeholder="Search by invoice #, customer…" />
           <CommandList>
             <CommandEmpty>No invoices found.</CommandEmpty>
             {value && (
@@ -193,166 +247,162 @@ function InvoiceCombobox({
 
 // ─── OutstandingTab ───────────────────────────────────────────────────────────
 
-function OutstandingTab({ search, onCollect }: { search: string; onCollect: (id: string) => void }) {
+function OutstandingTab({
+  outstanding, search, onCollect,
+}: {
+  outstanding: Invoice[];
+  search: string;
+  onCollect: (id: string) => void;
+}) {
   const filtered = useMemo(() => {
     const q = search.toLowerCase().trim();
-    if (!q) return OUTSTANDING;
-    return OUTSTANDING.filter((i) =>
-      i.number.toLowerCase().includes(q) ||
-      i.companyName.toLowerCase().includes(q) ||
-      (i.projectName ?? "").toLowerCase().includes(q)
+    if (!q) return outstanding;
+    return outstanding.filter((i) =>
+      i.number.toLowerCase().includes(q) || i.companyName.toLowerCase().includes(q)
     );
-  }, [search]);
+  }, [outstanding, search]);
 
   return (
-    <>
-
-      <div className="overflow-x-auto">
-        <table className="w-full text-[12.5px]">
-          <thead className="border-b border-border bg-muted/40 text-[10px] uppercase tracking-wider text-muted-foreground">
-            <tr>
-              <th className="text-left px-4 py-2.5 font-medium">Invoice #</th>
-              <th className="text-left px-4 py-2.5 font-medium">Customer</th>
-              <th className="text-left px-4 py-2.5 font-medium hidden lg:table-cell">Project</th>
-              <th className="text-right px-4 py-2.5 font-medium">Total</th>
-              <th className="text-right px-4 py-2.5 font-medium hidden sm:table-cell">Paid</th>
-              <th className="text-right px-4 py-2.5 font-medium">Balance Due</th>
-              <th className="text-left px-4 py-2.5 font-medium hidden sm:table-cell">Due Date</th>
-              <th className="text-left px-4 py-2.5 font-medium">Status</th>
-              <th className="px-4 py-2.5" />
-            </tr>
-          </thead>
-          <tbody>
-            {filtered.map((inv) => {
-              const od = daysOverdue(inv.dueDate);
-              return (
-                <tr key={inv.id} className="border-b border-border/60 hover:bg-muted/30 transition-colors">
-                  <td className="px-4 py-3 font-mono text-[12px] font-medium">{inv.number}</td>
-                  <td className="px-4 py-3 font-medium">{inv.companyName}</td>
-                  <td className="px-4 py-3 text-muted-foreground hidden lg:table-cell truncate max-w-36">
-                    {inv.projectName ?? "—"}
-                  </td>
-                  <td className="px-4 py-3 text-right tabular-nums">{currency(inv.total)}</td>
-                  <td className="px-4 py-3 text-right tabular-nums text-muted-foreground hidden sm:table-cell">
-                    {inv.amountPaid > 0 ? currency(inv.amountPaid) : "—"}
-                  </td>
-                  <td className={cn("px-4 py-3 text-right tabular-nums font-semibold", inv.status === "overdue" && "text-red-500")}>
-                    <span className="block">{currency(inv.balanceDue)}</span>
-                    {od > 0 && (
-                      <span className="text-[10px] font-normal text-red-400">{od}d overdue</span>
-                    )}
-                  </td>
-                  <td className="px-4 py-3 text-muted-foreground hidden sm:table-cell">{inv.dueDate}</td>
-                  <td className="px-4 py-3"><StatusBadge status={inv.status} /></td>
-                  <td className="px-4 py-3 text-right">
-                    <button
-                      onClick={() => onCollect(inv.id)}
-                      className="h-7 rounded-md bg-primary/10 px-3 text-[11.5px] font-medium text-primary hover:bg-primary/20 transition-colors whitespace-nowrap"
-                    >
-                      Collect →
-                    </button>
-                  </td>
-                </tr>
-              );
-            })}
-            {filtered.length === 0 && (
-              <tr>
-                <td colSpan={9} className="px-4 py-16 text-center text-[12.5px] text-muted-foreground">
-                  No outstanding invoices found
+    <div className="overflow-x-auto">
+      <table className="w-full text-[12.5px]">
+        <thead className="border-b border-border bg-muted/40 text-[10px] uppercase tracking-wider text-muted-foreground">
+          <tr>
+            <th className="text-left px-4 py-2.5 font-medium">Invoice #</th>
+            <th className="text-left px-4 py-2.5 font-medium">Customer</th>
+            <th className="text-right px-4 py-2.5 font-medium">Total</th>
+            <th className="text-right px-4 py-2.5 font-medium hidden sm:table-cell">Paid</th>
+            <th className="text-right px-4 py-2.5 font-medium">Balance Due</th>
+            <th className="text-left px-4 py-2.5 font-medium hidden sm:table-cell">Due Date</th>
+            <th className="text-left px-4 py-2.5 font-medium">Status</th>
+            <th className="px-4 py-2.5" />
+          </tr>
+        </thead>
+        <tbody>
+          {filtered.map((inv) => {
+            const od = daysOverdue(inv.dueDate);
+            return (
+              <tr key={inv.id} className="border-b border-border/60 hover:bg-muted/30 transition-colors">
+                <td className="px-4 py-3 font-mono text-[12px] font-medium">{inv.number}</td>
+                <td className="px-4 py-3 font-medium">{inv.companyName}</td>
+                <td className="px-4 py-3 text-right tabular-nums">{currency(inv.total)}</td>
+                <td className="px-4 py-3 text-right tabular-nums text-muted-foreground hidden sm:table-cell">
+                  {inv.amountPaid > 0 ? currency(inv.amountPaid) : "—"}
+                </td>
+                <td className={cn("px-4 py-3 text-right tabular-nums font-semibold", inv.status === "overdue" && "text-red-500")}>
+                  <span className="block">{currency(inv.balanceDue)}</span>
+                  {od > 0 && <span className="text-[10px] font-normal text-red-400">{od}d overdue</span>}
+                </td>
+                <td className="px-4 py-3 text-muted-foreground hidden sm:table-cell">{fmtDate(inv.dueDate)}</td>
+                <td className="px-4 py-3"><StatusBadge status={inv.status} /></td>
+                <td className="px-4 py-3 text-right">
+                  <button
+                    onClick={() => onCollect(inv.id)}
+                    className="h-7 rounded-md bg-primary/10 px-3 text-[11.5px] font-medium text-primary hover:bg-primary/20 transition-colors whitespace-nowrap"
+                  >
+                    Collect →
+                  </button>
                 </td>
               </tr>
-            )}
-          </tbody>
-        </table>
-      </div>
-    </>
+            );
+          })}
+          {filtered.length === 0 && (
+            <tr>
+              <td colSpan={8} className="px-4 py-16 text-center text-[12.5px] text-muted-foreground">
+                No outstanding invoices found
+              </td>
+            </tr>
+          )}
+        </tbody>
+      </table>
+    </div>
   );
 }
 
 // ─── AllPaymentsTab ───────────────────────────────────────────────────────────
 
-function AllPaymentsTab({ search, methodFilter }: { search: string; methodFilter: string }) {
+function AllPaymentsTab({
+  allPayments, search, methodFilter,
+}: {
+  allPayments: FlatPayment[];
+  search: string;
+  methodFilter: string;
+}) {
   const filtered = useMemo(() => {
     const q = search.toLowerCase().trim();
-    return ALL_PAYMENTS.filter((p) => {
+    return allPayments.filter((p) => {
       if (methodFilter !== "all" && p.method !== methodFilter) return false;
-      if (q &&
-        !p.invoiceNumber.toLowerCase().includes(q) &&
-        !p.companyName.toLowerCase().includes(q) &&
-        !p.reference.toLowerCase().includes(q)
-      ) return false;
+      if (q && !p.invoiceNumber.toLowerCase().includes(q) && !p.companyName.toLowerCase().includes(q) && !p.reference.toLowerCase().includes(q)) return false;
       return true;
     });
-  }, [search, methodFilter]);
+  }, [allPayments, search, methodFilter]);
 
   return (
-    <>
-
-      <div className="overflow-x-auto">
-        <table className="w-full text-[12.5px]">
-          <thead className="border-b border-border bg-muted/40 text-[10px] uppercase tracking-wider text-muted-foreground">
-            <tr>
-              <th className="text-left px-4 py-2.5 font-medium">Date</th>
-              <th className="text-left px-4 py-2.5 font-medium">Invoice #</th>
-              <th className="text-left px-4 py-2.5 font-medium">Customer</th>
-              <th className="text-left px-4 py-2.5 font-medium">Method</th>
-              <th className="text-left px-4 py-2.5 font-medium hidden md:table-cell">Reference</th>
-              <th className="text-right px-4 py-2.5 font-medium">Amount</th>
+    <div className="overflow-x-auto">
+      <table className="w-full text-[12.5px]">
+        <thead className="border-b border-border bg-muted/40 text-[10px] uppercase tracking-wider text-muted-foreground">
+          <tr>
+            <th className="text-left px-4 py-2.5 font-medium">Date</th>
+            <th className="text-left px-4 py-2.5 font-medium">Invoice #</th>
+            <th className="text-left px-4 py-2.5 font-medium">Customer</th>
+            <th className="text-left px-4 py-2.5 font-medium">Method</th>
+            <th className="text-left px-4 py-2.5 font-medium hidden md:table-cell">Reference</th>
+            <th className="text-right px-4 py-2.5 font-medium">Amount</th>
+          </tr>
+        </thead>
+        <tbody>
+          {filtered.map((p) => (
+            <tr key={p.id} className="border-b border-border/60 hover:bg-muted/30 transition-colors">
+              <td className="px-4 py-3 text-muted-foreground">{fmtDate(p.date)}</td>
+              <td className="px-4 py-3 font-mono text-[12px] font-medium">{p.invoiceNumber}</td>
+              <td className="px-4 py-3 font-medium">{p.companyName}</td>
+              <td className="px-4 py-3"><MethodBadge method={p.method} /></td>
+              <td className="px-4 py-3 text-muted-foreground font-mono text-[11.5px] hidden md:table-cell">
+                {p.reference || "—"}
+              </td>
+              <td className="px-4 py-3 text-right tabular-nums font-semibold text-green-600 dark:text-green-400">
+                +{currency(p.amount)}
+              </td>
             </tr>
-          </thead>
-          <tbody>
-            {filtered.map((p) => (
-              <tr key={p.id} className="border-b border-border/60 hover:bg-muted/30 transition-colors">
-                <td className="px-4 py-3 text-muted-foreground">{p.date}</td>
-                <td className="px-4 py-3 font-mono text-[12px] font-medium">{p.invoiceNumber}</td>
-                <td className="px-4 py-3 font-medium">{p.companyName}</td>
-                <td className="px-4 py-3"><MethodBadge method={p.method} /></td>
-                <td className="px-4 py-3 text-muted-foreground font-mono text-[11.5px] hidden md:table-cell">
-                  {p.reference || "—"}
-                </td>
-                <td className="px-4 py-3 text-right tabular-nums font-semibold text-green-600 dark:text-green-400">
-                  +{currency(p.amount)}
-                </td>
-              </tr>
-            ))}
-            {filtered.length === 0 && (
-              <tr>
-                <td colSpan={6} className="px-4 py-16 text-center text-[12.5px] text-muted-foreground">
-                  No payments found
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-      </div>
-    </>
+          ))}
+          {filtered.length === 0 && (
+            <tr>
+              <td colSpan={6} className="px-4 py-16 text-center text-[12.5px] text-muted-foreground">
+                No payments found
+              </td>
+            </tr>
+          )}
+        </tbody>
+      </table>
+    </div>
   );
 }
 
 // ─── CollectTab ───────────────────────────────────────────────────────────────
 
 function CollectTab({
-  invoiceId, onInvoiceChange,
+  outstanding, invoiceId, onInvoiceChange,
 }: {
+  outstanding: Invoice[];
   invoiceId: string;
   onInvoiceChange: (id: string) => void;
 }) {
+  const qc = useQueryClient();
   const [method, setMethod] = useState<CollectMethod>("stripe");
   const [amount, setAmount] = useState("");
   const [email, setEmail] = useState("");
   const [checkNumber, setCheckNumber] = useState("");
   const [bankRef, setBankRef] = useState("");
-  const [dateReceived, setDateReceived] = useState("Jun 8, 2026");
-  const [notes, setNotes] = useState("");
+  const [dateReceived, setDateReceived] = useState(today);
   const [linkCopied, setLinkCopied] = useState(false);
   const [linkSent, setLinkSent] = useState(false);
   const [recorded, setRecorded] = useState(false);
+  const [recordedAmount, setRecordedAmount] = useState(0);
 
-  const selectedInvoice = OUTSTANDING.find((i) => i.id === invoiceId) ?? null;
+  const selectedInvoice = outstanding.find((i) => i.id === invoiceId) ?? null;
 
   useEffect(() => {
     if (invoiceId) {
-      const inv = OUTSTANDING.find((i) => i.id === invoiceId);
+      const inv = outstanding.find((i) => i.id === invoiceId);
       setAmount(inv ? inv.balanceDue.toFixed(2) : "");
     } else {
       setAmount("");
@@ -363,22 +413,56 @@ function CollectTab({
     setCheckNumber("");
     setBankRef("");
     setEmail("");
-    setNotes("");
-  }, [invoiceId]);
+    setDateReceived(today());
+  }, [invoiceId, outstanding]);
 
-  const fakeStripeLink = selectedInvoice
-    ? `https://buy.stripe.com/pcss_${selectedInvoice.number.toLowerCase().replace("-", "")}`
-    : "";
+  const collectMutation = useMutation({
+    mutationFn: async () => {
+      if (!selectedInvoice) throw new Error("No invoice selected");
+      const tenantId = qc.getQueryData<{ id: string }>(["tenant"])?.id;
+      const amountNum = Number(amount);
+      const dbMethod = method === "check" ? "check" : method === "wire" ? "wire" : "cash";
+      const reference = method === "check" ? checkNumber : method === "wire" ? bankRef : "";
+
+      const { error: pmtError } = await supabase
+        .from("invoice_payments")
+        .insert({
+          tenant_id:  tenantId!,
+          invoice_id: selectedInvoice.id,
+          date:       dateReceived,
+          amount:     amountNum,
+          method:     dbMethod,
+          reference:  reference,
+        });
+      if (pmtError) throw pmtError;
+
+      const newAmountPaid = selectedInvoice.amountPaid + amountNum;
+      const newBalanceDue = Math.max(0, selectedInvoice.total - newAmountPaid);
+      const newStatus: InvoiceStatus = newBalanceDue <= 0 ? "paid" : "partial";
+
+      const { data, error: invError } = await supabase
+        .from("invoices")
+        .update({ amount_paid: newAmountPaid, balance_due: newBalanceDue, status: newStatus })
+        .eq("id", selectedInvoice.id)
+        .select("*, invoice_line_items(*), invoice_payments(*)")
+        .single();
+      if (invError) throw invError;
+      return data as unknown as DbInvoice;
+    },
+    onSuccess: (updatedInv) => {
+      qc.setQueryData<DbInvoice[]>(["invoices"], (prev = []) =>
+        prev.map((inv) => (inv.id === updatedInv.id ? updatedInv : inv)),
+      );
+      setRecordedAmount(Number(amount));
+      setRecorded(true);
+    },
+  });
 
   const amountNum = Number(amount);
   const isPartial = selectedInvoice && amountNum > 0 && amountNum < selectedInvoice.balanceDue;
-
-  function handleCopyLink() {
-    setLinkCopied(true);
-    setTimeout(() => setLinkCopied(false), 2500);
-  }
-
-  // ─ success states ─
+  const fakeStripeLink = selectedInvoice
+    ? `https://buy.stripe.com/pcss_${selectedInvoice.number.toLowerCase().replace("-", "")}`
+    : "";
 
   if (recorded && selectedInvoice) {
     return (
@@ -389,7 +473,7 @@ function CollectTab({
         <div className="text-center">
           <p className="text-[16px] font-semibold">Payment Recorded</p>
           <p className="text-[13px] text-muted-foreground mt-1">
-            {currency(amountNum)} applied to {selectedInvoice.number}
+            {currency(recordedAmount)} applied to {selectedInvoice.number}
           </p>
         </div>
         <button
@@ -431,17 +515,11 @@ function CollectTab({
     <div className="flex justify-center px-6 py-8">
       <div className="w-full max-w-xl space-y-6">
 
-        {/* Invoice selector */}
         <div>
           <label className={labelCls}>Invoice</label>
-          <InvoiceCombobox
-            value={invoiceId}
-            onChange={onInvoiceChange}
-            invoices={OUTSTANDING}
-          />
+          <InvoiceCombobox value={invoiceId} onChange={onInvoiceChange} invoices={outstanding} />
         </div>
 
-        {/* Invoice summary card */}
         {selectedInvoice && (
           <div className="rounded-xl border border-border bg-muted/30 p-4 space-y-3">
             <div className="flex items-start justify-between gap-2">
@@ -476,18 +554,11 @@ function CollectTab({
                 </p>
               </div>
             </div>
-            {selectedInvoice.projectName && (
-              <p className="text-[11.5px] text-muted-foreground flex items-center gap-1.5">
-                <FileText className="h-3 w-3 shrink-0" />
-                {selectedInvoice.projectName}
-              </p>
-            )}
           </div>
         )}
 
         {selectedInvoice && (
           <>
-            {/* Amount */}
             <div>
               <label className={labelCls}>Amount</label>
               <div className="relative">
@@ -509,81 +580,48 @@ function CollectTab({
               )}
             </div>
 
-            {/* Method selector */}
             <div>
               <label className={labelCls}>Payment Method</label>
               <div className="grid grid-cols-4 gap-2">
-
-                {/* Stripe */}
-                <button
-                  type="button"
-                  onClick={() => setMethod("stripe")}
-                  className={cn(
-                    "relative flex flex-col items-center gap-1.5 rounded-lg border p-3 text-center transition-colors",
-                    method === "stripe"
-                      ? "border-primary bg-primary/5"
-                      : "border-border bg-background text-muted-foreground hover:bg-muted/40",
-                  )}
-                >
-                  <span className="absolute -top-2 left-1/2 -translate-x-1/2 rounded-full bg-primary px-1.5 py-0.5 text-[9px] font-semibold text-primary-foreground whitespace-nowrap">
-                    Recommended
-                  </span>
-                  <CreditCard className={cn("h-4 w-4 mt-1", method === "stripe" ? "text-primary" : "text-muted-foreground")} />
-                  <span className={cn("text-[12px] font-medium", method === "stripe" ? "text-foreground" : "")}>Stripe</span>
-                  <span className="text-[10px] leading-tight text-muted-foreground">Card or ACH</span>
-                </button>
-
-                {/* Check */}
-                <button
-                  type="button"
-                  onClick={() => setMethod("check")}
-                  className={cn(
-                    "flex flex-col items-center gap-1.5 rounded-lg border p-3 text-center transition-colors",
-                    method === "check"
-                      ? "border-primary bg-primary/5"
-                      : "border-border bg-background text-muted-foreground hover:bg-muted/40",
-                  )}
-                >
-                  <Receipt className={cn("h-4 w-4", method === "check" ? "text-primary" : "text-muted-foreground")} />
-                  <span className={cn("text-[12px] font-medium", method === "check" ? "text-foreground" : "")}>Check</span>
-                  <span className="text-[10px] leading-tight text-muted-foreground">Paper check</span>
-                </button>
-
-                {/* Wire */}
-                <button
-                  type="button"
-                  onClick={() => setMethod("wire")}
-                  className={cn(
-                    "flex flex-col items-center gap-1.5 rounded-lg border p-3 text-center transition-colors",
-                    method === "wire"
-                      ? "border-primary bg-primary/5"
-                      : "border-border bg-background text-muted-foreground hover:bg-muted/40",
-                  )}
-                >
-                  <Landmark className={cn("h-4 w-4", method === "wire" ? "text-primary" : "text-muted-foreground")} />
-                  <span className={cn("text-[12px] font-medium", method === "wire" ? "text-foreground" : "")}>Wire</span>
-                  <span className="text-[10px] leading-tight text-muted-foreground">Bank transfer</span>
-                </button>
-
-                {/* Cash */}
-                <button
-                  type="button"
-                  onClick={() => setMethod("cash")}
-                  className={cn(
-                    "flex flex-col items-center gap-1.5 rounded-lg border p-3 text-center transition-colors",
-                    method === "cash"
-                      ? "border-primary bg-primary/5"
-                      : "border-border bg-background text-muted-foreground hover:bg-muted/40",
-                  )}
-                >
-                  <Banknote className={cn("h-4 w-4", method === "cash" ? "text-primary" : "text-muted-foreground")} />
-                  <span className={cn("text-[12px] font-medium", method === "cash" ? "text-foreground" : "")}>Cash</span>
-                  <span className="text-[10px] leading-tight text-muted-foreground">Cash receipt</span>
-                </button>
+                {(["stripe", "check", "wire", "cash"] as CollectMethod[]).map((m) => {
+                  const icons: Record<CollectMethod, React.ReactNode> = {
+                    stripe: <CreditCard className={cn("h-4 w-4 mt-1", m === method ? "text-primary" : "text-muted-foreground")} />,
+                    check:  <Receipt   className={cn("h-4 w-4", m === method ? "text-primary" : "text-muted-foreground")} />,
+                    wire:   <Landmark  className={cn("h-4 w-4", m === method ? "text-primary" : "text-muted-foreground")} />,
+                    cash:   <Banknote  className={cn("h-4 w-4", m === method ? "text-primary" : "text-muted-foreground")} />,
+                  };
+                  const labels: Record<CollectMethod, [string, string]> = {
+                    stripe: ["Stripe", "Card or ACH"],
+                    check:  ["Check", "Paper check"],
+                    wire:   ["Wire", "Bank transfer"],
+                    cash:   ["Cash", "Cash receipt"],
+                  };
+                  return (
+                    <button
+                      key={m}
+                      type="button"
+                      onClick={() => setMethod(m)}
+                      className={cn(
+                        "relative flex flex-col items-center gap-1.5 rounded-lg border p-3 text-center transition-colors",
+                        method === m
+                          ? "border-primary bg-primary/5"
+                          : "border-border bg-background text-muted-foreground hover:bg-muted/40",
+                      )}
+                    >
+                      {m === "stripe" && (
+                        <span className="absolute -top-2 left-1/2 -translate-x-1/2 rounded-full bg-primary px-1.5 py-0.5 text-[9px] font-semibold text-primary-foreground whitespace-nowrap">
+                          Recommended
+                        </span>
+                      )}
+                      {icons[m]}
+                      <span className={cn("text-[12px] font-medium", method === m ? "text-foreground" : "")}>{labels[m][0]}</span>
+                      <span className="text-[10px] leading-tight text-muted-foreground">{labels[m][1]}</span>
+                    </button>
+                  );
+                })}
               </div>
             </div>
 
-            {/* Method-specific fields */}
             {method === "stripe" && (
               <div className="rounded-xl border border-border bg-muted/20 p-4 space-y-4">
                 <div className="flex items-start gap-3">
@@ -597,7 +635,6 @@ function CollectTab({
                     </p>
                   </div>
                 </div>
-
                 <div>
                   <label className={labelCls}>Send to (email)</label>
                   <input
@@ -608,22 +645,17 @@ function CollectTab({
                     placeholder={`${selectedInvoice.contactName.split(" ")[0].toLowerCase()}@example.com`}
                   />
                 </div>
-
                 <div className="rounded-md border border-border bg-background px-3 py-2">
                   <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">Payment link</p>
                   <p className="font-mono text-[11.5px] text-muted-foreground truncate">{fakeStripeLink}</p>
                 </div>
-
                 <div className="flex gap-2">
                   <button
                     type="button"
-                    onClick={handleCopyLink}
+                    onClick={() => { setLinkCopied(true); setTimeout(() => setLinkCopied(false), 2500); }}
                     className="flex-1 h-9 flex items-center justify-center gap-2 rounded-md border border-border bg-background text-[12.5px] hover:bg-accent transition-colors"
                   >
-                    {linkCopied
-                      ? <><Check className="h-3.5 w-3.5 text-green-500" /> Copied!</>
-                      : <><Link2 className="h-3.5 w-3.5" /> Copy Link</>
-                    }
+                    {linkCopied ? <><Check className="h-3.5 w-3.5 text-green-500" /> Copied!</> : <><Link2 className="h-3.5 w-3.5" /> Copy Link</>}
                   </button>
                   <button
                     type="button"
@@ -636,47 +668,24 @@ function CollectTab({
               </div>
             )}
 
-            {method === "check" && (
+            {(method === "check" || method === "wire") && (
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className={labelCls}>Date Received</label>
                   <input
+                    type="date"
                     value={dateReceived}
                     onChange={(e) => setDateReceived(e.target.value)}
                     className={inputCls}
-                    placeholder="Jun 8, 2026"
                   />
                 </div>
                 <div>
-                  <label className={labelCls}>Check Number</label>
+                  <label className={labelCls}>{method === "check" ? "Check Number" : "Bank Reference"}</label>
                   <input
-                    value={checkNumber}
-                    onChange={(e) => setCheckNumber(e.target.value)}
+                    value={method === "check" ? checkNumber : bankRef}
+                    onChange={(e) => method === "check" ? setCheckNumber(e.target.value) : setBankRef(e.target.value)}
                     className={inputCls}
-                    placeholder="e.g. 4421"
-                  />
-                </div>
-              </div>
-            )}
-
-            {method === "wire" && (
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className={labelCls}>Date Received</label>
-                  <input
-                    value={dateReceived}
-                    onChange={(e) => setDateReceived(e.target.value)}
-                    className={inputCls}
-                    placeholder="Jun 8, 2026"
-                  />
-                </div>
-                <div>
-                  <label className={labelCls}>Bank Reference</label>
-                  <input
-                    value={bankRef}
-                    onChange={(e) => setBankRef(e.target.value)}
-                    className={inputCls}
-                    placeholder="e.g. WIRE-2026-04421"
+                    placeholder={method === "check" ? "e.g. 4421" : "e.g. WIRE-2026-04421"}
                   />
                 </div>
               </div>
@@ -686,34 +695,22 @@ function CollectTab({
               <div>
                 <label className={labelCls}>Date Received</label>
                 <input
+                  type="date"
                   value={dateReceived}
                   onChange={(e) => setDateReceived(e.target.value)}
                   className={inputCls}
-                  placeholder="Jun 8, 2026"
                 />
               </div>
             )}
 
-            {/* Notes */}
-            <div>
-              <label className={labelCls}>Notes (optional)</label>
-              <textarea
-                value={notes}
-                onChange={(e) => setNotes(e.target.value)}
-                rows={2}
-                placeholder="Internal notes…"
-                className="w-full resize-none rounded-md border border-border bg-background px-3 py-2 text-[12.5px] focus:outline-none focus:ring-1 focus:ring-primary placeholder:text-muted-foreground/50"
-              />
-            </div>
-
-            {/* CTA — only for non-Stripe (Stripe has its own buttons above) */}
             {method !== "stripe" && (
               <button
                 type="button"
-                onClick={() => setRecorded(true)}
-                className="w-full h-10 rounded-md bg-primary text-[13px] font-medium text-primary-foreground hover:opacity-90 transition-opacity"
+                onClick={() => collectMutation.mutate()}
+                disabled={collectMutation.isPending || !amountNum || amountNum <= 0}
+                className="w-full h-10 rounded-md bg-primary text-[13px] font-medium text-primary-foreground hover:opacity-90 transition-opacity disabled:opacity-50"
               >
-                Record Payment
+                {collectMutation.isPending ? "Recording…" : "Record Payment"}
               </button>
             )}
           </>
@@ -739,16 +736,62 @@ function PaymentsPage() {
   const [allSearch, setAllSearch] = useState("");
   const [methodFilter, setMethodFilter] = useState("all");
 
-  // Outstanding stats
-  const totalOutstanding = OUTSTANDING.reduce((s, i) => s + i.balanceDue, 0);
-  const overdueList      = OUTSTANDING.filter((i) => i.status === "overdue");
-  const overdueTotal     = overdueList.reduce((s, i) => s + i.balanceDue, 0);
-  const partialBalance   = OUTSTANDING.filter((i) => i.status === "partial").reduce((s, i) => s + i.balanceDue, 0);
+  const { data: rawInvoices = [] } = useQuery({
+    queryKey: ["invoices"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("invoices")
+        .select("*, invoice_line_items(*), invoice_payments(*)")
+        .order("issued_date", { ascending: false });
+      if (error) throw error;
+      return data as unknown as DbInvoice[];
+    },
+  });
 
-  // All Payments stats
-  const totalCollected = ALL_PAYMENTS.reduce((s, p) => s + p.amount, 0);
-  const thisMonth      = ALL_PAYMENTS.filter((p) => p.date.startsWith("Jun")).reduce((s, p) => s + p.amount, 0);
-  const lastMonth      = ALL_PAYMENTS.filter((p) => p.date.startsWith("May")).reduce((s, p) => s + p.amount, 0);
+  const invoices = useMemo(() => rawInvoices.map(toInvoice), [rawInvoices]);
+
+  const outstanding = useMemo(() =>
+    invoices
+      .filter((i) => i.status === "sent" || i.status === "partial" || i.status === "overdue")
+      .sort((a, b) => {
+        const aOv = a.status === "overdue";
+        const bOv = b.status === "overdue";
+        if (aOv !== bOv) return aOv ? -1 : 1;
+        return a.dueDate.localeCompare(b.dueDate);
+      }),
+    [invoices],
+  );
+
+  const allPayments = useMemo((): FlatPayment[] =>
+    rawInvoices.flatMap((inv) =>
+      (inv.invoice_payments ?? []).map((p) => ({
+        id:            p.id,
+        invoiceId:     inv.id,
+        invoiceNumber: inv.invoice_number,
+        companyName:   inv.company_name,
+        date:          p.date,
+        amount:        Number(p.amount),
+        method:        p.method,
+        reference:     p.reference,
+      }))
+    ).sort((a, b) => b.date.localeCompare(a.date)),
+    [rawInvoices],
+  );
+
+  // Stat aggregates — outstanding tab
+  const totalOutstanding = useMemo(() => outstanding.reduce((s, i) => s + i.balanceDue, 0), [outstanding]);
+  const overdueList      = useMemo(() => outstanding.filter((i) => i.status === "overdue"), [outstanding]);
+  const overdueTotal     = useMemo(() => overdueList.reduce((s, i) => s + i.balanceDue, 0), [overdueList]);
+  const partialBalance   = useMemo(() => outstanding.filter((i) => i.status === "partial").reduce((s, i) => s + i.balanceDue, 0), [outstanding]);
+
+  // Stat aggregates — all payments tab
+  const totalCollected = useMemo(() => allPayments.reduce((s, p) => s + p.amount, 0), [allPayments]);
+  const now            = new Date();
+  const thisMonthPfx   = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+  const lastMonthDate  = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+  const lastMonthPfx   = `${lastMonthDate.getFullYear()}-${String(lastMonthDate.getMonth() + 1).padStart(2, "0")}`;
+  const thisMonth      = useMemo(() => allPayments.filter((p) => p.date.startsWith(thisMonthPfx)).reduce((s, p) => s + p.amount, 0), [allPayments, thisMonthPfx]);
+  const lastMonth      = useMemo(() => allPayments.filter((p) => p.date.startsWith(lastMonthPfx)).reduce((s, p) => s + p.amount, 0), [allPayments, lastMonthPfx]);
 
   useEffect(() => {
     setMeta({ title: "Payments", subtitle: "Finance" });
@@ -761,13 +804,12 @@ function PaymentsPage() {
 
   return (
     <div className="flex flex-col">
-      {/* Stat bar */}
       {tab === "outstanding" && (
         <StatBar>
-          <StatItem icon={DollarSign}  label="Total Outstanding"                 value={currency(totalOutstanding)} />
+          <StatItem icon={DollarSign}  label="Total Outstanding"                value={currency(totalOutstanding)} />
           <StatItem icon={AlertCircle} label={`Overdue (${overdueList.length})`} value={currency(overdueTotal)} accent={overdueList.length > 0} />
-          <StatItem icon={TrendingUp}  label="Partial — Remaining"               value={currency(partialBalance)} />
-          <StatItem icon={FileText}    label="Open Invoices"                     value={String(OUTSTANDING.length)} />
+          <StatItem icon={TrendingUp}  label="Partial — Remaining"              value={currency(partialBalance)} />
+          <StatItem icon={FileText}    label="Open Invoices"                    value={String(outstanding.length)} />
         </StatBar>
       )}
       {tab === "all" && (
@@ -775,21 +817,19 @@ function PaymentsPage() {
           <StatItem icon={CheckCircle2} label="Total Collected" value={currency(totalCollected)} />
           <StatItem icon={TrendingUp}   label="This Month"      value={currency(thisMonth)} />
           <StatItem icon={Receipt}      label="Last Month"      value={currency(lastMonth)} />
-          <StatItem icon={FileText}     label="Payments"        value={String(ALL_PAYMENTS.length)} />
+          <StatItem icon={FileText}     label="Payments"        value={String(allPayments.length)} />
         </StatBar>
       )}
 
-      {/* Tabs */}
       <PageTabs>
         <PageTab active={tab === "outstanding"} onClick={() => setTab("outstanding")}>Outstanding</PageTab>
         <PageTab active={tab === "all"}         onClick={() => setTab("all")}>All Payments</PageTab>
         <PageTab active={tab === "collect"}     onClick={() => setTab("collect")}>Collect Payment</PageTab>
       </PageTabs>
 
-      {/* Filter bar */}
       {tab === "outstanding" && (
         <FilterBar>
-          <SearchInput value={outSearch} onChange={setOutSearch} placeholder="Search invoice #, customer, project…" />
+          <SearchInput value={outSearch} onChange={setOutSearch} placeholder="Search invoice #, customer…" />
         </FilterBar>
       )}
       {tab === "all" && (
@@ -806,12 +846,9 @@ function PaymentsPage() {
         </FilterBar>
       )}
 
-      {/* Tab content */}
-      {tab === "outstanding" && <OutstandingTab search={outSearch} onCollect={handleCollect} />}
-      {tab === "all"         && <AllPaymentsTab search={allSearch} methodFilter={methodFilter} />}
-      {tab === "collect"     && (
-        <CollectTab invoiceId={collectInvoiceId} onInvoiceChange={setCollectInvoiceId} />
-      )}
+      {tab === "outstanding" && <OutstandingTab outstanding={outstanding} search={outSearch} onCollect={handleCollect} />}
+      {tab === "all"         && <AllPaymentsTab allPayments={allPayments} search={allSearch} methodFilter={methodFilter} />}
+      {tab === "collect"     && <CollectTab outstanding={outstanding} invoiceId={collectInvoiceId} onInvoiceChange={setCollectInvoiceId} />}
     </div>
   );
 }

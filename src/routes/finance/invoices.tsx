@@ -1,35 +1,119 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useMeta } from "@/contexts/PageMetaContext";
 import { currency } from "@/lib/demo-data";
 import { cn } from "@/lib/utils";
 import {
-  AlertCircle, Check, CheckCircle2, ChevronsUpDown, CreditCard,
-  FileText, Pencil, X,
+  AlertCircle, Check, CheckCircle2, ChevronsUpDown,
+  CreditCard, FileText, Pencil, X,
 } from "lucide-react";
 import {
   StatBar, StatItem, FilterBar, SearchInput, FilterSelect,
   PageTabs, PageTab,
 } from "@/components/ui/page-components";
-import {
-  Sheet, SheetContent, SheetHeader, SheetTitle,
-} from "@/components/ui/sheet";
-import {
-  Popover, PopoverContent, PopoverTrigger,
-} from "@/components/ui/popover";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
   Command, CommandEmpty, CommandGroup, CommandInput,
   CommandItem, CommandList, CommandSeparator,
 } from "@/components/ui/command";
-import { INVOICES, type Invoice, type InvoiceStatus } from "@/data/invoices";
-import { PROJECTS } from "@/data/projects";
-
-// ─── Route ────────────────────────────────────────────────────────────────────
+import { createClient } from "@/lib/supabase/client";
+import type { TablesUpdate } from "@/lib/supabase/types";
 
 export const Route = createFileRoute("/finance/invoices")({
-  head: () => ({ meta: [{ title: "Invoices · Port City Sound & Security" }] }),
+  head: () => ({ meta: [{ title: "Invoices · BearingPro" }] }),
   component: InvoicesPage,
 });
+
+const supabase = createClient();
+
+// ─── Types ────────────────────────────────────────────────────────────────────
+
+export type InvoiceStatus = "draft" | "sent" | "partial" | "paid" | "overdue" | "void";
+
+type DbLineItem = {
+  id: string;
+  invoice_id: string;
+  description: string;
+  qty: number;
+  unit_price: number;
+  total: number;
+  sort_order: number;
+};
+
+type DbPayment = {
+  id: string;
+  invoice_id: string;
+  date: string;
+  amount: number;
+  method: string;
+  reference: string;
+  created_at: string;
+};
+
+type DbInvoice = {
+  id: string;
+  invoice_number: string;
+  status: string;
+  company_name: string;
+  contact_name: string;
+  linked_project_id: string | null;
+  linked_work_order_id: string | null;
+  issued_date: string;
+  due_date: string;
+  payment_terms: string;
+  subtotal: number;
+  tax_rate: number;
+  tax_amount: number;
+  total: number;
+  amount_paid: number;
+  balance_due: number;
+  notes: string;
+  invoice_line_items: DbLineItem[];
+  invoice_payments: DbPayment[];
+};
+
+interface LineItem {
+  id: string;
+  description: string;
+  qty: number;
+  unitPrice: number;
+  total: number;
+}
+
+interface Payment {
+  id: string;
+  date: string;
+  amount: number;
+  method: string;
+  reference: string;
+}
+
+interface Invoice {
+  id: string;
+  number: string;
+  status: InvoiceStatus;
+  companyName: string;
+  contactName: string;
+  linkedProjectId: string | null;
+  linkedWorkOrderId: string | null;
+  issuedDate: string;
+  dueDate: string;
+  paymentTerms: string;
+  subtotal: number;
+  taxRate: number;
+  taxAmount: number;
+  total: number;
+  amountPaid: number;
+  balanceDue: number;
+  notes: string;
+  lineItems: LineItem[];
+  payments: Payment[];
+}
+
+type DbProject = { id: string; code: string; name: string };
+type DbWorkOrder = { id: string; code: string; name: string };
 
 // ─── Config ───────────────────────────────────────────────────────────────────
 
@@ -56,26 +140,96 @@ const METHOD_LABELS: Record<string, string> = {
   ach:         "ACH",
   credit_card: "Credit Card",
   wire:        "Wire Transfer",
+  cash:        "Cash",
 };
+
+const PAYMENT_TERMS = ["Due on Receipt", "Net 15", "Net 30", "Net 45", "Net 60"];
+
+const inputCls = "w-full rounded-md border border-border bg-background px-3 py-1.5 text-[12.5px] focus:outline-none focus:ring-1 focus:ring-primary placeholder:text-muted-foreground/50";
+const labelCls = "block text-[10.5px] uppercase tracking-wider text-muted-foreground font-medium mb-1";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-const inputCls  = "w-full rounded-md border border-border bg-background px-3 py-1.5 text-[12.5px] focus:outline-none focus:ring-1 focus:ring-primary placeholder:text-muted-foreground/50";
-const labelCls  = "block text-[10.5px] uppercase tracking-wider text-muted-foreground font-medium mb-1";
-
-const JOB_PROJECTS   = PROJECTS.filter((p) => p.type === "project"    && p.status !== "cancelled");
-const JOB_WORKORDERS = PROJECTS.filter((p) => p.type === "work-order" && p.status !== "cancelled");
-
-// ─── ProjectCombobox ──────────────────────────────────────────────────────────
-
-interface ProjectComboboxProps {
-  value: string;
-  onChange: (id: string) => void;
+function fmtDate(iso: string): string {
+  const [y, m, d] = iso.split("-").map(Number);
+  const months = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+  return `${months[m - 1]} ${d}, ${y}`;
 }
 
-function ProjectCombobox({ value, onChange }: ProjectComboboxProps) {
+function today(): string {
+  return new Date().toISOString().split("T")[0];
+}
+
+function toInvoice(r: DbInvoice): Invoice {
+  return {
+    id:                r.id,
+    number:            r.invoice_number,
+    status:            r.status as InvoiceStatus,
+    companyName:       r.company_name,
+    contactName:       r.contact_name,
+    linkedProjectId:   r.linked_project_id,
+    linkedWorkOrderId: r.linked_work_order_id,
+    issuedDate:        r.issued_date,
+    dueDate:           r.due_date,
+    paymentTerms:      r.payment_terms,
+    subtotal:          Number(r.subtotal),
+    taxRate:           Number(r.tax_rate),
+    taxAmount:         Number(r.tax_amount),
+    total:             Number(r.total),
+    amountPaid:        Number(r.amount_paid),
+    balanceDue:        Number(r.balance_due),
+    notes:             r.notes,
+    lineItems: (r.invoice_line_items ?? [])
+      .sort((a, b) => a.sort_order - b.sort_order)
+      .map((li) => ({
+        id:          li.id,
+        description: li.description,
+        qty:         Number(li.qty),
+        unitPrice:   Number(li.unit_price),
+        total:       Number(li.total),
+      })),
+    payments: (r.invoice_payments ?? [])
+      .sort((a, b) => a.date.localeCompare(b.date))
+      .map((p) => ({
+        id:        p.id,
+        date:      p.date,
+        amount:    Number(p.amount),
+        method:    p.method,
+        reference: p.reference,
+      })),
+  };
+}
+
+// ─── StatusBadge ──────────────────────────────────────────────────────────────
+
+function StatusBadge({ status }: { status: InvoiceStatus }) {
+  const { label, cls } = STATUS_META[status];
+  return (
+    <span className={cn("inline-flex items-center rounded px-1.5 py-0.5 text-[10.5px] font-medium", cls)}>
+      {label}
+    </span>
+  );
+}
+
+// ─── JobCombobox ──────────────────────────────────────────────────────────────
+
+function JobCombobox({
+  value,
+  onChange,
+  projects,
+  workOrders,
+}: {
+  value: string;
+  onChange: (id: string) => void;
+  projects: DbProject[];
+  workOrders: DbWorkOrder[];
+}) {
   const [open, setOpen] = useState(false);
-  const selected = value ? PROJECTS.find((p) => p.id === value) ?? null : null;
+
+  const selectedProject   = value.startsWith("p:") ? projects.find((p) => p.id === value.slice(2)) ?? null : null;
+  const selectedWorkOrder = value.startsWith("w:") ? workOrders.find((w) => w.id === value.slice(2)) ?? null : null;
+  const selected          = selectedProject ?? selectedWorkOrder;
+  const selectedType      = selectedProject ? "project" : selectedWorkOrder ? "work-order" : null;
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -90,11 +244,11 @@ function ProjectCombobox({ value, onChange }: ProjectComboboxProps) {
             <span className="flex items-center gap-2 min-w-0">
               <span className={cn(
                 "shrink-0 inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-medium",
-                selected.type === "work-order"
+                selectedType === "work-order"
                   ? "bg-violet-500/15 text-violet-600 dark:text-violet-400"
                   : "bg-blue-500/15 text-blue-600 dark:text-blue-400",
               )}>
-                {selected.type === "work-order" ? "WO" : "Proj"}
+                {selectedType === "work-order" ? "WO" : "Proj"}
               </span>
               <span className="font-mono text-[11.5px] shrink-0">{selected.code}</span>
               <span className="text-muted-foreground truncate">{selected.name}</span>
@@ -106,17 +260,10 @@ function ProjectCombobox({ value, onChange }: ProjectComboboxProps) {
         </button>
       </PopoverTrigger>
       <PopoverContent className="w-110 p-0" align="start">
-        <Command
-          filter={(itemValue, search) => {
-            if (itemValue === "__clear__") return 1;
-            const job = PROJECTS.find((p) => p.id === itemValue);
-            if (!job) return 0;
-            return `${job.code} ${job.name} ${job.customer}`.toLowerCase().includes(search.toLowerCase()) ? 1 : 0;
-          }}
-        >
-          <CommandInput placeholder="Search by code, name, or customer…" />
+        <Command>
+          <CommandInput placeholder="Search by code or name…" />
           <CommandList>
-            <CommandEmpty>No projects found.</CommandEmpty>
+            <CommandEmpty>No jobs found.</CommandEmpty>
             {value && (
               <>
                 <CommandGroup>
@@ -131,36 +278,38 @@ function ProjectCombobox({ value, onChange }: ProjectComboboxProps) {
                 <CommandSeparator />
               </>
             )}
-            <CommandGroup heading="Projects">
-              {JOB_PROJECTS.map((job) => (
-                <CommandItem
-                  key={job.id}
-                  value={job.id}
-                  onSelect={(v) => { onChange(v); setOpen(false); }}
-                  className="text-[12.5px] gap-2"
-                >
-                  <Check className={cn("h-3.5 w-3.5 shrink-0", value === job.id ? "opacity-100" : "opacity-0")} />
-                  <span className="font-mono text-[11px] text-muted-foreground shrink-0">{job.code}</span>
-                  <span className="flex-1 truncate">{job.name}</span>
-                  <span className="text-[11px] text-muted-foreground shrink-0 max-w-28 truncate">{job.customer}</span>
-                </CommandItem>
-              ))}
-            </CommandGroup>
-            <CommandGroup heading="Work Orders">
-              {JOB_WORKORDERS.map((job) => (
-                <CommandItem
-                  key={job.id}
-                  value={job.id}
-                  onSelect={(v) => { onChange(v); setOpen(false); }}
-                  className="text-[12.5px] gap-2"
-                >
-                  <Check className={cn("h-3.5 w-3.5 shrink-0", value === job.id ? "opacity-100" : "opacity-0")} />
-                  <span className="font-mono text-[11px] text-muted-foreground shrink-0">{job.code}</span>
-                  <span className="flex-1 truncate">{job.name}</span>
-                  <span className="text-[11px] text-muted-foreground shrink-0 max-w-28 truncate">{job.customer}</span>
-                </CommandItem>
-              ))}
-            </CommandGroup>
+            {projects.length > 0 && (
+              <CommandGroup heading="Projects">
+                {projects.map((p) => (
+                  <CommandItem
+                    key={p.id}
+                    value={`p:${p.id}`}
+                    onSelect={(v) => { onChange(v); setOpen(false); }}
+                    className="text-[12.5px] gap-2"
+                  >
+                    <Check className={cn("h-3.5 w-3.5 shrink-0", value === `p:${p.id}` ? "opacity-100" : "opacity-0")} />
+                    <span className="font-mono text-[11px] text-muted-foreground shrink-0">{p.code}</span>
+                    <span className="flex-1 truncate">{p.name}</span>
+                  </CommandItem>
+                ))}
+              </CommandGroup>
+            )}
+            {workOrders.length > 0 && (
+              <CommandGroup heading="Work Orders">
+                {workOrders.map((w) => (
+                  <CommandItem
+                    key={w.id}
+                    value={`w:${w.id}`}
+                    onSelect={(v) => { onChange(v); setOpen(false); }}
+                    className="text-[12.5px] gap-2"
+                  >
+                    <Check className={cn("h-3.5 w-3.5 shrink-0", value === `w:${w.id}` ? "opacity-100" : "opacity-0")} />
+                    <span className="font-mono text-[11px] text-muted-foreground shrink-0">{w.code}</span>
+                    <span className="flex-1 truncate">{w.name}</span>
+                  </CommandItem>
+                ))}
+              </CommandGroup>
+            )}
           </CommandList>
         </Command>
       </PopoverContent>
@@ -168,60 +317,109 @@ function ProjectCombobox({ value, onChange }: ProjectComboboxProps) {
   );
 }
 
-// ─── StatusBadge ──────────────────────────────────────────────────────────────
-
-function StatusBadge({ status }: { status: InvoiceStatus }) {
-  const { label, cls } = STATUS_META[status];
-  return (
-    <span className={cn("inline-flex items-center rounded px-1.5 py-0.5 text-[10.5px] font-medium", cls)}>
-      {label}
-    </span>
-  );
-}
-
 // ─── InvoiceDrawer ────────────────────────────────────────────────────────────
 
 type DrawerMode = "view" | "edit";
 
-interface DrawerProps {
+function InvoiceDrawer({
+  open,
+  invoice,
+  mode,
+  projects,
+  workOrders,
+  onClose,
+  onSwitchToEdit,
+  onSave,
+  isPending,
+}: {
   open: boolean;
   invoice: Invoice | null;
   mode: DrawerMode;
+  projects: DbProject[];
+  workOrders: DbWorkOrder[];
   onClose: () => void;
   onSwitchToEdit: () => void;
-  onSave: (updated: Invoice) => void;
-}
+  onSave: (patch: TablesUpdate<"invoices">) => void;
+  isPending: boolean;
+}) {
+  const [form, setForm] = useState<{
+    status: InvoiceStatus;
+    paymentTerms: string;
+    issuedDate: string;
+    dueDate: string;
+    companyName: string;
+    contactName: string;
+    linkedJobId: string;
+    notes: string;
+  }>({
+    status: "draft", paymentTerms: "Net 30",
+    issuedDate: "", dueDate: "",
+    companyName: "", contactName: "",
+    linkedJobId: "", notes: "",
+  });
 
-function InvoiceDrawer({ open, invoice, mode, onClose, onSwitchToEdit, onSave }: DrawerProps) {
-  const [form, setForm] = useState<Partial<Invoice>>({});
+  const initializedRef = useRef(false);
 
   useEffect(() => {
-    if (invoice) setForm({ ...invoice });
-  }, [invoice]);
+    if (!open || !invoice) { initializedRef.current = false; return; }
+    if (initializedRef.current) return;
+    initializedRef.current = true;
+    setForm({
+      status:       invoice.status,
+      paymentTerms: invoice.paymentTerms,
+      issuedDate:   invoice.issuedDate,
+      dueDate:      invoice.dueDate,
+      companyName:  invoice.companyName,
+      contactName:  invoice.contactName,
+      linkedJobId:  invoice.linkedProjectId
+        ? `p:${invoice.linkedProjectId}`
+        : invoice.linkedWorkOrderId
+          ? `w:${invoice.linkedWorkOrderId}`
+          : "",
+      notes: invoice.notes,
+    });
+  }, [open, invoice]);
 
-  if (!invoice) return null;
-
-  function field(key: keyof Invoice) {
+  function field(key: keyof typeof form) {
     return {
-      value: (form[key] as string) ?? "",
-      onChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) =>
-        setForm((prev) => ({ ...prev, [key]: e.target.value })),
+      value: form[key] as string,
+      onChange: (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) =>
+        setForm((f) => ({ ...f, [key]: e.target.value })),
     };
   }
 
   function handleSave() {
-    onSave({ ...invoice!, ...form } as Invoice);
+    const patch: TablesUpdate<"invoices"> = {
+      status:                form.status,
+      payment_terms:         form.paymentTerms,
+      issued_date:           form.issuedDate,
+      due_date:              form.dueDate,
+      company_name:          form.companyName,
+      contact_name:          form.contactName,
+      linked_project_id:     form.linkedJobId.startsWith("p:") ? form.linkedJobId.slice(2) : null,
+      linked_work_order_id:  form.linkedJobId.startsWith("w:") ? form.linkedJobId.slice(2) : null,
+      notes:                 form.notes,
+    };
+    onSave(patch);
   }
+
+  if (!invoice) return null;
 
   const paidPct = invoice.total > 0 ? Math.round((invoice.amountPaid / invoice.total) * 100) : 0;
 
+  const linkedProject   = invoice.linkedProjectId   ? projects.find((p) => p.id === invoice.linkedProjectId)   : null;
+  const linkedWorkOrder = invoice.linkedWorkOrderId ? workOrders.find((w) => w.id === invoice.linkedWorkOrderId) : null;
+  const linkedJob       = linkedProject ?? linkedWorkOrder;
+  const linkedJobLabel  = linkedProject
+    ? `${linkedProject.code} — ${linkedProject.name}`
+    : linkedWorkOrder
+      ? `${linkedWorkOrder.code} — ${linkedWorkOrder.name}`
+      : null;
+
   return (
     <Sheet open={open} onOpenChange={(v) => { if (!v) onClose(); }}>
-      <SheetContent
-        side="right"
-        className="flex w-full max-w-140 flex-col gap-0 p-0 overflow-hidden"
-      >
-        {/* Header */}
+      <SheetContent side="right" className="flex w-full max-w-140 flex-col gap-0 p-0 overflow-hidden">
+
         <SheetHeader className="shrink-0 flex flex-row items-start justify-between gap-2 border-b border-border px-5 py-4 pr-12">
           <div>
             <p className="text-[10px] uppercase tracking-widest text-muted-foreground font-medium mb-0.5">
@@ -240,12 +438,11 @@ function InvoiceDrawer({ open, invoice, mode, onClose, onSwitchToEdit, onSave }:
           <div className="flex flex-col flex-1 overflow-hidden">
             <div className="flex-1 overflow-y-auto px-5 py-4 space-y-5">
 
-              {/* Key dates / terms */}
               <div className="grid grid-cols-3 gap-3">
                 {[
-                  { label: "Issued",  value: invoice.issuedDate   },
-                  { label: "Due",     value: invoice.dueDate       },
-                  { label: "Terms",   value: invoice.paymentTerms  },
+                  { label: "Issued", value: fmtDate(invoice.issuedDate) },
+                  { label: "Due",    value: fmtDate(invoice.dueDate) },
+                  { label: "Terms",  value: invoice.paymentTerms },
                 ].map(({ label, value }) => (
                   <div key={label} className="rounded-md border border-border bg-surface p-2.5">
                     <p className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">{label}</p>
@@ -256,11 +453,10 @@ function InvoiceDrawer({ open, invoice, mode, onClose, onSwitchToEdit, onSave }:
                 ))}
               </div>
 
-              {/* Project link */}
-              {invoice.projectName && (
+              {linkedJobLabel && (
                 <div>
-                  <p className={labelCls}>Linked Project</p>
-                  <p className="text-[12.5px] text-primary font-medium">{invoice.projectName}</p>
+                  <p className={labelCls}>Linked Job</p>
+                  <p className="text-[12.5px] text-primary font-medium">{linkedJobLabel}</p>
                 </div>
               )}
 
@@ -278,6 +474,13 @@ function InvoiceDrawer({ open, invoice, mode, onClose, onSwitchToEdit, onSave }:
                       </tr>
                     </thead>
                     <tbody>
+                      {invoice.lineItems.length === 0 && (
+                        <tr>
+                          <td colSpan={4} className="px-3 py-4 text-center text-[11.5px] text-muted-foreground italic">
+                            No line items — add via Quote Builder
+                          </td>
+                        </tr>
+                      )}
                       {invoice.lineItems.map((li, idx) => (
                         <tr key={li.id} className={cn("border-t border-border/60", idx % 2 === 1 && "bg-muted/20")}>
                           <td className="py-2 px-3 text-foreground">{li.description}</td>
@@ -321,7 +524,6 @@ function InvoiceDrawer({ open, invoice, mode, onClose, onSwitchToEdit, onSave }:
                 )}
               </div>
 
-              {/* Payment progress for partial */}
               {invoice.status === "partial" && (
                 <div>
                   <div className="flex justify-between text-[10.5px] text-muted-foreground mb-1">
@@ -343,7 +545,7 @@ function InvoiceDrawer({ open, invoice, mode, onClose, onSwitchToEdit, onSave }:
                       <div key={pmt.id} className="flex items-center justify-between rounded-md border border-border bg-surface px-3 py-2">
                         <div>
                           <p className="text-[12px] font-medium">{currency(pmt.amount)}</p>
-                          <p className="text-[10.5px] text-muted-foreground">{pmt.date} · {METHOD_LABELS[pmt.method]}</p>
+                          <p className="text-[10.5px] text-muted-foreground">{fmtDate(pmt.date)} · {METHOD_LABELS[pmt.method] ?? pmt.method}</p>
                         </div>
                         <p className="text-[10.5px] font-mono text-muted-foreground">{pmt.reference}</p>
                       </div>
@@ -352,7 +554,6 @@ function InvoiceDrawer({ open, invoice, mode, onClose, onSwitchToEdit, onSave }:
                 </div>
               )}
 
-              {/* Notes */}
               {invoice.notes && (
                 <div>
                   <p className={labelCls}>Notes</p>
@@ -361,12 +562,11 @@ function InvoiceDrawer({ open, invoice, mode, onClose, onSwitchToEdit, onSave }:
               )}
             </div>
 
-            {/* Footer */}
             <div className="shrink-0 flex items-center justify-between gap-2 border-t border-border px-5 py-3">
               <div className="text-[11px] text-muted-foreground">
                 {invoice.status === "overdue" && (
                   <span className="flex items-center gap-1 text-red-500">
-                    <AlertCircle className="h-3.5 w-3.5" /> {invoice.dueDate} — overdue
+                    <AlertCircle className="h-3.5 w-3.5" /> {fmtDate(invoice.dueDate)} — overdue
                   </span>
                 )}
                 {invoice.status === "paid" && (
@@ -402,9 +602,7 @@ function InvoiceDrawer({ open, invoice, mode, onClose, onSwitchToEdit, onSave }:
                 <div>
                   <label className={labelCls}>Payment Terms</label>
                   <select {...field("paymentTerms")} className={cn(inputCls, "cursor-pointer")}>
-                    {["Due on Receipt", "Net 15", "Net 30", "Net 45", "Net 60"].map((t) => (
-                      <option key={t} value={t}>{t}</option>
-                    ))}
+                    {PAYMENT_TERMS.map((t) => <option key={t} value={t}>{t}</option>)}
                   </select>
                 </div>
               </div>
@@ -412,62 +610,70 @@ function InvoiceDrawer({ open, invoice, mode, onClose, onSwitchToEdit, onSave }:
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className={labelCls}>Issued Date</label>
-                  <input {...field("issuedDate")} className={inputCls} placeholder="Jun 1, 2026" />
+                  <input type="date" {...field("issuedDate")} className={inputCls} />
                 </div>
                 <div>
                   <label className={labelCls}>Due Date</label>
-                  <input {...field("dueDate")} className={inputCls} placeholder="Jul 1, 2026" />
+                  <input type="date" {...field("dueDate")} className={inputCls} />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className={labelCls}>Customer</label>
+                  <input {...field("companyName")} className={inputCls} />
+                </div>
+                <div>
+                  <label className={labelCls}>Contact</label>
+                  <input {...field("contactName")} className={inputCls} />
                 </div>
               </div>
 
               <div>
-                <label className={labelCls}>Customer</label>
-                <input {...field("companyName")} className={inputCls} />
+                <label className={labelCls}>Linked Job</label>
+                <JobCombobox
+                  value={form.linkedJobId}
+                  onChange={(v) => setForm((f) => ({ ...f, linkedJobId: v }))}
+                  projects={projects}
+                  workOrders={workOrders}
+                />
               </div>
 
-              <div>
-                <label className={labelCls}>Contact</label>
-                <input {...field("contactName")} className={inputCls} />
-              </div>
-
-              <div>
-                <label className={labelCls}>Linked Project</label>
-                <input {...field("projectName")} className={inputCls} placeholder="— none —" />
-              </div>
-
-              {/* Line items (read-only in edit for now) */}
-              <div>
-                <p className={labelCls}>Line Items</p>
-                <div className="rounded-md border border-border overflow-hidden">
-                  <table className="w-full text-[11.5px]">
-                    <thead className="bg-muted/50 text-[10px] uppercase tracking-wider text-muted-foreground">
-                      <tr>
-                        <th className="text-left py-1.5 px-3 font-medium">Description</th>
-                        <th className="text-right py-1.5 px-3 font-medium">Qty</th>
-                        <th className="text-right py-1.5 px-3 font-medium">Unit</th>
-                        <th className="text-right py-1.5 px-3 font-medium">Total</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {invoice.lineItems.map((li, idx) => (
-                        <tr key={li.id} className={cn("border-t border-border/60", idx % 2 === 1 && "bg-muted/20")}>
-                          <td className="py-2 px-3">{li.description}</td>
-                          <td className="py-2 px-3 text-right tabular-nums text-muted-foreground">{li.qty}</td>
-                          <td className="py-2 px-3 text-right tabular-nums text-muted-foreground">{currency(li.unitPrice)}</td>
-                          <td className="py-2 px-3 text-right tabular-nums font-medium">{currency(li.total)}</td>
+              {/* Line items read-only */}
+              {invoice.lineItems.length > 0 && (
+                <div>
+                  <p className={labelCls}>Line Items</p>
+                  <div className="rounded-md border border-border overflow-hidden">
+                    <table className="w-full text-[11.5px]">
+                      <thead className="bg-muted/50 text-[10px] uppercase tracking-wider text-muted-foreground">
+                        <tr>
+                          <th className="text-left py-1.5 px-3 font-medium">Description</th>
+                          <th className="text-right py-1.5 px-3 font-medium">Qty</th>
+                          <th className="text-right py-1.5 px-3 font-medium">Unit</th>
+                          <th className="text-right py-1.5 px-3 font-medium">Total</th>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                      </thead>
+                      <tbody>
+                        {invoice.lineItems.map((li, idx) => (
+                          <tr key={li.id} className={cn("border-t border-border/60", idx % 2 === 1 && "bg-muted/20")}>
+                            <td className="py-2 px-3">{li.description}</td>
+                            <td className="py-2 px-3 text-right tabular-nums text-muted-foreground">{li.qty}</td>
+                            <td className="py-2 px-3 text-right tabular-nums text-muted-foreground">{currency(li.unitPrice)}</td>
+                            <td className="py-2 px-3 text-right tabular-nums font-medium">{currency(li.total)}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                  <p className="text-[10.5px] text-muted-foreground mt-1.5">Line item editing coming in the quote builder integration.</p>
                 </div>
-                <p className="text-[10.5px] text-muted-foreground mt-1.5">Line item editing coming in the quote builder integration.</p>
-              </div>
+              )}
 
               <div>
                 <label className={labelCls}>Notes</label>
                 <textarea
-                  value={(form.notes as string) ?? ""}
-                  onChange={(e) => setForm((prev) => ({ ...prev, notes: e.target.value }))}
+                  value={form.notes}
+                  onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))}
                   rows={3}
                   placeholder="Internal notes…"
                   className="w-full resize-none rounded-md border border-border bg-background px-3 py-2 text-[12.5px] focus:outline-none focus:ring-1 focus:ring-primary placeholder:text-muted-foreground/50"
@@ -478,7 +684,7 @@ function InvoiceDrawer({ open, invoice, mode, onClose, onSwitchToEdit, onSave }:
             <div className="shrink-0 flex items-center justify-end gap-2 border-t border-border px-5 py-3">
               <button
                 type="button"
-                onClick={onSwitchToEdit}
+                onClick={() => { initializedRef.current = false; onSwitchToEdit(); }}
                 className="h-8 rounded-md border border-border bg-surface px-3 text-[12.5px] hover:bg-accent transition-colors"
               >
                 Cancel
@@ -486,9 +692,10 @@ function InvoiceDrawer({ open, invoice, mode, onClose, onSwitchToEdit, onSave }:
               <button
                 type="button"
                 onClick={handleSave}
-                className="h-8 rounded-md bg-primary px-3 text-[12.5px] font-medium text-primary-foreground hover:opacity-90 transition-opacity"
+                disabled={isPending}
+                className="h-8 rounded-md bg-primary px-3 text-[12.5px] font-medium text-primary-foreground hover:opacity-90 transition-opacity disabled:opacity-50"
               >
-                Save Changes
+                {isPending ? "Saving…" : "Save Changes"}
               </button>
             </div>
           </div>
@@ -500,60 +707,100 @@ function InvoiceDrawer({ open, invoice, mode, onClose, onSwitchToEdit, onSave }:
 
 // ─── NewInvoiceModal ──────────────────────────────────────────────────────────
 
-function NewInvoiceModal({ open, onClose }: { open: boolean; onClose: () => void }) {
-  const [linkedProjectId, setLinkedProjectId] = useState("");
+const newInvoiceDefaults = {
+  companyName: "", contactName: "",
+  linkedJobId: "", issuedDate: "", dueDate: "",
+  paymentTerms: "Net 30", notes: "",
+};
 
-  if (!open) return null;
+function NewInvoiceModal({
+  onClose,
+  onCreate,
+  isPending,
+  projects,
+  workOrders,
+}: {
+  onClose: () => void;
+  onCreate: (form: typeof newInvoiceDefaults) => void;
+  isPending: boolean;
+  projects: DbProject[];
+  workOrders: DbWorkOrder[];
+}) {
+  const [form, setForm] = useState({ ...newInvoiceDefaults, issuedDate: today() });
+
+  function field(key: keyof typeof form) {
+    return {
+      value: form[key],
+      onChange: (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) =>
+        setForm((f) => ({ ...f, [key]: e.target.value })),
+    };
+  }
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center">
-      <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative z-10 w-full max-w-md rounded-xl border border-border bg-card shadow-2xl">
-        <div className="flex items-center justify-between border-b border-border px-5 py-4">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
+      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
+    >
+      <div className="w-full max-w-md max-h-[90vh] overflow-y-auto rounded-xl border border-border bg-background shadow-xl">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-border">
           <h2 className="text-[14px] font-semibold">New Invoice</h2>
-          <button onClick={onClose} className="rounded p-1 hover:bg-accent transition-colors">
-            <X className="h-4 w-4 text-muted-foreground" />
+          <button onClick={onClose} className="flex h-6 w-6 items-center justify-center rounded text-muted-foreground hover:bg-accent transition-colors">
+            <X className="h-4 w-4" />
           </button>
         </div>
         <div className="px-5 py-4 space-y-3">
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className={labelCls}>Customer</label>
-              <input className={inputCls} placeholder="Company name" />
+              <input {...field("companyName")} placeholder="Company name" className={inputCls} />
             </div>
             <div>
               <label className={labelCls}>Contact</label>
-              <input className={inputCls} placeholder="Contact name" />
+              <input {...field("contactName")} placeholder="Contact name" className={inputCls} />
             </div>
           </div>
           <div>
-            <label className={labelCls}>Linked Project</label>
-            <ProjectCombobox value={linkedProjectId} onChange={setLinkedProjectId} />
+            <label className={labelCls}>Linked Job</label>
+            <JobCombobox
+              value={form.linkedJobId}
+              onChange={(v) => setForm((f) => ({ ...f, linkedJobId: v }))}
+              projects={projects}
+              workOrders={workOrders}
+            />
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className={labelCls}>Issue Date</label>
-              <input className={inputCls} placeholder="Jun 7, 2026" />
+              <input type="date" {...field("issuedDate")} className={inputCls} />
             </div>
             <div>
               <label className={labelCls}>Payment Terms</label>
-              <select className={cn(inputCls, "cursor-pointer")}>
-                {["Net 30", "Net 15", "Net 45", "Due on Receipt"].map((t) => (
-                  <option key={t}>{t}</option>
-                ))}
+              <select {...field("paymentTerms")} className={cn(inputCls, "cursor-pointer")}>
+                {PAYMENT_TERMS.map((t) => <option key={t} value={t}>{t}</option>)}
               </select>
             </div>
           </div>
           <div>
             <label className={labelCls}>Notes</label>
-            <textarea rows={2} className="w-full resize-none rounded-md border border-border bg-background px-3 py-2 text-[12.5px] focus:outline-none focus:ring-1 focus:ring-primary placeholder:text-muted-foreground/50" placeholder="Internal notes…" />
+            <textarea
+              {...field("notes")}
+              rows={2}
+              placeholder="Internal notes…"
+              className="w-full resize-none rounded-md border border-border bg-background px-3 py-2 text-[12.5px] focus:outline-none focus:ring-1 focus:ring-primary placeholder:text-muted-foreground/50"
+            />
           </div>
+          <p className="text-[10.5px] text-muted-foreground">Invoice is created as a draft. Add line items via the Quote Builder.</p>
         </div>
         <div className="flex justify-end gap-2 border-t border-border px-5 py-3">
           <button onClick={onClose} className="h-8 rounded-md border border-border bg-surface px-3 text-[12.5px] hover:bg-accent transition-colors">
             Cancel
           </button>
-          <button onClick={onClose} className="h-8 rounded-md bg-primary px-3 text-[12.5px] font-medium text-primary-foreground hover:opacity-90 transition-opacity">
-            Create Invoice
+          <button
+            onClick={() => onCreate(form)}
+            disabled={isPending || !form.companyName.trim() || !form.issuedDate}
+            className="h-8 rounded-md bg-primary px-3 text-[12.5px] font-medium text-primary-foreground hover:opacity-90 transition-opacity disabled:opacity-50"
+          >
+            {isPending ? "Creating…" : "Create Invoice"}
           </button>
         </div>
       </div>
@@ -565,13 +812,142 @@ function NewInvoiceModal({ open, onClose }: { open: boolean; onClose: () => void
 
 function InvoicesPage() {
   const { setMeta } = useMeta();
-  const [invoices, setInvoices] = useState<Invoice[]>(INVOICES);
+  const qc = useQueryClient();
   const [tab, setTab] = useState<InvoiceStatus | "all">("all");
   const [search, setSearch] = useState("");
   const [customerFilter, setCustomerFilter] = useState("all");
   const [newOpen, setNewOpen] = useState(false);
-  const [selected, setSelected] = useState<Invoice | null>(null);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
   const [drawerMode, setDrawerMode] = useState<DrawerMode>("view");
+
+  const { data: rawInvoices = [], isLoading } = useQuery({
+    queryKey: ["invoices"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("invoices")
+        .select("*, invoice_line_items(*), invoice_payments(*)")
+        .order("issued_date", { ascending: false });
+      if (error) throw error;
+      return data as unknown as DbInvoice[];
+    },
+  });
+
+  const { data: rawProjects = [] } = useQuery({
+    queryKey: ["projects-basic"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("projects")
+        .select("id, code, name")
+        .neq("status", "cancelled")
+        .order("code");
+      if (error) throw error;
+      return data as DbProject[];
+    },
+  });
+
+  const { data: rawWorkOrders = [] } = useQuery({
+    queryKey: ["work-orders-basic"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("work_orders")
+        .select("id, code, name")
+        .neq("status", "cancelled")
+        .order("code");
+      if (error) throw error;
+      return data as DbWorkOrder[];
+    },
+  });
+
+  const invoices = useMemo(() => rawInvoices.map(toInvoice), [rawInvoices]);
+
+  const saveMutation = useMutation({
+    mutationFn: async ({ id, patch }: { id: string; patch: TablesUpdate<"invoices"> }) => {
+      const { data, error } = await supabase
+        .from("invoices")
+        .update(patch)
+        .eq("id", id)
+        .select("*, invoice_line_items(*), invoice_payments(*)")
+        .single();
+      if (error) throw error;
+      return data as unknown as DbInvoice;
+    },
+    onSuccess: (updated) => {
+      qc.setQueryData<DbInvoice[]>(["invoices"], (prev = []) =>
+        prev.map((inv) => (inv.id === updated.id ? updated : inv)),
+      );
+      setDrawerMode("view");
+    },
+  });
+
+  const createMutation = useMutation({
+    mutationFn: async (form: typeof newInvoiceDefaults) => {
+      const tenantId = qc.getQueryData<{ id: string }>(["tenant"])?.id;
+      const maxNum = rawInvoices.reduce((max, inv) => {
+        const n = parseInt(inv.invoice_number.replace(/[^0-9]/g, ""), 10);
+        return isNaN(n) ? max : Math.max(max, n);
+      }, 4815);
+      const invoiceNumber = `INV-${String(maxNum + 1).padStart(5, "0")}`;
+
+      const termsDays: Record<string, number> = {
+        "Due on Receipt": 0, "Net 15": 15, "Net 30": 30, "Net 45": 45, "Net 60": 60,
+      };
+      const days = termsDays[form.paymentTerms] ?? 30;
+      const issued = new Date(form.issuedDate);
+      const due = new Date(issued);
+      due.setDate(due.getDate() + days);
+      const dueDate = due.toISOString().split("T")[0];
+
+      const { data, error } = await supabase
+        .from("invoices")
+        .insert({
+          tenant_id:           tenantId!,
+          invoice_number:      invoiceNumber,
+          status:              "draft",
+          company_name:        form.companyName,
+          contact_name:        form.contactName,
+          linked_project_id:   form.linkedJobId.startsWith("p:") ? form.linkedJobId.slice(2) : null,
+          linked_work_order_id: form.linkedJobId.startsWith("w:") ? form.linkedJobId.slice(2) : null,
+          issued_date:         form.issuedDate,
+          due_date:            dueDate,
+          payment_terms:       form.paymentTerms,
+          notes:               form.notes,
+        })
+        .select("*, invoice_line_items(*), invoice_payments(*)")
+        .single();
+      if (error) throw error;
+      return data as unknown as DbInvoice;
+    },
+    onSuccess: (created) => {
+      qc.setQueryData<DbInvoice[]>(["invoices"], (prev = []) => [created, ...prev]);
+      setNewOpen(false);
+    },
+  });
+
+  const filtered = useMemo(() => {
+    const q = search.toLowerCase().trim();
+    return invoices.filter((i) => {
+      if (tab !== "all" && i.status !== tab) return false;
+      if (customerFilter !== "all" && i.companyName !== customerFilter) return false;
+      if (q && !i.number.toLowerCase().includes(q) && !i.companyName.toLowerCase().includes(q)) return false;
+      return true;
+    });
+  }, [invoices, tab, search, customerFilter]);
+
+  const outstanding   = useMemo(() => invoices.filter((i) => ["sent","partial","overdue"].includes(i.status)).reduce((s, i) => s + i.balanceDue, 0), [invoices]);
+  const overdueTotal  = useMemo(() => invoices.filter((i) => i.status === "overdue").reduce((s, i) => s + i.balanceDue, 0), [invoices]);
+  const overdueCount  = useMemo(() => invoices.filter((i) => i.status === "overdue").length, [invoices]);
+  const paidMTD       = useMemo(() => {
+    const now = new Date();
+    return invoices.filter((i) => {
+      if (i.status !== "paid") return false;
+      const d = new Date(i.issuedDate);
+      return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth();
+    }).reduce((s, i) => s + i.total, 0);
+  }, [invoices]);
+
+  const customers = useMemo(() => Array.from(new Set(invoices.map((i) => i.companyName))).sort(), [invoices]);
+
+  const selected = useMemo(() => invoices.find((i) => i.id === selectedId) ?? null, [invoices, selectedId]);
 
   useEffect(() => {
     setMeta({
@@ -582,59 +958,15 @@ function InvoicesPage() {
     });
   }, [setMeta, invoices.length]);
 
-  // Stat aggregates
-  const outstanding = useMemo(
-    () => invoices.filter((i) => i.status === "sent" || i.status === "partial" || i.status === "overdue").reduce((s, i) => s + i.balanceDue, 0),
-    [invoices],
-  );
-  const overdueTotal = useMemo(
-    () => invoices.filter((i) => i.status === "overdue").reduce((s, i) => s + i.balanceDue, 0),
-    [invoices],
-  );
-  const paidMTD = useMemo(
-    () => invoices.filter((i) => i.status === "paid").reduce((s, i) => s + i.total, 0),
-    [invoices],
-  );
-  const overdueCount = useMemo(() => invoices.filter((i) => i.status === "overdue").length, [invoices]);
-
-  // Unique customers for filter
-  const customers = useMemo(
-    () => Array.from(new Set(invoices.map((i) => i.companyName))).sort(),
-    [invoices],
-  );
-
-  // Filtered list
-  const filtered = useMemo(() => {
-    const q = search.toLowerCase().trim();
-    return invoices.filter((i) => {
-      if (tab !== "all" && i.status !== tab) return false;
-      if (customerFilter !== "all" && i.companyName !== customerFilter) return false;
-      if (q && !i.number.toLowerCase().includes(q) && !i.companyName.toLowerCase().includes(q) && !(i.projectName ?? "").toLowerCase().includes(q)) return false;
-      return true;
-    });
-  }, [invoices, tab, search, customerFilter]);
-
-  function openView(inv: Invoice) {
-    setSelected(inv);
-    setDrawerMode("view");
-  }
-  function handleSave(updated: Invoice) {
-    setInvoices((prev) => prev.map((i) => i.id === updated.id ? updated : i));
-    setSelected(updated);
-    setDrawerMode("view");
-  }
-
   return (
-    <div className="flex flex-col">
-      {/* Stat bar */}
+    <div className={cn("flex flex-col", isLoading && "opacity-50")}>
       <StatBar>
-        <StatItem icon={CreditCard}   label="Outstanding"   value={currency(outstanding)} />
-        <StatItem icon={AlertCircle}  label="Overdue"       value={`${currency(overdueTotal)} (${overdueCount})`} accent={overdueCount > 0} />
-        <StatItem icon={CheckCircle2} label="Collected MTD" value={currency(paidMTD)} />
+        <StatItem icon={CreditCard}   label="Outstanding"    value={currency(outstanding)} />
+        <StatItem icon={AlertCircle}  label="Overdue"        value={`${currency(overdueTotal)} (${overdueCount})`} accent={overdueCount > 0} />
+        <StatItem icon={CheckCircle2} label="Collected MTD"  value={currency(paidMTD)} />
         <StatItem icon={FileText}     label="Total Invoices" value={String(invoices.length)} />
       </StatBar>
 
-      {/* Status tabs */}
       <PageTabs>
         {TABS.map(({ key, label }) => {
           const count = key === "all" ? invoices.length : invoices.filter((i) => i.status === key).length;
@@ -646,7 +978,6 @@ function InvoicesPage() {
         })}
       </PageTabs>
 
-      {/* Filter bar */}
       <FilterBar>
         <SearchInput value={search} onChange={setSearch} placeholder="Search invoices…" />
         <FilterSelect value={customerFilter} onChange={setCustomerFilter}>
@@ -655,14 +986,12 @@ function InvoicesPage() {
         </FilterSelect>
       </FilterBar>
 
-      {/* Table */}
       <div className="flex-1 overflow-auto">
         <table className="w-full text-[12.5px]">
           <thead className="sticky top-0 z-10 text-[10.5px] uppercase tracking-wide text-muted-foreground bg-surface border-b border-border">
             <tr>
               <th className="text-left font-medium py-2 px-4">Number</th>
               <th className="text-left font-medium py-2">Customer</th>
-              <th className="text-left font-medium py-2 hidden md:table-cell">Project</th>
               <th className="text-right font-medium py-2">Total</th>
               <th className="text-right font-medium py-2 hidden sm:table-cell">Balance Due</th>
               <th className="text-left font-medium py-2 pl-4">Due Date</th>
@@ -673,7 +1002,7 @@ function InvoicesPage() {
           <tbody>
             {filtered.length === 0 && (
               <tr>
-                <td colSpan={8} className="py-12 text-center text-muted-foreground text-[12px]">
+                <td colSpan={7} className="py-12 text-center text-muted-foreground text-[12px]">
                   No invoices match your filters.
                 </td>
               </tr>
@@ -682,13 +1011,10 @@ function InvoicesPage() {
               <tr
                 key={inv.id}
                 className="border-b border-border/60 hover:bg-accent/40 cursor-pointer transition-colors"
-                onClick={() => openView(inv)}
+                onClick={() => { setSelectedId(inv.id); setDrawerMode("view"); }}
               >
                 <td className="py-2.5 px-4 font-mono text-[11px] text-muted-foreground">{inv.number}</td>
                 <td className="py-2.5 font-medium">{inv.companyName}</td>
-                <td className="py-2.5 text-muted-foreground hidden md:table-cell max-w-45 truncate">
-                  {inv.projectName ?? <span className="italic text-muted-foreground/50">—</span>}
-                </td>
                 <td className="py-2.5 text-right font-mono tabular-nums font-semibold">{currency(inv.total)}</td>
                 <td className="py-2.5 text-right font-mono tabular-nums hidden sm:table-cell">
                   {inv.balanceDue > 0
@@ -697,17 +1023,12 @@ function InvoicesPage() {
                   }
                 </td>
                 <td className={cn("py-2.5 pl-4", inv.status === "overdue" ? "text-red-500 font-medium" : "text-muted-foreground")}>
-                  {inv.dueDate}
+                  {fmtDate(inv.dueDate)}
                 </td>
-                <td className="py-2.5">
-                  <StatusBadge status={inv.status} />
-                </td>
-                <td
-                  className="py-2.5 pr-4 text-right"
-                  onClick={(e) => e.stopPropagation()}
-                >
+                <td className="py-2.5"><StatusBadge status={inv.status} /></td>
+                <td className="py-2.5 pr-4 text-right" onClick={(e) => e.stopPropagation()}>
                   <button
-                    onClick={() => openView(inv)}
+                    onClick={() => { setSelectedId(inv.id); setDrawerMode("view"); }}
                     className="text-[11.5px] text-primary hover:underline"
                   >
                     {inv.status === "draft" ? "Edit" : "View"}
@@ -719,18 +1040,27 @@ function InvoicesPage() {
         </table>
       </div>
 
-      {/* Drawer */}
       <InvoiceDrawer
-        open={!!selected}
+        open={selectedId !== null}
         invoice={selected}
         mode={drawerMode}
-        onClose={() => setSelected(null)}
+        projects={rawProjects}
+        workOrders={rawWorkOrders}
+        onClose={() => setSelectedId(null)}
         onSwitchToEdit={() => setDrawerMode(drawerMode === "view" ? "edit" : "view")}
-        onSave={handleSave}
+        onSave={(patch) => { if (selectedId) saveMutation.mutate({ id: selectedId, patch }); }}
+        isPending={saveMutation.isPending}
       />
 
-      {/* New Invoice modal */}
-      <NewInvoiceModal open={newOpen} onClose={() => setNewOpen(false)} />
+      {newOpen && (
+        <NewInvoiceModal
+          onClose={() => setNewOpen(false)}
+          onCreate={(form) => createMutation.mutate(form)}
+          isPending={createMutation.isPending}
+          projects={rawProjects}
+          workOrders={rawWorkOrders}
+        />
+      )}
     </div>
   );
 }
