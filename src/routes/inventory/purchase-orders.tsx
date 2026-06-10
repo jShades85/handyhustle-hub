@@ -1177,7 +1177,7 @@ function PurchaseOrdersPage() {
   });
 
   const { data: rawVendors = [] } = useQuery({
-    queryKey: ["vendors"],
+    queryKey: ["vendors-basic"],
     queryFn: async () => {
       const { data, error } = await supabase.from("vendors").select("id, name").order("name");
       if (error) throw error;
