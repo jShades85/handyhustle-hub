@@ -106,6 +106,18 @@ export function AppShell() {
 
 const pendingRequestCount = requestItems.length;
 
+function moduleFromPath(pathname: string): AppModule | null {
+  if (pathname.startsWith("/crm"))        return "crm";
+  if (pathname.startsWith("/sales"))      return "sales";
+  if (pathname.startsWith("/operations")) return "operations";
+  if (pathname.startsWith("/service"))    return "service";
+  if (pathname.startsWith("/inventory"))  return "inventory";
+  if (pathname.startsWith("/finance"))    return "finance";
+  if (pathname.startsWith("/reports"))    return "reports";
+  if (pathname.startsWith("/settings"))   return "settings";
+  return null;
+}
+
 async function fetchTenant() {
   const supabase = createClient();
   const { data, error } = await supabase.from("tenants").select("id, name, trade_type").single();
@@ -317,7 +329,7 @@ function AppShellContent() {
                 <kbd className="rounded border border-border bg-muted px-1 py-0.5 text-[10px] font-mono leading-none">Ctrl K</kbd>
               </span>
             </button>
-            {meta.onNew && (
+            {meta.onNew && (permsLoading || !moduleFromPath(pathname) || can(moduleFromPath(pathname)!, "write")) && (
               <button
                 onClick={meta.onNew}
                 className="flex h-7 items-center gap-1.5 rounded-md bg-primary px-2.5 text-[12px] font-medium text-primary-foreground hover:opacity-90"
