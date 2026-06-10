@@ -6,6 +6,7 @@ import { Avatar, PriorityDot } from "@/components/ui-bits";
 import { useMeta } from "@/contexts/PageMetaContext";
 import { usePermissions } from "@/contexts/PermissionsContext";
 import { currency } from "@/lib/demo-data";
+const fmtValue = (v: number | null) => (v ? currency(v) : "—");
 import type { Priority } from "@/lib/demo-data";
 import {
   ChevronDown, ChevronUp, ChevronsUpDown, FileText,
@@ -55,7 +56,7 @@ interface Opportunity {
   companyId: string | null;
   contact: string;
   contactId: string | null;
-  value: number;
+  value: number | null;
   stage: OpportunityStage;
   closeDate: string;
   rep: string;
@@ -131,7 +132,7 @@ function toUiOpp(d: DbOpportunity): Opportunity {
     companyId:    d.company?.id ?? null,
     contact:      d.contact?.full_name ?? "—",
     contactId:    d.contact?.id ?? null,
-    value:        Number(d.value ?? 0),
+    value:        d.value ?? null,
     stage:        d.stage,
     closeDate:    d.close_date ?? "—",
     rep:          repName,
@@ -277,7 +278,7 @@ function Opportunities() {
   });
 
   useEffect(() => {
-    const pipeline = opps.filter((o) => o.stage !== "closed-lost").reduce((s, o) => s + o.value, 0);
+    const pipeline = opps.filter((o) => o.stage !== "closed-lost").reduce((s, o) => s + (o.value ?? 0), 0);
     setMeta({
       title: "Opportunities",
       subtitle: opps.length ? `${opps.length} opportunities · ${currency(pipeline)} pipeline` : "Opportunities",
@@ -392,7 +393,7 @@ function KanbanView({
         {openId !== null && <div className="fixed inset-0 z-10" onClick={() => setOpenId(null)} />}
         {stageOrder.map((stage) => {
           const items = opps.filter((o) => o.stage === stage);
-          const total = items.reduce((s, o) => s + o.value, 0);
+          const total = items.reduce((s, o) => s + (o.value ?? 0), 0);
           const { dim } = stageMeta[stage];
           return (
             <div
@@ -407,7 +408,7 @@ function KanbanView({
                   <StageBadge stage={stage} />
                   <span className="font-mono text-[10.5px] text-muted-foreground">{items.length}</span>
                 </div>
-                <span className="font-mono text-[10.5px] tabular-nums text-muted-foreground">{currency(total)}</span>
+                <span className="font-mono text-[10.5px] tabular-nums text-muted-foreground">{total ? currency(total) : "—"}</span>
               </div>
               <div className="flex-1 overflow-y-auto space-y-2 p-2">
                 {items.map((opp) => (
@@ -478,7 +479,7 @@ function KanbanCard({
       <div className="mt-1.5 text-[12.5px] font-semibold leading-snug truncate">{opp.title}</div>
       <div className="text-[11px] text-muted-foreground truncate">{opp.company} · {opp.contact}</div>
       <div className="mt-2.5 flex items-center justify-between">
-        <span className="font-mono tabular-nums text-[12.5px] font-semibold">{currency(opp.value)}</span>
+        <span className="font-mono tabular-nums text-[12.5px] font-semibold">{fmtValue(opp.value)}</span>
         <PriorityDot p={opp.priority} />
       </div>
       <div className="mt-2 flex items-center justify-between text-[10.5px] text-muted-foreground">
@@ -504,7 +505,7 @@ function ListView({ opps, onSelect }: { opps: Opportunity[]; onSelect: (opp: Opp
   const rows = useMemo(() => {
     return [...opps].sort((a, b) => {
       let av: number, bv: number;
-      if (sortCol === "value") { av = a.value; bv = b.value; }
+      if (sortCol === "value") { av = a.value ?? 0; bv = b.value ?? 0; }
       else if (sortCol === "stage") { av = stageOrder.indexOf(a.stage); bv = stageOrder.indexOf(b.stage); }
       else if (sortCol === "priority") { av = priorityOrder[a.priority]; bv = priorityOrder[b.priority]; }
       else {
@@ -560,7 +561,7 @@ function ListView({ opps, onSelect }: { opps: Opportunity[]; onSelect: (opp: Opp
                   <div className="text-[11px] text-muted-foreground">{o.contact}</div>
                 </td>
                 <td className="py-2.5 px-2 text-muted-foreground text-[12px]">{o.company}</td>
-                <td className="py-2.5 px-2 text-right font-mono tabular-nums font-semibold">{currency(o.value)}</td>
+                <td className="py-2.5 px-2 text-right font-mono tabular-nums font-semibold">{fmtValue(o.value)}</td>
                 <td className="py-2.5 px-2"><StageBadge stage={o.stage} /></td>
                 <td className="py-2.5 px-2 text-muted-foreground font-mono text-[11.5px]">{o.closeDate}</td>
                 <td className="py-2.5 px-2">
@@ -622,7 +623,7 @@ function OpportunityDrawer({
           <div className="grid grid-cols-2 gap-x-4 gap-y-3 text-[12.5px]">
             <div>
               <p className="text-[10px] text-muted-foreground mb-0.5">Value</p>
-              <p className="font-semibold font-mono tabular-nums">{currency(opp.value)}</p>
+              <p className="font-semibold font-mono tabular-nums">{fmtValue(opp.value)}</p>
             </div>
             <div>
               <p className="text-[10px] text-muted-foreground mb-0.5">Close Date</p>

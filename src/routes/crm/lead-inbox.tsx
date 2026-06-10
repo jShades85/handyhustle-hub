@@ -141,6 +141,7 @@ async function convertLead(lead: DbLead, existingContactId?: string): Promise<vo
         full_name:     fullName(lead),
         phone:         lead.phone,
         email:         lead.email,
+        address:       lead.location,
         source:        lead.source,
         stage:         "Lead",
         customer_type: "commercial",
