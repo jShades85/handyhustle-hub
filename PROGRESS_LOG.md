@@ -6,8 +6,8 @@
 
 ## Current Status
 
-**Phase:** Backend — Finance live, Reports/Settings remaining
-**Last Updated:** Session 033
+**Phase:** Backend — All modules live; permissions enforced; seed data connected
+**Last Updated:** Session 034
 **Live URL:** https://bearingpro.tech (Vercel + Cloudflare DNS)
 **Supabase Project:** `erdtfwelbdlvammfdtgz`
 
@@ -17,7 +17,8 @@
 
 **Start here next session:**
 
-1. **All backend modules now live** — decide what comes next: Reports (real data), Settings cleanup, or start Quote Builder backend
+1. **Test the full flow** using the Derek Paulson scenario below — create a lead and follow it all the way through to a paid invoice
+2. **Decide next build priority**: Quote Builder backend, Reports with real data, or Company detail → Projects/Opportunities panels (cross-module navigation)
 
 ---
 
@@ -94,7 +95,8 @@
 | `20260610000020_purchase_orders` | `purchase_orders` + `po_line_items` tables with full RLS; `set_purchase_orders_updated_at` trigger | ✅ Live |
 | `20260610000021_vendors_pos_seed` | 7 vendors + 11 POs + 18 line items for test tenant; POs linked to seeded projects by code; line items linked to catalog items by SKU | ✅ Live |
 | `20260610000022_invoices` | `invoices`, `invoice_line_items`, `invoice_payments` tables with full RLS; `set_invoices_updated_at` trigger | ✅ Live |
-| `20260610000023_invoices_seed` | 10 seed invoices + 55 line items + 6 payments; `linked_project_id` wired to "Surgical Center A/V Overhaul" via ilike | ✅ Live |
+| `20260610000023_invoices_seed` | 10 seed invoices + 55 line items + 6 payments; `linked_project_id` wired to "Surgical Center A/V Overhaul" via ilike | ✅ Live (replaced by 024) |
+| `20260610000024_reseed_connected` | Replaces all operational seed data with a fully connected story — all 5 projects now use real CRM company_ids, carry `opportunity_id` FK, linked POs and invoices carry `linked_project_id`; companies/contacts/leads/tickets/plans/stock untouched | ✅ Live |
 
 **Trigger logic:** New signup → creates `tenants` row + `user_profiles` row (Owner role). Invited user (has `tenant_id` in metadata) → joins existing tenant with assigned role. Upserts on conflict so re-inviting a removed user reactivates their profile.
 
@@ -118,6 +120,63 @@
 - **`.npmrc`** — `legacy-peer-deps=true` required for Vercel installs
 - **`stat bar → tabs → filter bar`** — locked layout order on every list page
 - **View-before-edit** — row click = view panel, hover Edit = shortcut to edit form
+
+---
+
+## Test Scenario — Derek Paulson New Build
+
+Use this to manually walk the full app flow end-to-end. Every step is wired to the live DB.
+
+**The call:** Derek Paulson phones in. He's building a 4,200 sq ft custom home in Naperville, IL and wants whole-home AV and security. Referred by Audrey Chen at Northbeam Architects (existing client). Rough budget $28,000–$35,000.
+
+**What he wants:**
+- Whole-home audio — 6 zones (Sonos), patio + living room + kitchen + 3 bedrooms
+- Security cameras — 8 exterior cameras + 4 interior
+- Smart front door lock + video doorbell
+- Living room home theater — 120" motorized screen, 4K laser projector, 7.1 surround
+
+**Step-by-step flow to test:**
+
+1. **Lead Inbox → New Lead**
+   - Full name: Derek Paulson
+   - Phone: (630) 555-0147
+   - Source: Referral
+   - Notes: *Referred by Audrey Chen / Northbeam. New build in Naperville, framing complete. Wants whole-home audio, cameras, and home theater. Budget $28–35k. Follow up to schedule site walk.*
+
+2. **Convert Lead**
+   - Hit Convert → create new contact (residential)
+   - Opportunity name: "Paulson Residence — New Build AV & Security"
+   - Assign to: Sarah Kim (Sales Rep)
+
+3. **Opportunities Kanban**
+   - Move: Site Visit → (after scheduling walkthrough) → Estimating
+   - Add note on the opp with scope details from the site visit
+
+4. **Convert to Project** (since Quote Builder isn't built yet, skip straight to project)
+   - Button in opportunity drawer (Closed Won stage) → Convert to Project
+   - Project name: "Paulson New Build — AV & Security"
+   - PM: Riley Torres
+   - Site address: 1847 Whitmore Ln, Naperville, IL 60565
+
+5. **Create Work Orders** (from the project, or the New Work Order modal)
+   - WO 1: "Paulson — Rough-In (conduit + cable pull)" → assigned Mike Okafor, scheduled during framing
+   - WO 2: "Paulson — Trim-Out (devices + speakers)" → assigned Jordan Vale, scheduled after drywall
+   - WO 3: "Paulson — Final Commissioning & Training" → assigned Mike Okafor, scheduled before move-in
+
+6. **Progress Work Orders** — change each WO status as you "complete" the work
+
+7. **Invoices → New Invoice**
+   - Link job to the Paulson project
+   - Add line items: Sonos Amp ×6, Sonos Era 300 ×8, Axis cameras ×12, Verkada doorbell ×1, Epson projector ×1, labor hours
+   - Set status: Sent
+
+8. **Payments → Collect Payment**
+   - Record deposit (50%), then final payment
+   - Confirm invoice flips to Partial → Paid
+
+**What this tests:** Lead creation → conversion → opportunity stages → project creation → work order dispatch → invoicing → payment collection. Every write goes to the live DB.
+
+**Note on Quote Builder gap:** In the real flow, step 4 would be: Estimating stage → Create Quote (line items from catalog) → client approves → Closed Won → auto-convert to Project. That step is deferred. For now, manually move the opp to Closed Won and convert directly.
 
 ---
 
@@ -418,3 +477,46 @@ Session 017: Reports page — 27-report catalog across 6 categories + custom rep
 - PO line item update strategy: DELETE WHERE `po_id = ?` then bulk INSERT; simpler than tracking individual adds/removes; acceptable since there are no external references to line item IDs
 - `projects!linked_project_id(id, code, name)` — Supabase `!column` syntax for FK joins where the FK column name differs from the default; result key matches the alias prefix
 - `catalog_items.is_active` (boolean) not `status` — use `.eq("is_active", true)` to filter active items
+
+---
+
+## Session 034 — Write Permissions Enforcement + Query Key Safety + Connected Seed Data
+
+**Date:** June 10, 2026
+
+**Completed:**
+
+- **Write permissions enforced across all live pages** — every page now respects `can(module, "write")` from `usePermissions()`:
+  - `service/service-tickets.tsx`: Mark Resolved + Close Ticket hidden for read-only; notes textarea `readOnly`
+  - `sales/opportunities.tsx`: stage-move badge is static for read-only; Convert button + Edit button hidden; notes `readOnly`
+  - `settings/company.tsx`: Save bar hidden for read-only
+  - `settings/roles.tsx`: name input `readOnly`; color swatch + module permission buttons render as inert `<div>` when read-only; delete button + AddRoleRow hidden
+  - `settings/team-members.tsx`: Invite button hidden; row click disabled; Remove/Reactivate buttons hidden; EditPanel + InvitePanel gated
+
+- **Vendors page crash fixed** — root cause: `purchase-orders.tsx` used `queryKey: ["vendors"]` with `select("id, name")` (partial); `vendors.tsx` uses `["vendors"]` with `select("*")` (full). Cache poisoning → TypeError in `vendorStats` useMemo. Fixed by renaming to `["vendors-basic"]` in purchase-orders.tsx.
+
+- **Query key collision prevention** — three-layer defense added:
+  - Naming rule in `CLAUDE.md`: bare key = full select, `-basic` suffix = partial select
+  - `scripts/check-query-keys.cjs` — scans all route files for duplicate keys; prints files to verify select shapes
+  - `"check:keys"` script added to `package.json` → `bun run check:keys`
+  - Script caught another collision: `operations/team.tsx` `["roles"]` partial vs `settings/roles.tsx` `["roles"]` full → fixed by renaming to `["roles-basic"]`
+
+- **Migration 20260610000024** — full reseed of operational data with a connected story:
+  - Deleted: opportunities, projects, work_orders, vendors, purchase_orders, po_line_items, invoices, invoice_line_items, invoice_payments
+  - Re-inserted everything using the 7 actual CRM companies (Northbeam, Pinecrest, Helio, Vertex, Halcyon, Cinder, Arden)
+  - All 5 projects carry `opportunity_id` FK to originating opportunity
+  - All POs carry `linked_project_id` to their project
+  - All invoices carry `linked_project_id` where a project exists
+  - Companies/contacts/leads/service tickets/service plans/catalog/stock untouched
+
+**Work order architecture clarified:**
+- Work Order = project task (child of a project, one of many phases) OR standalone job (no project, single-phase)
+- Standalone path: Lead → Contact → Work Order → Invoice → Payment (no quote, no project)
+- Full path: Lead → Contact → Opportunity → Quote* → Project → Work Orders → Invoice → Payment
+- *Quote Builder still deferred
+
+**Query key collisions seen so far (4 total):**
+- `team-members.tsx` `["roles"]` partial vs `roles.tsx` `["roles"]` full
+- `vendors.tsx` `["purchase-orders"]` full vs `purchase-orders.tsx` `["purchase-orders"]` partial
+- `purchase-orders.tsx` `["vendors"]` partial vs `vendors.tsx` `["vendors"]` full
+- `operations/team.tsx` `["roles"]` partial vs `settings/roles.tsx` `["roles"]` full
