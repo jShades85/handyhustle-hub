@@ -79,6 +79,19 @@ ALTER TABLE projects ADD COLUMN source_quote_id uuid references quotes(id);
 
 ---
 
+## Planned Fix — Project Initial Status on Convert
+
+**Problem:** `convertToProject` defaults to `status: "scheduled"` but a project that just converted from Closed Won hasn't been scheduled yet. "Scheduled" implies dates are set and crew is assigned.
+
+**Fix:**
+1. Migration — add `'planning'` to the `projects.status` check constraint
+2. Update `convertToProject` in `opportunities.tsx` to default to `"planning"` instead of `"scheduled"`
+3. Update `Projects` page status filter/badge config to include `"planning"`
+
+**Correct status progression:** `planning` → `scheduled` → `in-progress` → `on-hold` → `completed` / `cancelled`
+
+---
+
 ## Planned Feature — Referral Partner Tracking
 
 **Problem:** Leads that come via referral have no FK link to the referring company. Source is just a string ("Referral"). You can't see which contractors/architects are driving business, and the referral context is lost after conversion.
