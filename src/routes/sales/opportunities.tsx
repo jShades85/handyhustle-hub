@@ -32,7 +32,7 @@ type OppSource = "Referral" | "Repeat Client" | "Cold Outreach" | "Bid/RFP" | "P
 type ActivityKind = "call" | "quote" | "site-visit" | "proposal" | "note";
 type QuoteStatus = "draft" | "sent" | "viewed" | "accepted" | "expired";
 
-interface LinkedQuote { id: string; number: string; value: number; status: QuoteStatus; notes: string | null }
+interface LinkedQuote { id: string; number: string; value: number; status: QuoteStatus; notes: string | null; expiryDate: string | null; revision: number }
 interface ActivityEntry { kind: ActivityKind; text: string; date: string }
 
 interface DbOpportunity {
@@ -47,7 +47,7 @@ interface DbOpportunity {
   company: { id: string; name: string } | null;
   contact: { id: string; full_name: string } | null;
   assignee: { id: string; full_name: string | null } | null;
-  quotes: { id: string; number: string; status: QuoteStatus; value: number; notes: string | null }[];
+  quotes: { id: string; number: string; status: QuoteStatus; value: number; notes: string | null; expiry_date: string | null; revision: number }[];
 }
 
 interface DraftLineItem {
@@ -161,7 +161,7 @@ function toUiOpp(d: DbOpportunity): Opportunity {
     priority:     d.priority ?? "med",
     notes:        d.notes ?? "",
     linkedQuote:  d.quotes?.[0]
-      ? { id: d.quotes[0].id, number: d.quotes[0].number, status: d.quotes[0].status, value: Number(d.quotes[0].value), notes: d.quotes[0].notes ?? null }
+      ? { id: d.quotes[0].id, number: d.quotes[0].number, status: d.quotes[0].status, value: Number(d.quotes[0].value), notes: d.quotes[0].notes ?? null, expiryDate: d.quotes[0].expiry_date ?? null, revision: d.quotes[0].revision ?? 1 }
       : undefined,
     activityFeed: [],
   };
@@ -240,7 +240,7 @@ async function fetchOpportunities(): Promise<DbOpportunity[]> {
   const supabase = createClient();
   const { data, error } = await supabase
     .from("opportunities")
-    .select("*, company:companies(id,name), contact:contacts(id,full_name), assignee:user_profiles!assigned_to(id,full_name), quotes(id,number,status,value,notes)")
+    .select("*, company:companies(id,name), contact:contacts(id,full_name), assignee:user_profiles!assigned_to(id,full_name), quotes(id,number,status,value,notes,expiry_date,revision)")
     .order("created_at", { ascending: false });
   if (error) throw error;
   return (data ?? []) as DbOpportunity[];
@@ -268,8 +268,10 @@ async function fetchQuoteLineItems(quoteId: string): Promise<DbQuoteLineItem[]> 
 async function saveQuote(
   opportunityId: string,
   quoteId: string | null,
+  currentRevision: number,
   items: DraftLineItem[],
   notes: string,
+  expiryDate: string,
 ): Promise<void> {
   const supabase = createClient();
   const { data: tenantRow } = await supabase.from("tenants").select("id").single();
@@ -288,8 +290,12 @@ async function saveQuote(
       total:           (parseFloat(li.quantity) || 1) * (parseFloat(li.unitPrice) || 0),
     }));
 
+  const expiry = expiryDate || null;
+
   if (quoteId) {
-    const { error: ue } = await supabase.from("quotes").update({ value, notes: notes || null }).eq("id", quoteId);
+    const { error: ue } = await supabase.from("quotes").update({
+      value, notes: notes || null, expiry_date: expiry, revision: currentRevision + 1,
+    }).eq("id", quoteId);
     if (ue) throw ue;
     await supabase.from("quote_line_items").delete().eq("quote_id", quoteId);
     if (lineItemRows.length > 0) {
@@ -303,7 +309,7 @@ async function saveQuote(
     const year = new Date().getFullYear();
     const number = `Q-${year}-${String((count ?? 0) + 1).padStart(3, "0")}`;
     const { data: quote, error: qe } = await supabase
-      .from("quotes").insert({ tenant_id: tid, opportunity_id: opportunityId, number, value, notes: notes || null, status: "draft" })
+      .from("quotes").insert({ tenant_id: tid, opportunity_id: opportunityId, number, value, notes: notes || null, status: "draft", expiry_date: expiry, revision: 1 })
       .select("id").single();
     if (qe || !quote) throw qe ?? new Error("Quote insert failed");
     if (lineItemRows.length > 0) {
@@ -776,6 +782,7 @@ function QuoteBuilderModal({
 }) {
   const [saving, setSaving] = useState(false);
   const [notes, setNotes] = useState(existingQuote?.notes ?? "");
+  const [expiryDate, setExpiryDate] = useState(existingQuote?.expiryDate ?? "");
   const [items, setItems] = useState<DraftLineItem[]>([freshRow()]);
   const initializedRef = useRef(false);
 
@@ -825,7 +832,7 @@ function QuoteBuilderModal({
     if (!hasItems) return;
     setSaving(true);
     try {
-      await saveQuote(opportunityId, existingQuote?.id ?? null, items, notes);
+      await saveQuote(opportunityId, existingQuote?.id ?? null, existingQuote?.revision ?? 1, items, notes, expiryDate);
       onSaved();
       onClose();
     } finally {
@@ -924,16 +931,27 @@ function QuoteBuilderModal({
           </button>
         </div>
 
-        {/* Notes */}
-        <div>
-          <label className={labelCls}>Notes</label>
-          <textarea
-            rows={2}
-            value={notes}
-            onChange={(e) => setNotes(e.target.value)}
-            placeholder="Scope notes, exclusions, assumptions…"
-            className="w-full resize-none rounded-md border border-border bg-background px-2.5 py-2 text-[12.5px] placeholder:text-muted-foreground/50 focus:outline-none focus:ring-1 focus:ring-primary"
-          />
+        {/* Expiry + Notes */}
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <label className={labelCls}>Expiry Date</label>
+            <input
+              type="date"
+              value={expiryDate}
+              onChange={(e) => setExpiryDate(e.target.value)}
+              className={cn(inputCls, "w-full")}
+            />
+          </div>
+          <div>
+            <label className={labelCls}>Notes</label>
+            <textarea
+              rows={1}
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              placeholder="Scope notes, exclusions…"
+              className="w-full resize-none rounded-md border border-border bg-background px-2.5 py-2 text-[12.5px] placeholder:text-muted-foreground/50 focus:outline-none focus:ring-1 focus:ring-primary"
+            />
+          </div>
         </div>
 
         {/* Total + actions */}
@@ -1144,7 +1162,10 @@ function OpportunityDrawer({
           {opp.linkedQuote ? (
             <div className="rounded-md border border-border bg-surface/50 px-3 py-2.5 space-y-2">
               <div className="flex items-center justify-between text-[12px]">
-                <span className="font-mono text-foreground font-medium">{opp.linkedQuote.number}</span>
+                <div className="flex items-center gap-2">
+                  <span className="font-mono text-foreground font-medium">{opp.linkedQuote.number}</span>
+                  <span className="text-[10.5px] text-muted-foreground font-mono">v{opp.linkedQuote.revision}</span>
+                </div>
                 <div className="flex items-center gap-2.5">
                   <span className={cn("inline-flex items-center rounded px-1.5 py-0.5 text-[10.5px] font-medium", quoteStatusMeta[opp.linkedQuote.status].cls)}>
                     {quoteStatusMeta[opp.linkedQuote.status].label}
@@ -1152,8 +1173,11 @@ function OpportunityDrawer({
                   <span className="font-mono font-semibold">{currency(opp.linkedQuote.value)}</span>
                 </div>
               </div>
-              {opp.linkedQuote.notes && (
-                <p className="text-[11.5px] text-muted-foreground">{opp.linkedQuote.notes}</p>
+              {(opp.linkedQuote.expiryDate || opp.linkedQuote.notes) && (
+                <div className="flex items-center gap-3 text-[11.5px] text-muted-foreground">
+                  {opp.linkedQuote.expiryDate && <span>Expires {opp.linkedQuote.expiryDate}</span>}
+                  {opp.linkedQuote.notes && <span className="truncate">{opp.linkedQuote.notes}</span>}
+                </div>
               )}
               {canWrite && opp.linkedQuote.status !== "accepted" && (
                 <div className="flex gap-2 pt-0.5">
