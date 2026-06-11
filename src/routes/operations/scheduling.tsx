@@ -650,7 +650,6 @@ function ScheduleDrawer({
   onSave,
   editingJob = null,
   teamMembers,
-  projects,
   workOrders,
 }: {
   open: boolean;
@@ -658,7 +657,6 @@ function ScheduleDrawer({
   onSave: (data: FormData, editingId?: string) => void;
   editingJob?: ScheduledJob | null;
   teamMembers: { id: string; full_name: string }[];
-  projects: { id: string; code: string; name: string; site_address: string; customer_name: string }[];
   workOrders: { id: string; code: string; name: string; site_address: string; customer_name: string }[];
 }) {
   const {
@@ -670,12 +668,11 @@ function ScheduleDrawer({
     formState: { errors },
   } = useForm<FormData>({
     resolver: zodResolver(formSchema),
-    defaultValues: { jobType: "work_order", techIds: [], notes: "" },
+    defaultValues: { jobType: "work_order" as const, techIds: [], notes: "" },
   });
 
   const techIds = watch("techIds");
   const selectedCategory = watch("category") as JobCategory | undefined;
-  const jobType = watch("jobType");
 
   useEffect(() => {
     if (!open) return;
@@ -702,8 +699,7 @@ function ScheduleDrawer({
   const handleJobSelect = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const selectedId = e.target.value;
     setValue("jobId", selectedId);
-    const list = jobType === "project" ? projects : workOrders;
-    const record = list.find((r) => r.id === selectedId);
+    const record = workOrders.find((r) => r.id === selectedId);
     if (record) {
       setValue("jobReference", record.code);
       setValue("title", record.name);
@@ -727,39 +723,24 @@ function ScheduleDrawer({
     onOpenChange(false);
   };
 
-  const jobList = jobType === "project" ? projects : workOrders;
-
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent side="right" className="w-full max-w-md overflow-y-auto p-0">
         <SheetHeader className="border-b border-border px-5 py-4">
-          <SheetTitle className="text-[14px]">{editingJob ? "Edit Schedule" : "Schedule Job"}</SheetTitle>
+          <SheetTitle className="text-[14px]">{editingJob ? "Edit Schedule" : "Dispatch Work Order"}</SheetTitle>
         </SheetHeader>
 
         <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4 px-5 py-4">
-          {/* Job Type */}
+          {/* Link Work Order */}
           <div>
-            <label className={labelCls}>Job Type *</label>
-            <div className="flex gap-2">
-              {(["project", "work_order"] as const).map((t) => (
-                <label key={t} className="flex items-center gap-1.5 cursor-pointer text-[12.5px]">
-                  <input type="radio" value={t} {...register("jobType")} className="accent-primary" />
-                  {t === "project" ? "Project" : "Work Order"}
-                </label>
-              ))}
-            </div>
-          </div>
-
-          {/* Link Job */}
-          <div>
-            <label className={labelCls}>Link Job</label>
+            <label className={labelCls}>Work Order</label>
             <select
               className={cn(inputCls, "cursor-pointer")}
               onChange={handleJobSelect}
               defaultValue=""
             >
-              <option value="">— Select {jobType === "project" ? "project" : "work order"}…</option>
-              {jobList.map((r) => (
+              <option value="">— Select work order…</option>
+              {workOrders.map((r) => (
                 <option key={r.id} value={r.id}>
                   {r.code} — {r.name}
                 </option>
@@ -946,7 +927,7 @@ function SchedulingPage() {
     setMeta({
       title: "Scheduling",
       subtitle: "Job calendar and dispatch",
-      newLabel: "Schedule Job",
+      newLabel: "Dispatch",
       onNew: () => setDrawerOpen(true),
     });
   }, [setMeta]);
@@ -976,31 +957,6 @@ function SchedulingPage() {
         .order("full_name");
       if (error) throw error;
       return data as { id: string; full_name: string }[];
-    },
-  });
-
-  const { data: projects = [] } = useQuery({
-    queryKey: ["projects-scheduling"],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("projects")
-        .select("id, code, name, site_address, companies!company_id(name), contacts!contact_id(full_name)")
-        .neq("status", "cancelled")
-        .order("code");
-      if (error) throw error;
-      return (data ?? []).map((r) => {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const co = r.companies as any;
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const ct = r.contacts as any;
-        return {
-          id: r.id,
-          code: r.code ?? "",
-          name: r.name,
-          site_address: r.site_address ?? "",
-          customer_name: co?.name ?? ct?.full_name ?? "",
-        };
-      });
     },
   });
 
@@ -1274,7 +1230,6 @@ function SchedulingPage() {
         onSave={handleSave}
         editingJob={editingJob}
         teamMembers={teamMembers}
-        projects={projects}
         workOrders={workOrders}
       />
     </div>
