@@ -9,8 +9,8 @@ import { currency } from "@/lib/demo-data";
 const fmtValue = (v: number | null) => (v ? currency(v) : "—");
 import type { Priority } from "@/lib/demo-data";
 import {
-  ChevronDown, ChevronUp, ChevronsUpDown, FileText,
-  KanbanSquare, List, MapPin, MessageSquare, Phone, Send,
+  Check, ChevronDown, ChevronUp, ChevronsUpDown, FileText,
+  KanbanSquare, List, MapPin, MessageSquare, Pencil, Phone, Plus, Send, X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { FilterBar, SearchInput, FilterSelect } from "@/components/ui/page-components";
@@ -32,7 +32,7 @@ type OppSource = "Referral" | "Repeat Client" | "Cold Outreach" | "Bid/RFP" | "P
 type ActivityKind = "call" | "quote" | "site-visit" | "proposal" | "note";
 type QuoteStatus = "draft" | "sent" | "viewed" | "accepted" | "expired";
 
-interface LinkedQuote { number: string; value: number; status: QuoteStatus }
+interface LinkedQuote { id: string; number: string; value: number; status: QuoteStatus; notes: string | null }
 interface ActivityEntry { kind: ActivityKind; text: string; date: string }
 
 interface DbOpportunity {
@@ -47,7 +47,23 @@ interface DbOpportunity {
   company: { id: string; name: string } | null;
   contact: { id: string; full_name: string } | null;
   assignee: { id: string; full_name: string | null } | null;
-  quotes: { id: string; number: string; status: QuoteStatus; value: number }[];
+  quotes: { id: string; number: string; status: QuoteStatus; value: number; notes: string | null }[];
+}
+
+interface DraftLineItem {
+  key: string;
+  catalogItemId: string | null;
+  description: string;
+  quantity: string;
+  unitPrice: string;
+}
+
+interface DbQuoteLineItem {
+  id: string;
+  catalog_item_id: string | null;
+  description: string;
+  quantity: number;
+  unit_price: number;
 }
 
 interface CatalogItemOption { id: string; name: string; msrp: number | null; sku: string | null }
@@ -145,7 +161,7 @@ function toUiOpp(d: DbOpportunity): Opportunity {
     priority:     d.priority ?? "med",
     notes:        d.notes ?? "",
     linkedQuote:  d.quotes?.[0]
-      ? { number: d.quotes[0].number, status: d.quotes[0].status, value: Number(d.quotes[0].value) }
+      ? { id: d.quotes[0].id, number: d.quotes[0].number, status: d.quotes[0].status, value: Number(d.quotes[0].value), notes: d.quotes[0].notes ?? null }
       : undefined,
     activityFeed: [],
   };
@@ -224,7 +240,7 @@ async function fetchOpportunities(): Promise<DbOpportunity[]> {
   const supabase = createClient();
   const { data, error } = await supabase
     .from("opportunities")
-    .select("*, company:companies(id,name), contact:contacts(id,full_name), assignee:user_profiles!assigned_to(id,full_name), quotes(id,number,status,value)")
+    .select("*, company:companies(id,name), contact:contacts(id,full_name), assignee:user_profiles!assigned_to(id,full_name), quotes(id,number,status,value,notes)")
     .order("created_at", { ascending: false });
   if (error) throw error;
   return (data ?? []) as DbOpportunity[];
@@ -238,30 +254,81 @@ async function fetchCatalogItems(): Promise<CatalogItemOption[]> {
   return data ?? [];
 }
 
-async function createQuote(opportunityId: string, item: CatalogItemOption, qty: number, unitPrice: number, notes: string): Promise<void> {
+async function fetchQuoteLineItems(quoteId: string): Promise<DbQuoteLineItem[]> {
+  const supabase = createClient();
+  const { data, error } = await supabase
+    .from("quote_line_items")
+    .select("id, catalog_item_id, description, quantity, unit_price")
+    .eq("quote_id", quoteId)
+    .order("id");
+  if (error) throw error;
+  return data ?? [];
+}
+
+async function saveQuote(
+  opportunityId: string,
+  quoteId: string | null,
+  items: DraftLineItem[],
+  notes: string,
+): Promise<void> {
   const supabase = createClient();
   const { data: tenantRow } = await supabase.from("tenants").select("id").single();
   if (!tenantRow) throw new Error("No tenant");
   const tid = tenantRow.id;
 
-  const { count } = await supabase.from("quotes").select("*", { count: "exact", head: true });
-  const year = new Date().getFullYear();
-  const number = `Q-${year}-${String((count ?? 0) + 1).padStart(3, "0")}`;
-  const value = qty * unitPrice;
+  const value = items.reduce((s, li) => s + (parseFloat(li.quantity) || 0) * (parseFloat(li.unitPrice) || 0), 0);
+  const lineItemRows = items
+    .filter((li) => li.description.trim())
+    .map((li) => ({
+      tenant_id:       tid,
+      catalog_item_id: li.catalogItemId,
+      description:     li.description.trim(),
+      quantity:        parseFloat(li.quantity) || 1,
+      unit_price:      parseFloat(li.unitPrice) || 0,
+      total:           (parseFloat(li.quantity) || 1) * (parseFloat(li.unitPrice) || 0),
+    }));
 
-  const { data: quote, error: qe } = await supabase
-    .from("quotes").insert({ tenant_id: tid, opportunity_id: opportunityId, number, value, notes: notes || null })
-    .select("id").single();
-  if (qe || !quote) throw qe ?? new Error("Quote insert failed");
-
-  const { error: le } = await supabase.from("quote_line_items").insert({
-    tenant_id: tid, quote_id: quote.id,
-    catalog_item_id: item.id, description: item.name,
-    quantity: qty, unit_price: unitPrice,
-  });
-  if (le) throw le;
+  if (quoteId) {
+    const { error: ue } = await supabase.from("quotes").update({ value, notes: notes || null }).eq("id", quoteId);
+    if (ue) throw ue;
+    await supabase.from("quote_line_items").delete().eq("quote_id", quoteId);
+    if (lineItemRows.length > 0) {
+      const { error: le } = await supabase.from("quote_line_items").insert(
+        lineItemRows.map((r) => ({ ...r, quote_id: quoteId }))
+      );
+      if (le) throw le;
+    }
+  } else {
+    const { count } = await supabase.from("quotes").select("*", { count: "exact", head: true });
+    const year = new Date().getFullYear();
+    const number = `Q-${year}-${String((count ?? 0) + 1).padStart(3, "0")}`;
+    const { data: quote, error: qe } = await supabase
+      .from("quotes").insert({ tenant_id: tid, opportunity_id: opportunityId, number, value, notes: notes || null, status: "draft" })
+      .select("id").single();
+    if (qe || !quote) throw qe ?? new Error("Quote insert failed");
+    if (lineItemRows.length > 0) {
+      const { error: le } = await supabase.from("quote_line_items").insert(
+        lineItemRows.map((r) => ({ ...r, quote_id: quote.id }))
+      );
+      if (le) throw le;
+    }
+  }
 
   const { error: oe } = await supabase.from("opportunities").update({ value }).eq("id", opportunityId);
+  if (oe) throw oe;
+}
+
+async function updateQuoteStatus(quoteId: string, status: QuoteStatus): Promise<void> {
+  const supabase = createClient();
+  const { error } = await supabase.from("quotes").update({ status }).eq("id", quoteId);
+  if (error) throw error;
+}
+
+async function acceptQuote(quoteId: string, opportunityId: string): Promise<void> {
+  const supabase = createClient();
+  const { error: qe } = await supabase.from("quotes").update({ status: "accepted" }).eq("id", quoteId);
+  if (qe) throw qe;
+  const { error: oe } = await supabase.from("opportunities").update({ stage: "closed-won" }).eq("id", opportunityId);
   if (oe) throw oe;
 }
 
@@ -363,9 +430,13 @@ function Opportunities() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ["opportunities"] }),
   });
 
-  const quoteMutation = useMutation({
-    mutationFn: ({ oppId, item, qty, unitPrice, notes }: { oppId: string; item: CatalogItemOption; qty: number; unitPrice: number; notes: string }) =>
-      createQuote(oppId, item, qty, unitPrice, notes),
+  const markSentMutation = useMutation({
+    mutationFn: (quoteId: string) => updateQuoteStatus(quoteId, "sent"),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["opportunities"] }),
+  });
+
+  const acceptMutation = useMutation({
+    mutationFn: ({ quoteId, oppId }: { quoteId: string; oppId: string }) => acceptQuote(quoteId, oppId),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["opportunities"] }),
   });
 
@@ -445,9 +516,9 @@ function Opportunities() {
             onSave={async (values) => {
               await saveMutation.mutateAsync({ id: selected.id, values });
             }}
-            onCreateQuote={async (item, qty, unitPrice, notes) => {
-              await quoteMutation.mutateAsync({ oppId: selected.id, item, qty, unitPrice, notes });
-            }}
+            onQuoteSaved={() => qc.invalidateQueries({ queryKey: ["opportunities"] })}
+            onMarkSent={(quoteId) => markSentMutation.mutate(quoteId)}
+            onAcceptQuote={(quoteId) => acceptMutation.mutate({ quoteId, oppId: selected.id })}
             onConvert={async (type, siteAddress) => {
               if (type === "project") await convertToProject(selected, siteAddress);
               else await convertToWorkOrder(selected);
@@ -688,91 +759,208 @@ function ListView({ opps, onSelect }: { opps: Opportunity[]; onSelect: (opp: Opp
 
 // ─── Opportunity detail drawer ────────────────────────────────────────────────
 
-function CreateQuoteModal({
+function freshRow(): DraftLineItem {
+  return { key: crypto.randomUUID(), catalogItemId: null, description: "", quantity: "1", unitPrice: "" };
+}
+
+function QuoteBuilderModal({
+  opportunityId,
+  existingQuote,
   onClose,
-  onSave,
+  onSaved,
 }: {
+  opportunityId: string;
+  existingQuote: LinkedQuote | null;
   onClose: () => void;
-  onSave: (item: CatalogItemOption, qty: number, unitPrice: number, notes: string) => Promise<void>;
+  onSaved: () => void;
 }) {
   const [saving, setSaving] = useState(false);
-  const [selectedItem, setSelectedItem] = useState<CatalogItemOption | null>(null);
-  const [unitPrice, setUnitPrice] = useState("");
-  const [qty, setQty] = useState("1");
+  const [notes, setNotes] = useState(existingQuote?.notes ?? "");
+  const [items, setItems] = useState<DraftLineItem[]>([freshRow()]);
+  const initializedRef = useRef(false);
+
   const { data: catalogItems = [] } = useQuery({ queryKey: ["catalog-items-quote"], queryFn: fetchCatalogItems });
+  const { data: existingLineItems } = useQuery({
+    queryKey: ["quote-line-items", existingQuote?.id],
+    queryFn: () => fetchQuoteLineItems(existingQuote!.id),
+    enabled: !!existingQuote,
+  });
 
-  const inputCls  = "w-full h-8 rounded-md border border-border bg-surface px-2.5 text-[12.5px] focus:outline-none focus:ring-1 focus:ring-primary";
-  const selectCls = "w-full h-8 rounded-md border border-border bg-surface px-2 text-[12.5px] focus:outline-none focus:ring-1 focus:ring-primary";
-  const labelCls  = "block text-[10px] uppercase tracking-wider text-muted-foreground mb-1";
+  useEffect(() => {
+    if (!existingLineItems || initializedRef.current) return;
+    initializedRef.current = true;
+    if (existingLineItems.length > 0) {
+      setItems(existingLineItems.map((li) => ({
+        key: li.id,
+        catalogItemId: li.catalog_item_id,
+        description: li.description,
+        quantity: String(li.quantity),
+        unitPrice: String(li.unit_price),
+      })));
+    }
+  }, [existingLineItems]);
 
-  const total = (parseFloat(qty) || 0) * (parseFloat(unitPrice) || 0);
+  const inputCls = "h-8 rounded-md border border-border bg-background px-2.5 text-[12.5px] focus:outline-none focus:ring-1 focus:ring-primary";
+  const labelCls = "block text-[10px] uppercase tracking-wider text-muted-foreground mb-1";
 
-  const handleItemChange = (id: string) => {
-    const item = catalogItems.find((i) => i.id === id) ?? null;
-    setSelectedItem(item);
-    if (item?.msrp) setUnitPrice(String(item.msrp));
-  };
+  const total = items.reduce((s, li) => s + (parseFloat(li.quantity) || 0) * (parseFloat(li.unitPrice) || 0), 0);
+  const hasItems = items.some((li) => li.description.trim());
 
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    if (!selectedItem) return;
+  function updateRow(key: string, patch: Partial<DraftLineItem>) {
+    setItems((prev) => prev.map((r) => r.key === key ? { ...r, ...patch } : r));
+  }
+
+  function handleCatalogSelect(key: string, itemId: string) {
+    const cat = catalogItems.find((c) => c.id === itemId);
+    if (cat) {
+      updateRow(key, {
+        catalogItemId: cat.id,
+        description: cat.name,
+        unitPrice: cat.msrp ? String(cat.msrp) : "",
+      });
+    }
+  }
+
+  async function handleSave() {
+    if (!hasItems) return;
     setSaving(true);
-    const fd = new FormData(e.currentTarget);
     try {
-      await onSave(selectedItem, parseFloat(qty) || 1, parseFloat(unitPrice) || 0, fd.get("notes") as string);
+      await saveQuote(opportunityId, existingQuote?.id ?? null, items, notes);
+      onSaved();
       onClose();
     } finally {
       setSaving(false);
     }
-  };
+  }
 
   return (
-    <DialogContent className="max-w-md">
+    <DialogContent className="max-w-2xl">
       <DialogHeader>
-        <DialogTitle>Create Quote</DialogTitle>
+        <DialogTitle>
+          {existingQuote ? `Edit Quote — ${existingQuote.number}` : "Create Quote"}
+        </DialogTitle>
       </DialogHeader>
-      <form onSubmit={handleSubmit} className="mt-1 space-y-3">
+      <div className="mt-2 space-y-4">
+        {/* Line items table */}
         <div>
-          <label className={labelCls}>Catalog Item *</label>
-          <select required className={selectCls} defaultValue="" onChange={(e) => handleItemChange(e.target.value)}>
-            <option value="" disabled>— Select an item —</option>
-            {catalogItems.map((i) => <option key={i.id} value={i.id}>{i.name}{i.sku ? ` (${i.sku})` : ""}</option>)}
-          </select>
+          <label className={labelCls}>Line Items</label>
+          <div className="rounded-md border border-border overflow-hidden">
+            <table className="w-full text-[12px]">
+              <thead className="bg-muted/50 text-[10px] uppercase tracking-wider text-muted-foreground">
+                <tr>
+                  <th className="text-left py-1.5 px-3 font-medium">Description</th>
+                  <th className="text-right py-1.5 px-2 font-medium w-16">Qty</th>
+                  <th className="text-right py-1.5 px-2 font-medium w-28">Unit Price</th>
+                  <th className="text-right py-1.5 px-3 font-medium w-24">Total</th>
+                  <th className="w-8" />
+                </tr>
+              </thead>
+              <tbody>
+                {items.map((row) => (
+                  <tr key={row.key} className="border-t border-border/60">
+                    <td className="py-1.5 px-2">
+                      <div className="flex flex-col gap-1">
+                        <select
+                          className="h-7 w-full rounded border border-border bg-background px-2 text-[11.5px] text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+                          value=""
+                          onChange={(e) => { if (e.target.value) handleCatalogSelect(row.key, e.target.value); e.target.value = ""; }}
+                        >
+                          <option value="">— Pick from catalog —</option>
+                          {catalogItems.map((c) => (
+                            <option key={c.id} value={c.id}>{c.name}{c.sku ? ` (${c.sku})` : ""}</option>
+                          ))}
+                        </select>
+                        <input
+                          className={cn(inputCls, "w-full")}
+                          placeholder="Description"
+                          value={row.description}
+                          onChange={(e) => updateRow(row.key, { description: e.target.value, catalogItemId: e.target.value !== row.description ? null : row.catalogItemId })}
+                        />
+                      </div>
+                    </td>
+                    <td className="py-1.5 px-2">
+                      <input
+                        type="number" min="0.01" step="0.01"
+                        className={cn(inputCls, "w-full text-right")}
+                        value={row.quantity}
+                        onChange={(e) => updateRow(row.key, { quantity: e.target.value })}
+                      />
+                    </td>
+                    <td className="py-1.5 px-2">
+                      <input
+                        type="number" min="0" step="0.01"
+                        placeholder="0.00"
+                        className={cn(inputCls, "w-full text-right")}
+                        value={row.unitPrice}
+                        onChange={(e) => updateRow(row.key, { unitPrice: e.target.value })}
+                      />
+                    </td>
+                    <td className="py-1.5 px-3 text-right tabular-nums font-medium text-[11.5px]">
+                      {row.quantity && row.unitPrice
+                        ? currency((parseFloat(row.quantity) || 0) * (parseFloat(row.unitPrice) || 0))
+                        : "—"}
+                    </td>
+                    <td className="py-1 pr-1.5">
+                      <button
+                        type="button"
+                        onClick={() => setItems((prev) => prev.filter((r) => r.key !== row.key))}
+                        disabled={items.length === 1}
+                        className="h-6 w-6 flex items-center justify-center rounded text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors disabled:opacity-30"
+                      >
+                        <X className="h-3.5 w-3.5" />
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <button
+            type="button"
+            onClick={() => setItems((prev) => [...prev, freshRow()])}
+            className="mt-2 flex items-center gap-1 text-[11.5px] text-primary hover:underline"
+          >
+            <Plus className="h-3.5 w-3.5" /> Add Line Item
+          </button>
         </div>
-        <div className="grid grid-cols-2 gap-3">
-          <div>
-            <label className={labelCls}>Quantity</label>
-            <input type="number" min="0.01" step="0.01" required className={inputCls}
-              value={qty} onChange={(e) => setQty(e.target.value)} />
-          </div>
-          <div>
-            <label className={labelCls}>Unit Price ($)</label>
-            <input type="number" min="0" step="0.01" required className={inputCls}
-              value={unitPrice} onChange={(e) => setUnitPrice(e.target.value)} />
-          </div>
-        </div>
-        {total > 0 && (
-          <div className="rounded-md bg-surface border border-border px-3 py-2 flex items-center justify-between text-[12.5px]">
-            <span className="text-muted-foreground">Quote Total</span>
-            <span className="font-mono font-semibold">{currency(total)}</span>
-          </div>
-        )}
+
+        {/* Notes */}
         <div>
           <label className={labelCls}>Notes</label>
-          <textarea name="notes" rows={2} placeholder="Optional notes…"
-            className="w-full resize-none rounded-md border border-border bg-surface px-2.5 py-2 text-[12.5px] placeholder:text-muted-foreground/50 focus:outline-none focus:ring-1 focus:ring-primary" />
+          <textarea
+            rows={2}
+            value={notes}
+            onChange={(e) => setNotes(e.target.value)}
+            placeholder="Scope notes, exclusions, assumptions…"
+            className="w-full resize-none rounded-md border border-border bg-background px-2.5 py-2 text-[12.5px] placeholder:text-muted-foreground/50 focus:outline-none focus:ring-1 focus:ring-primary"
+          />
         </div>
+
+        {/* Total + actions */}
+        {total > 0 && (
+          <div className="rounded-md bg-surface border border-border px-4 py-2.5 flex items-center justify-between">
+            <span className="text-[12px] text-muted-foreground">Quote Total</span>
+            <span className="font-mono text-[14px] font-semibold">{currency(total)}</span>
+          </div>
+        )}
         <div className="flex gap-2 pt-1">
-          <button type="submit" disabled={saving || !selectedItem}
-            className="flex-1 h-8 rounded-md bg-primary text-[12.5px] font-medium text-primary-foreground hover:opacity-90 disabled:opacity-50 transition-opacity">
-            {saving ? "Creating…" : "Create Quote"}
+          <button
+            type="button"
+            onClick={handleSave}
+            disabled={saving || !hasItems}
+            className="flex-1 h-8 rounded-md bg-primary text-[12.5px] font-medium text-primary-foreground hover:opacity-90 disabled:opacity-50 transition-opacity"
+          >
+            {saving ? "Saving…" : existingQuote ? "Save Changes" : "Create Quote"}
           </button>
-          <button type="button" onClick={onClose}
-            className="flex-1 h-8 rounded-md border border-border text-[12.5px] text-muted-foreground hover:text-foreground hover:bg-accent transition-colors">
+          <button
+            type="button"
+            onClick={onClose}
+            className="flex-1 h-8 rounded-md border border-border text-[12.5px] text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
+          >
             Cancel
           </button>
         </div>
-      </form>
+      </div>
     </DialogContent>
   );
 }
@@ -781,7 +969,9 @@ function OpportunityDrawer({
   opp,
   onNotesChange,
   onSave,
-  onCreateQuote,
+  onQuoteSaved,
+  onMarkSent,
+  onAcceptQuote,
   onConvert,
   canWrite,
   team,
@@ -789,7 +979,9 @@ function OpportunityDrawer({
   opp: Opportunity;
   onNotesChange: (notes: string) => void;
   onSave: (values: Parameters<typeof updateOpportunity>[1]) => Promise<void>;
-  onCreateQuote: (item: CatalogItemOption, qty: number, unitPrice: number, notes: string) => Promise<void>;
+  onQuoteSaved: () => void;
+  onMarkSent: (quoteId: string) => void;
+  onAcceptQuote: (quoteId: string) => void;
   onConvert: (type: "project" | "work-order", siteAddress?: string) => Promise<void>;
   canWrite: boolean;
   team: TeamMember[];
@@ -950,19 +1142,57 @@ function OpportunityDrawer({
         <section>
           <p className="text-[10px] uppercase tracking-wider text-muted-foreground mb-2.5">Linked Quote</p>
           {opp.linkedQuote ? (
-            <div className="flex items-center justify-between rounded-md border border-border bg-surface/50 px-3 py-2.5 text-[12px]">
-              <span className="font-mono text-foreground">{opp.linkedQuote.number}</span>
-              <div className="flex items-center gap-2.5 shrink-0 ml-2">
-                <span className={cn("inline-flex items-center rounded px-1.5 py-0.5 text-[10.5px] font-medium", quoteStatusMeta[opp.linkedQuote.status].cls)}>
-                  {quoteStatusMeta[opp.linkedQuote.status].label}
-                </span>
-                <span className="font-mono text-muted-foreground">{currency(opp.linkedQuote.value)}</span>
+            <div className="rounded-md border border-border bg-surface/50 px-3 py-2.5 space-y-2">
+              <div className="flex items-center justify-between text-[12px]">
+                <span className="font-mono text-foreground font-medium">{opp.linkedQuote.number}</span>
+                <div className="flex items-center gap-2.5">
+                  <span className={cn("inline-flex items-center rounded px-1.5 py-0.5 text-[10.5px] font-medium", quoteStatusMeta[opp.linkedQuote.status].cls)}>
+                    {quoteStatusMeta[opp.linkedQuote.status].label}
+                  </span>
+                  <span className="font-mono font-semibold">{currency(opp.linkedQuote.value)}</span>
+                </div>
               </div>
+              {opp.linkedQuote.notes && (
+                <p className="text-[11.5px] text-muted-foreground">{opp.linkedQuote.notes}</p>
+              )}
+              {canWrite && opp.linkedQuote.status !== "accepted" && (
+                <div className="flex gap-2 pt-0.5">
+                  <button
+                    type="button"
+                    onClick={() => setQuoteModalOpen(true)}
+                    className="flex items-center gap-1 h-7 rounded-md border border-border bg-background px-2.5 text-[11.5px] hover:bg-accent transition-colors"
+                  >
+                    <Pencil className="h-3 w-3" /> Edit
+                  </button>
+                  {opp.linkedQuote.status === "draft" && (
+                    <button
+                      type="button"
+                      onClick={() => onMarkSent(opp.linkedQuote!.id)}
+                      className="flex items-center gap-1 h-7 rounded-md border border-border bg-background px-2.5 text-[11.5px] hover:bg-accent transition-colors"
+                    >
+                      <Send className="h-3 w-3" /> Mark as Sent
+                    </button>
+                  )}
+                  {(opp.linkedQuote.status === "sent" || opp.linkedQuote.status === "viewed") && (
+                    <button
+                      type="button"
+                      onClick={() => onAcceptQuote(opp.linkedQuote!.id)}
+                      className="flex items-center gap-1 h-7 rounded-md bg-green-600 text-white px-2.5 text-[11.5px] hover:opacity-90 transition-opacity"
+                    >
+                      <Check className="h-3 w-3" /> Accept Quote
+                    </button>
+                  )}
+                </div>
+              )}
             </div>
           ) : (
             <div className="flex items-center justify-between rounded-md border border-dashed border-border px-3 py-2.5 text-[12px]">
               <span className="text-muted-foreground">No quote linked yet</span>
-              {canWrite && <button type="button" onClick={() => setQuoteModalOpen(true)} className="text-primary text-[11.5px] font-medium hover:underline">Create Quote</button>}
+              {canWrite && (
+                <button type="button" onClick={() => setQuoteModalOpen(true)} className="text-primary text-[11.5px] font-medium hover:underline">
+                  Create Quote
+                </button>
+              )}
             </div>
           )}
         </section>
@@ -1082,9 +1312,11 @@ function OpportunityDrawer({
       </div>
       <Dialog open={quoteModalOpen} onOpenChange={setQuoteModalOpen}>
         {quoteModalOpen && (
-          <CreateQuoteModal
+          <QuoteBuilderModal
+            opportunityId={opp.id}
+            existingQuote={opp.linkedQuote ?? null}
             onClose={() => setQuoteModalOpen(false)}
-            onSave={onCreateQuote}
+            onSaved={() => { setQuoteModalOpen(false); onQuoteSaved(); }}
           />
         )}
       </Dialog>
