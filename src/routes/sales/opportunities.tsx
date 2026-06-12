@@ -327,10 +327,12 @@ function Opportunities() {
   const [selected, setSelected] = useState<Opportunity | null>(null);
   const [newOpen, setNewOpen] = useState(false);
 
-  const { data: dbOpps = [] } = useQuery({ queryKey: ["opportunities"], queryFn: fetchOpportunities });
+  const { data: dbOpps } = useQuery({ queryKey: ["opportunities"], queryFn: fetchOpportunities });
   const { data: team = [] } = useQuery({ queryKey: ["team-members"], queryFn: fetchTeamMembers });
 
-  const opps = useMemo(() => dbOpps.map(toUiOpp), [dbOpps]);
+  // dbOpps must NOT use a `= []` default — a new [] on every render makes useMemo recompute
+  // every render, which fires the setMeta effect, which re-renders, causing React error #185.
+  const opps = useMemo(() => (dbOpps ?? []).map(toUiOpp), [dbOpps]);
 
   const stageMutation = useMutation({
     mutationFn: ({ id, stage }: { id: string; stage: OpportunityStage }) => updateStage(id, stage),
