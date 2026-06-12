@@ -11,6 +11,9 @@ import { createClient } from "@/lib/supabase/client";
 import { usePermissions } from "@/contexts/PermissionsContext";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { FormSelect } from "@/components/ui/form-select";
+import { SC } from "@/lib/status-colors";
+import { currency } from "@/lib/demo-data";
+import { statusMeta as projectStatusMeta, type ProjectStatus } from "@/data/projects";
 
 export const Route = createFileRoute("/crm/companies/$companyId")({
   component: CompanyDetailPage,
@@ -43,12 +46,40 @@ interface DbContact {
   email: string | null;
 }
 
+type OppStage =
+  | "site-visit" | "estimating" | "proposal-sent"
+  | "negotiation" | "closed-won" | "closed-lost";
+
+interface DbCompanyOpp {
+  id: string;
+  title: string;
+  stage: OppStage;
+  value: number | null;
+}
+
+interface DbCompanyProject {
+  id: string;
+  code: string;
+  name: string;
+  status: ProjectStatus;
+  contract_value: number | null;
+}
+
 // ─── Config ──────────────────────────────────────────────────────────────────
 
 const stageMeta: Record<CompanyStage, { label: string; cls: string }> = {
   active:   { label: "Active",   cls: "bg-green-500/15 text-green-600 dark:text-green-400" },
   prospect: { label: "Prospect", cls: "bg-blue-500/15 text-blue-600 dark:text-blue-400" },
   inactive: { label: "Inactive", cls: "bg-slate-500/15 text-slate-500 dark:text-slate-400" },
+};
+
+const oppStageMeta: Record<OppStage, { label: string; cls: string }> = {
+  "site-visit":    { label: "Site Visit",    cls: SC.blue },
+  "estimating":    { label: "Estimating",    cls: SC.violet },
+  "proposal-sent": { label: "Proposal Sent", cls: SC.yellow },
+  "negotiation":   { label: "Negotiation",   cls: SC.orange },
+  "closed-won":    { label: "Closed Won",    cls: SC.green },
+  "closed-lost":   { label: "Closed Lost",   cls: SC.red },
 };
 
 // ─── Data ─────────────────────────────────────────────────────────────────────
@@ -73,6 +104,32 @@ async function fetchCompanyContacts(companyId: string): Promise<DbContact[]> {
     .order("full_name");
   if (error) throw error;
   return data ?? [];
+}
+
+// Open opportunities = this company is the customer, deal not yet closed.
+async function fetchCompanyOpportunities(companyId: string): Promise<DbCompanyOpp[]> {
+  const supabase = createClient();
+  const { data, error } = await supabase
+    .from("opportunities")
+    .select("id, title, stage, value")
+    .eq("company_id", companyId)
+    .not("stage", "in", "(closed-won,closed-lost)")
+    .order("value", { ascending: false, nullsFirst: false });
+  if (error) throw error;
+  return (data ?? []) as DbCompanyOpp[];
+}
+
+// Active projects = this company is the customer, project not finished/cancelled.
+async function fetchCompanyProjects(companyId: string): Promise<DbCompanyProject[]> {
+  const supabase = createClient();
+  const { data, error } = await supabase
+    .from("projects")
+    .select("id, code, name, status, contract_value")
+    .eq("company_id", companyId)
+    .not("status", "in", "(completed,cancelled)")
+    .order("contract_value", { ascending: false, nullsFirst: false });
+  if (error) throw error;
+  return (data ?? []) as DbCompanyProject[];
 }
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -111,6 +168,18 @@ function CompanyDetailPage() {
   const { data: contacts = [] } = useQuery({
     queryKey: ["company-contacts", companyId],
     queryFn: () => fetchCompanyContacts(companyId),
+    enabled: !!company,
+  });
+
+  const { data: openOpps = [] } = useQuery({
+    queryKey: ["company-opportunities", companyId],
+    queryFn: () => fetchCompanyOpportunities(companyId),
+    enabled: !!company,
+  });
+
+  const { data: openProjects = [] } = useQuery({
+    queryKey: ["company-projects", companyId],
+    queryFn: () => fetchCompanyProjects(companyId),
     enabled: !!company,
   });
 
@@ -299,16 +368,66 @@ function CompanyDetailPage() {
             )}
           </section>
 
-          {/* Opportunities — stub until Sales schema is built */}
+          {/* Open opportunities where this company is the customer */}
           <section>
-            <p className="text-[10px] uppercase tracking-wider text-muted-foreground mb-2">Open Opportunities</p>
-            <p className="text-[12px] text-muted-foreground italic">Available after Sales module is wired up.</p>
+            <p className="text-[10px] uppercase tracking-wider text-muted-foreground mb-2">
+              Open Opportunities{openOpps.length > 0 && <span className="ml-1 text-muted-foreground/60">({openOpps.length})</span>}
+            </p>
+            {openOpps.length > 0 ? (
+              <div className="space-y-2">
+                {openOpps.map((opp) => (
+                  <Link
+                    key={opp.id}
+                    to="/sales/opportunities"
+                    className="flex items-center gap-3 rounded-md border border-border bg-surface/40 px-3 py-2.5 text-[12px] hover:border-primary/30 transition-colors"
+                  >
+                    <div className="flex-1 min-w-0">
+                      <div className="font-medium leading-snug truncate">{opp.title}</div>
+                      <span className={cn("mt-1 inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] font-medium", oppStageMeta[opp.stage].cls)}>
+                        <span className="h-1.5 w-1.5 rounded-full bg-current" />
+                        {oppStageMeta[opp.stage].label}
+                      </span>
+                    </div>
+                    <span className="font-mono tabular-nums text-[11.5px] font-semibold shrink-0">{opp.value ? currency(opp.value) : "—"}</span>
+                  </Link>
+                ))}
+              </div>
+            ) : (
+              <p className="text-[12px] text-muted-foreground">No open opportunities.</p>
+            )}
           </section>
 
-          {/* Projects — stub until Operations schema is built */}
+          {/* Active projects where this company is the customer */}
           <section>
-            <p className="text-[10px] uppercase tracking-wider text-muted-foreground mb-2">Active Projects</p>
-            <p className="text-[12px] text-muted-foreground italic">Available after Operations module is wired up.</p>
+            <p className="text-[10px] uppercase tracking-wider text-muted-foreground mb-2">
+              Active Projects{openProjects.length > 0 && <span className="ml-1 text-muted-foreground/60">({openProjects.length})</span>}
+            </p>
+            {openProjects.length > 0 ? (
+              <div className="space-y-2">
+                {openProjects.map((project) => (
+                  <Link
+                    key={project.id}
+                    to="/operations/projects/$projectId"
+                    params={{ projectId: project.id }}
+                    className="flex items-center gap-3 rounded-md border border-border bg-surface/40 px-3 py-2.5 text-[12px] hover:border-primary/30 transition-colors"
+                  >
+                    <div className="flex-1 min-w-0">
+                      <div className="font-medium leading-snug truncate">{project.name}</div>
+                      <div className="mt-1 flex items-center gap-2">
+                        <span className="font-mono text-[10px] text-muted-foreground">{project.code}</span>
+                        <span className={cn("inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] font-medium", projectStatusMeta[project.status].cls)}>
+                          <span className="h-1.5 w-1.5 rounded-full bg-current" />
+                          {projectStatusMeta[project.status].label}
+                        </span>
+                      </div>
+                    </div>
+                    <span className="font-mono tabular-nums text-[11.5px] font-semibold shrink-0">{project.contract_value ? currency(project.contract_value) : "—"}</span>
+                  </Link>
+                ))}
+              </div>
+            ) : (
+              <p className="text-[12px] text-muted-foreground">No active projects.</p>
+            )}
           </section>
         </div>
 

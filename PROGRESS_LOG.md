@@ -341,6 +341,14 @@ Use this to manually walk the full app flow end-to-end. Every step is wired to t
 
 **Opportunities page is now considered done** (Module Status flipped to ✅ Opps done). Quote Builder remains the only deferred Sales piece.
 
+- **Company detail — customer panels wired** (`src/routes/crm/companies/$companyId.tsx`):
+  - Replaced the two long-standing stubs ("Available after Sales/Operations module") with live data
+  - **Open Opportunities**: `["company-opportunities", companyId]` — `opportunities` where `company_id = thisCompany` and `stage NOT IN (closed-won, closed-lost)`; rows link to the kanban (no opp detail route exists), show stage badge + value, sorted by value desc
+  - **Active Projects**: `["company-projects", companyId]` — `projects` where `company_id = thisCompany` and `status NOT IN (completed, cancelled)`; rows deep-link to `/operations/projects/$projectId`, show code + status badge + contract value
+  - Automatic via existing `company_id` FKs — no new schema, no backfill; new deals appear the moment they're created against the company
+  - **Referrals panel deliberately deferred** — that's the `referred_by_company_id` relationship (builder *refers* a homeowner vs. builder *is* the customer). Additive later, reads a different column, zero rework to these panels. Decision: trade-service referrals matter, but capture-then-display can wait; customer panels are the day-one value.
+  - Known minor gap: opportunity rows link to the kanban list, not the specific opp (opportunities have no `$id` detail route — they open in a drawer). Could add `?opp=<id>` search-param deep-linking later.
+
 ---
 
 ## Session 035 — Scheduling Live + Project Parts List + Convert Fixes
