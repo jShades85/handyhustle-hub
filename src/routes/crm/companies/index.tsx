@@ -100,7 +100,7 @@ function CompaniesPage() {
       title: "Companies",
       subtitle: `${companies.length} companies`,
       onNew: () => setNewOpen(true),
-      newLabel: "+ New Company",
+      newLabel: "New Company",
     });
   }, [setMeta, companies.length]);
 

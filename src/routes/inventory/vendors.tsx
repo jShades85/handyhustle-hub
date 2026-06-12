@@ -586,7 +586,7 @@ function VendorsPage() {
       title:    "Vendors",
       subtitle: `${vendors.length} vendors`,
       onNew:    () => setNewOpen(true),
-      newLabel: "+ New Vendor",
+      newLabel: "New Vendor",
     });
   }, [setMeta, vendors.length]);
 

@@ -1149,7 +1149,7 @@ function InvoicesPage() {
       title: "Invoices",
       subtitle: `${invoices.length} invoices`,
       onNew: () => setNewOpen(true),
-      newLabel: "+ New Invoice",
+      newLabel: "New Invoice",
     });
   }, [setMeta, invoices.length]);
 

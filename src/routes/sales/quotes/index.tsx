@@ -108,7 +108,7 @@ function QuotesPage() {
       title: "Quotes & Estimates",
       subtitle: `${quotes.length} quotes`,
       onNew: () => navigate({ to: "/sales/quotes/new", search: { opportunityId: undefined } }),
-      newLabel: "+ New Quote",
+      newLabel: "New Quote",
     });
   }, [setMeta, navigate, quotes.length]);
 
