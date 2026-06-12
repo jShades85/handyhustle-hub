@@ -15,6 +15,7 @@ import ThemeToggle from "./ui/ThemeToggle";
 import { PageMetaProvider, useMeta } from "@/contexts/PageMetaContext";
 import { requestItems } from "@/data/inbox-data";
 import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "./ui/tooltip";
 import { usePermissions, type AppModule } from "@/contexts/PermissionsContext";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -176,6 +177,7 @@ function AppShellContent() {
           )}
         </div>
 
+        <TooltipProvider delayDuration={300}>
         <nav className="flex-1 overflow-y-auto px-2 py-3">
           {sections.map((section, i) => {
             const locked = !permsLoading && !!section.module && !can(section.module, "read");
@@ -218,12 +220,17 @@ function AppShellContent() {
                         )}
                       </>
                     );
+                    const navItem = locked
+                      ? <span className={itemCls}>{content}</span>
+                      : <Link to={item.to} className={itemCls}>{content}</Link>;
                     return (
                       <li key={item.to}>
-                        {locked
-                          ? <span className={itemCls}>{content}</span>
-                          : <Link to={item.to} className={itemCls}>{content}</Link>
-                        }
+                        {collapsed ? (
+                          <Tooltip>
+                            <TooltipTrigger asChild>{navItem}</TooltipTrigger>
+                            <TooltipContent side="right">{item.label}</TooltipContent>
+                          </Tooltip>
+                        ) : navItem}
                       </li>
                     );
                   })}
@@ -232,6 +239,7 @@ function AppShellContent() {
             );
           })}
         </nav>
+        </TooltipProvider>
 
         <div className="border-t border-sidebar-border p-2">
           <div className={cn("flex items-center gap-2 rounded-md p-1.5", !collapsed && "hover:bg-sidebar-accent/60")}>
