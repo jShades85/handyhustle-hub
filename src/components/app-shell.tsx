@@ -337,7 +337,7 @@ function AppShellContent() {
           <div className="flex min-w-0 flex-1 items-center overflow-hidden">
             <Breadcrumb className="min-w-0">
               <BreadcrumbList className="flex-nowrap gap-1.5 text-base sm:gap-2">
-                {trail?.module && (
+                {trail?.module && trail.module !== meta.title && (
                   <>
                     <BreadcrumbItem className="hidden sm:inline-flex">
                       <span className="text-muted-foreground">{trail.module}</span>
@@ -359,7 +359,7 @@ function AppShellContent() {
                   <BreadcrumbPage className="truncate font-medium">
                     {meta.title || trail?.page.label || ""}
                   </BreadcrumbPage>
-                  {meta.subtitle && (
+                  {meta.subtitle && meta.subtitle !== trail?.module && meta.subtitle !== trail?.page.label && (
                     <>
                       <span className="text-muted-foreground/40">·</span>
                       <span className="truncate text-sm text-muted-foreground">{meta.subtitle}</span>
