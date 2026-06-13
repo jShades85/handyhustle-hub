@@ -17,6 +17,9 @@ import { requestItems } from "@/data/inbox-data";
 import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "./ui/tooltip";
 import { usePermissions, type AppModule } from "@/contexts/PermissionsContext";
+import {
+  Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator,
+} from "@/components/ui/breadcrumb";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -95,6 +98,25 @@ const sections: NavSection[] = [
   },
 ];
 
+// Build a breadcrumb trail from the current path using the nav config.
+// Returns the module label, the page (label + link), and whether the current
+// route is a detail page (deeper than the page's own route).
+function navTrail(pathname: string): { module?: string; page: { label: string; to: string }; isDetail: boolean } | null {
+  let best: { section: NavSection; item: NavItem } | null = null;
+  for (const section of sections) {
+    for (const item of section.items) {
+      const match = pathname === item.to || (item.to !== "/" && pathname.startsWith(item.to + "/"));
+      if (match && (!best || item.to.length > best.item.to.length)) best = { section, item };
+    }
+  }
+  if (!best) return null;
+  return {
+    module: best.section.title,
+    page: { label: best.item.label, to: best.item.to },
+    isDetail: pathname !== best.item.to,
+  };
+}
+
 // ─── Shell ────────────────────────────────────────────────────────────────────
 
 export function AppShell() {
@@ -132,6 +154,7 @@ function AppShellContent() {
   const { can, loading: permsLoading, roleName } = usePermissions();
   const { data: tenant } = useQuery({ queryKey: ["tenant"], queryFn: fetchTenant, staleTime: Infinity });
   const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const trail = navTrail(pathname);
   const navigate = useNavigate();
 
   const [signOutOpen, setSignOutOpen] = useState(false);
@@ -311,18 +334,40 @@ function AppShellContent() {
           >
             <PanelLeft className="h-4 w-4" />
           </button>
-          <div className="flex flex-1 flex-col items-center justify-center">
-            {meta.title && (
-              <div className="flex items-center gap-1.5">
-                <span className="text-base font-medium text-foreground">{meta.title}</span>
-                {meta.subtitle && (
+          <div className="flex min-w-0 flex-1 items-center overflow-hidden">
+            <Breadcrumb className="min-w-0">
+              <BreadcrumbList className="flex-nowrap gap-1.5 text-base sm:gap-2">
+                {trail?.module && (
                   <>
-                    <span className="text-muted-foreground/40">·</span>
-                    <span className="text-sm text-muted-foreground">{meta.subtitle}</span>
+                    <BreadcrumbItem className="hidden sm:inline-flex">
+                      <span className="text-muted-foreground">{trail.module}</span>
+                    </BreadcrumbItem>
+                    <BreadcrumbSeparator className="hidden sm:flex" />
                   </>
                 )}
-              </div>
-            )}
+                {trail?.isDetail && (
+                  <>
+                    <BreadcrumbItem>
+                      <BreadcrumbLink asChild>
+                        <Link to={trail.page.to}>{trail.page.label}</Link>
+                      </BreadcrumbLink>
+                    </BreadcrumbItem>
+                    <BreadcrumbSeparator />
+                  </>
+                )}
+                <BreadcrumbItem className="min-w-0">
+                  <BreadcrumbPage className="truncate font-medium">
+                    {meta.title || trail?.page.label || ""}
+                  </BreadcrumbPage>
+                  {meta.subtitle && (
+                    <>
+                      <span className="text-muted-foreground/40">·</span>
+                      <span className="truncate text-sm text-muted-foreground">{meta.subtitle}</span>
+                    </>
+                  )}
+                </BreadcrumbItem>
+              </BreadcrumbList>
+            </Breadcrumb>
           </div>
           <div className="flex items-center gap-2">
             <button
