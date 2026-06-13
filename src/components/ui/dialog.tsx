@@ -37,8 +37,20 @@ const DialogContent = React.forwardRef<
     <DialogOverlay />
     <DialogPrimitive.Content
       ref={ref}
+      tabIndex={-1}
+      onOpenAutoFocus={(e) => {
+        const content = e.currentTarget as HTMLElement | null;
+        if (!content) return;
+        // An autoFocus input inside the dialog already claimed focus — respect it.
+        if (content.contains(document.activeElement) && document.activeElement !== content) return;
+        // Otherwise focus the panel itself, so the close (X) button doesn't pick
+        // up a focus-visible ring the moment the dialog opens. Keyboard users still
+        // land inside the dialog and Tab reaches the close button (ringed) normally.
+        e.preventDefault();
+        content.focus();
+      }}
       className={cn(
-        "fixed left-[50%] top-[50%] z-50 grid w-full max-w-lg translate-x-[-50%] translate-y-[-50%] gap-4 border bg-background p-6 shadow-lg duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 sm:rounded-lg",
+        "fixed left-[50%] top-[50%] z-50 grid w-full max-w-lg translate-x-[-50%] translate-y-[-50%] gap-4 border bg-background p-6 shadow-lg duration-200 focus:outline-none data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 sm:rounded-lg",
         className,
       )}
       {...props}
