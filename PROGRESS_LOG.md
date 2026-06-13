@@ -7,7 +7,7 @@
 ## Current Status
 
 **Phase:** Backend — All modules live; permissions enforced; seed data connected; design polish in progress
-**Last Updated:** Session 038
+**Last Updated:** Session 039
 **Live URL:** https://bearingpro.tech (Vercel + Cloudflare DNS)
 **Supabase Project:** `erdtfwelbdlvammfdtgz`
 
@@ -369,6 +369,43 @@ Use this to manually walk the full app flow end-to-end. Every step is wired to t
 **What this tests:** Lead creation → conversion → opportunity stages → project creation → work order dispatch → invoicing → payment collection. Every write goes to the live DB.
 
 **Note on Quote Builder gap:** In the real flow, step 4 would be: Estimating stage → Create Quote (line items from catalog) → client approves → Closed Won → auto-convert to Project. That step is deferred. For now, manually move the opp to Closed Won and convert directly.
+
+---
+
+## Session 039 — Design Polish: Type Scale, Drawer Standardization, Topbar Breadcrumbs
+
+**Date:** June 12, 2026
+
+Worked through the Fable design checklist + drawer standardization. All changes verified with `tsc --noEmit` + `bun run build` and pushed incrementally.
+
+**Type scale (`qw-text-sizes`):**
+- Collapsed ~1,500 ad-hoc `text-[Npx]` usages (25 distinct values, incl. blurry half-pixels) into a **7-tier named ramp** in `styles.css` `@theme`: `text-2xs` 10 / `text-xs` 11 / `text-sm` 12 / `text-base` 13 / `text-md` 15 / `text-lg` 18 / `text-display` 22. Line-heights paired via `--tw-leading` fallback so explicit `leading-*` still wins. Stray shadcn named usages now resolve through the same scale. (32/52px auth/hero one-offs left alone.)
+
+**Opportunity kanban cards:**
+- Redesigned for hierarchy: colored **priority rail** on the left edge (urgent/high pop), removed redundant on-card stage badge, **value promoted to bold hero number** with divider, owner avatar, 2-line title clamp, hover lift + shadow (`sf-card-grab` + `sf-kanban-drag`).
+- Fixed top gap on low/medium cards — moved the stage-move control to absolute positioning so it never reserves an empty header row.
+- **Decision (open):** card heights stay variable (kanban standard); user may revisit the priority-flag height jump later via a consistent priority indicator.
+
+**Brand leak (`vp-brand-tabs`):** Replaced stale demo brands ("Port City Sound & Security", "Crosscurrent") in **18 route `head` titles** + TeamPanel email domain → `BearingPro`. All tabs now `Page · BearingPro`.
+
+**Focus rings (`qw-focus-flash`):** Swapped all **195 `focus:ring` → `focus-visible:ring`** across 38 files — ring only shows on keyboard nav, not mouse clicks. `focus:outline-none` left intact.
+
+**Drawer standardization (new `DRAWER_DESIGN_SPEC.md`):**
+- New shared **`<DrawerHeader>`** (`src/components/ui/drawer-header.tsx`): slots for `leading` (avatar), `eyebrow` (record code), `title`, `subtitle`, `onEdit`, `actions`, and a children badge row. Edit + Close render as a **matched icon pair** (bare `h-7 w-7` pencil + X, centered together) — fixes the earlier bordered-Edit-vs-floating-X misalignment.
+- `SheetContent` gained a **`hideClose`** prop; drawers using `DrawerHeader` pass it so the header owns the X.
+- Migrated **14 of 15 drawers** to `DrawerHeader` (contacts reference + 13 others). Remaining: `finance/invoices` (uses a justify-between header) + moving inventory view-drawer Edit from footer → header (both documented in the spec's status table).
+- Also fixed: drawer close button no longer grabs a focus-visible ring on open (Radix `onOpenAutoFocus` redirects initial focus to the panel, respecting `autoFocus` inputs); added `pr-12` to every drawer header that lacked it.
+
+**Topbar breadcrumbs (`nav-topbar-breadcrumbs`):**
+- Replaced the dead-center page title with a **left-aligned breadcrumb** derived from the nav config (`navTrail` in `app-shell.tsx`). List pages → `Module / Page`; detail pages → `Module / Page (linked) / Record`. Uses the previously-unused `breadcrumb.tsx`.
+- Dedupe guards: subtitle hidden when it equals the module/page crumb (fixes payments "Finance / Payments · Finance"); module crumb hidden when it equals the title (Reports/Reports). Informative subtitles (counts, dates, project tab) preserved.
+
+**Bug fixes:**
+- **FilterSelect crash on `<optgroup>`** — the Radix `FilterSelect` flattened only direct children, so an optgroup (no value) became an illegal `<SelectItem value="">`, crashing the PO Jobs filter (and its nested options never rendered). Added optgroup → `SelectGroup` + `SelectLabel` support; empty-value options skipped. Regression from the native→Radix FilterSelect conversion.
+
+**Repo hygiene:** Untracked + gitignored stray dev-server logs (`dev-err.txt`, `dev-out.txt`, old `dev_out.txt`); broadened ignore to `dev-*.txt` / `dev_*.txt`.
+
+**Spec'd (not built):** Per-phase project billing model — see the **Planned Feature** section above (blocked on the catalog/inventory phase attribute).
 
 ---
 
