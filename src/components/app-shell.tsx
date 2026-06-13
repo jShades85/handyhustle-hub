@@ -223,7 +223,7 @@ function AppShellContent() {
                       locked
                         ? "cursor-not-allowed text-sidebar-foreground/30"
                         : active
-                          ? "bg-sidebar-accent text-sidebar-accent-foreground before:absolute before:left-0 before:top-1/2 before:h-4 before:w-0.75 before:-translate-y-1/2 before:rounded-r-full before:bg-primary"
+                          ? "bg-sidebar-accent text-sidebar-accent-foreground before:absolute before:-left-1.5 before:top-1/2 before:h-4 before:w-0.75 before:-translate-y-1/2 before:rounded-full before:bg-primary"
                           : "text-sidebar-foreground/80 hover:bg-sidebar-accent/60 hover:text-sidebar-foreground",
                       collapsed && "justify-center px-0",
                     );
