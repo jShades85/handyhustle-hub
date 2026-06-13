@@ -1,5 +1,5 @@
 import { createFileRoute, Outlet } from "@tanstack/react-router";
 export const Route = createFileRoute("/service")({
-  head: () => ({ meta: [{ title: "Service · Port City Sound & Security" }] }),
+  head: () => ({ meta: [{ title: "Service · BearingPro" }] }),
   component: () => <Outlet />,
 });

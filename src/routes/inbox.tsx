@@ -11,7 +11,7 @@ import {
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/inbox")({
-  head: () => ({ meta: [{ title: "Inbox · Port City Sound & Security" }] }),
+  head: () => ({ meta: [{ title: "Inbox · BearingPro" }] }),
   component: InboxPage,
 });
 

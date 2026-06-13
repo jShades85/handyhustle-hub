@@ -45,7 +45,7 @@ const DEFAULT_DRAFT: DraftMember = { name: "", role: "field-tech" };
 // ─── Seed data ────────────────────────────────────────────────────────────────
 
 function makeEmail(name: string): string {
-  return `${name.split(" ")[0].toLowerCase()}@crosscurrent.io`;
+  return `${name.split(" ")[0].toLowerCase()}@bearingpro.tech`;
 }
 
 function makePhone(seed: number): string {

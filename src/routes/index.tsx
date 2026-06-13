@@ -10,7 +10,7 @@ import {
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/")({
-  head: () => ({ meta: [{ title: "Dashboard · Port City Sound & Security" }] }),
+  head: () => ({ meta: [{ title: "Dashboard · BearingPro" }] }),
   component: Dashboard,
 });
 

@@ -33,7 +33,7 @@ import {
 // ─── Route ───────────────────────────────────────────────────────────────────
 
 export const Route = createFileRoute("/inventory/stock")({
-  head: () => ({ meta: [{ title: "Stock · Crosscurrent" }] }),
+  head: () => ({ meta: [{ title: "Stock · BearingPro" }] }),
   component: StockPage,
 });
 

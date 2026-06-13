@@ -27,7 +27,7 @@ import {
 // ─── Route ───────────────────────────────────────────────────────────────────
 
 export const Route = createFileRoute("/settings/quote-templates")({
-  head: () => ({ meta: [{ title: "Quote Templates · Crosscurrent" }] }),
+  head: () => ({ meta: [{ title: "Quote Templates · BearingPro" }] }),
   component: QuoteTemplatesPage,
 });
 

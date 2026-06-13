@@ -23,7 +23,7 @@ import {
 import { FilterBar, FilterSelect } from "@/components/ui/page-components";
 
 export const Route = createFileRoute("/operations/scheduling")({
-  head: () => ({ meta: [{ title: "Scheduling · Crosscurrent" }] }),
+  head: () => ({ meta: [{ title: "Scheduling · BearingPro" }] }),
   component: SchedulingPage,
 });
 
