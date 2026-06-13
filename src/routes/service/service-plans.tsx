@@ -11,6 +11,7 @@ import type { TablesUpdate } from "@/lib/supabase/types";
 import { AlertCircle, Clock, DollarSign, MapPin, Phone, RefreshCw, Shield, TrendingUp } from "lucide-react";
 import { StatBar, StatItem, PageTabs, PageTab } from "@/components/ui/page-components";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { DrawerHeader } from "@/components/ui/drawer-header";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { statusMeta, tierMeta, STATUS_ORDER, type PlanStatus, type PlanTier } from "@/data/service-plans";
 
@@ -364,15 +365,16 @@ function PlanDrawer({
   }, [plan.notes]);
 
   return (
-    <SheetContent className="sm:max-w-115 flex flex-col p-0 gap-0">
-      <SheetHeader className="border-b border-border px-5 py-4 pr-12">
-        <p className="font-mono text-xs text-muted-foreground mb-1">{plan.code}</p>
-        <SheetTitle className="text-md font-semibold">{plan.customerName}</SheetTitle>
-        <div className="flex items-center gap-2 mt-1">
+    <SheetContent hideClose className="sm:max-w-115 flex flex-col p-0 gap-0">
+      <DrawerHeader
+        eyebrow={<p className="font-mono text-xs text-muted-foreground">{plan.code}</p>}
+        title={plan.customerName}
+      >
+        <div className="flex items-center gap-2">
           <TierBadge tier={plan.tier} />
           <StatusBadge status={plan.status} />
         </div>
-      </SheetHeader>
+      </DrawerHeader>
 
       <div className="flex-1 overflow-y-auto px-5 py-5 space-y-5">
         {/* Key metrics */}

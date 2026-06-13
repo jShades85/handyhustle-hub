@@ -12,6 +12,7 @@ import { useMeta } from "@/contexts/PageMetaContext";
 import { cn } from "@/lib/utils";
 import { Mail, MapPin, Phone } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { DrawerHeader } from "@/components/ui/drawer-header";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 export const Route = createFileRoute("/crm/lead-inbox")({
@@ -448,11 +449,8 @@ function LeadDrawer({
     : "?";
 
   return (
-    <SheetContent className="sm:max-w-[440px] flex flex-col p-0 gap-0">
-      <SheetHeader className="border-b border-border px-5 py-4 pr-12">
-        <SheetTitle className="text-md font-semibold">{fullName(lead)}</SheetTitle>
-        <p className="text-sm text-muted-foreground -mt-1">{lead.company_name ?? "—"}</p>
-      </SheetHeader>
+    <SheetContent hideClose className="sm:max-w-[440px] flex flex-col p-0 gap-0">
+      <DrawerHeader title={fullName(lead)} subtitle={lead.company_name ?? "—"} />
 
       <div className="flex-1 overflow-y-auto px-5 py-5 space-y-5">
         <div className="grid grid-cols-2 gap-x-4 gap-y-3.5 text-sm">

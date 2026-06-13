@@ -12,6 +12,7 @@ import {
   Briefcase, ChevronDown, Mail, Pencil, Phone, TriangleAlert, X,
 } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { DrawerHeader } from "@/components/ui/drawer-header";
 import { FilterBar, SearchInput, FilterSelect } from "@/components/ui/page-components";
 import { FormSelect } from "@/components/ui/form-select";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
@@ -247,16 +248,12 @@ function MemberDrawer({ open, onOpenChange, member, roles, onSave }: {
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="sm:max-w-[480px] flex flex-col p-0 gap-0">
-        <SheetHeader className="border-b border-border px-5 py-4 pr-12">
-          <div className="flex items-center gap-3">
-            <TeamAvatar name={member.full_name ?? "?"} className="h-10 w-10 text-md" />
-            <div>
-              <SheetTitle className="text-md font-semibold leading-tight">{member.full_name ?? "Unknown"}</SheetTitle>
-              <p className="text-sm text-muted-foreground">{member.roles?.name ?? "No role"}</p>
-            </div>
-          </div>
-        </SheetHeader>
+      <SheetContent hideClose className="sm:max-w-[480px] flex flex-col p-0 gap-0">
+        <DrawerHeader
+          leading={<TeamAvatar name={member.full_name ?? "?"} className="h-10 w-10 text-md" />}
+          title={member.full_name ?? "Unknown"}
+          subtitle={member.roles?.name ?? "No role"}
+        />
 
         <Form {...form}>
           <form onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0">

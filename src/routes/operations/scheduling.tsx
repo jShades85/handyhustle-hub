@@ -15,6 +15,7 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
+import { DrawerHeader } from "@/components/ui/drawer-header";
 import {
   Popover,
   PopoverContent,
@@ -730,10 +731,8 @@ function ScheduleDrawer({
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="right" className="w-full max-w-md overflow-y-auto p-0">
-        <SheetHeader className="border-b border-border px-5 py-4 pr-12">
-          <SheetTitle className="text-md">{editingJob ? "Edit Schedule" : "Dispatch Work Order"}</SheetTitle>
-        </SheetHeader>
+      <SheetContent hideClose side="right" className="w-full max-w-md overflow-y-auto p-0">
+        <DrawerHeader title={editingJob ? "Edit Schedule" : "Dispatch Work Order"} />
 
         <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4 px-5 py-4">
           {/* Link Work Order */}

@@ -2,6 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { DrawerHeader } from "@/components/ui/drawer-header";
 import { FormSelect } from "@/components/ui/form-select";
 import { createClient } from "@/lib/supabase/client";
 import { useMeta } from "@/contexts/PageMetaContext";
@@ -462,10 +463,8 @@ function WorkOrderEditDrawer({
 
   return (
     <Sheet open={open} onOpenChange={(o) => { if (!o) onClose(); }}>
-      <SheetContent className="sm:max-w-[460px] flex flex-col p-0 gap-0">
-        <SheetHeader className="border-b border-border px-5 py-4 pr-12">
-          <SheetTitle className="text-md font-semibold">Edit Work Order</SheetTitle>
-        </SheetHeader>
+      <SheetContent hideClose className="sm:max-w-[460px] flex flex-col p-0 gap-0">
+        <DrawerHeader title="Edit Work Order" />
 
         <div className="flex-1 overflow-y-auto px-5 py-5 space-y-4">
           <div className="space-y-1.5">

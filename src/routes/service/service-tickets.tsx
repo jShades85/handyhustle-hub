@@ -10,6 +10,7 @@ import { cn } from "@/lib/utils";
 import { Clock, MapPin, Phone } from "lucide-react";
 import { FilterBar, FilterSelect, PageTabs, PageTab } from "@/components/ui/page-components";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { DrawerHeader } from "@/components/ui/drawer-header";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import {
   CATEGORY_OPTIONS,
@@ -385,18 +386,20 @@ function TicketDrawer({
   const assigneeName    = ticket.assignee?.full_name ?? "Unassigned";
 
   return (
-    <SheetContent className="sm:max-w-115 flex flex-col p-0 gap-0">
-      <SheetHeader className="border-b border-border px-5 py-4 pr-12">
-        <div className="flex items-center gap-2 mb-1">
-          <span className="font-mono text-xs text-muted-foreground">{ticket.code ?? "—"}</span>
-          {ticket.on_service_plan && (
-            <span className="rounded px-1.5 py-0.5 text-2xs font-medium bg-emerald-500/15 text-emerald-600 dark:text-emerald-400">
-              Service Plan
-            </span>
-          )}
-        </div>
-        <SheetTitle className="text-md font-semibold leading-snug">{ticket.issue}</SheetTitle>
-      </SheetHeader>
+    <SheetContent hideClose className="sm:max-w-115 flex flex-col p-0 gap-0">
+      <DrawerHeader
+        eyebrow={
+          <div className="flex items-center gap-2">
+            <span className="font-mono text-xs text-muted-foreground">{ticket.code ?? "—"}</span>
+            {ticket.on_service_plan && (
+              <span className="rounded px-1.5 py-0.5 text-2xs font-medium bg-emerald-500/15 text-emerald-600 dark:text-emerald-400">
+                Service Plan
+              </span>
+            )}
+          </div>
+        }
+        title={ticket.issue}
+      />
 
       <div className="flex-1 overflow-y-auto px-5 py-5 space-y-5">
         {/* Status / Priority / Category */}

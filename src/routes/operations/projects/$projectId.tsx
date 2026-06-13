@@ -14,6 +14,7 @@ import {
   DropdownMenuSeparator, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { DrawerHeader } from "@/components/ui/drawer-header";
 import { FormSelect } from "@/components/ui/form-select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Avatar } from "@/components/ui-bits";
@@ -821,10 +822,8 @@ function ProjectEditDrawer({
 
   return (
     <Sheet open={open} onOpenChange={(o) => { if (!o) onClose(); }}>
-      <SheetContent className="sm:max-w-[460px] flex flex-col p-0 gap-0">
-        <SheetHeader className="border-b border-border px-5 py-4 pr-12">
-          <SheetTitle className="text-md font-semibold">Edit Project</SheetTitle>
-        </SheetHeader>
+      <SheetContent hideClose className="sm:max-w-[460px] flex flex-col p-0 gap-0">
+        <DrawerHeader title="Edit Project" />
 
         <div className="flex-1 overflow-y-auto px-5 py-5 space-y-4">
           <div className="space-y-1.5">

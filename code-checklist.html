@@ -1,0 +1,948 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>BearingPro · Code Review Checklist</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400;14..32,450;14..32,500;14..32,600;14..32,700;14..32,800&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --bg: #0c0b0a;
+    --bg-soft: #121009;
+    --surface: #161310;
+    --surface-2: #1c1814;
+    --elevated: #221d18;
+    --hairline: rgba(255, 255, 255, 0.07);
+    --hairline-strong: rgba(255, 255, 255, 0.12);
+    --text: #eeeae5;
+    --text-mid: #b0a89e;
+    --text-dim: #7d756b;
+    --accent: #fb923c;
+    --accent-soft: rgba(251, 146, 60, 0.12);
+
+    --c-critical: #f4564e;
+    --c-data: #fb923c;
+    --c-perms: #facc15;
+    --c-stale: #f472b6;
+    --c-hood: #9aa6b8;
+    --c-quick: #34d399;
+
+    --crit-bg: rgba(244, 63, 63, 0.16);
+    --crit-fg: #ff8a80;
+    --crit-bd: rgba(244, 63, 63, 0.42);
+    --high-bg: rgba(251, 113, 80, 0.12);
+    --high-fg: #fb9a7a;
+    --high-bd: rgba(251, 113, 80, 0.32);
+    --med-bg: rgba(245, 158, 11, 0.12);
+    --med-fg: #fbbf24;
+    --med-bd: rgba(245, 158, 11, 0.3);
+    --low-bg: rgba(148, 163, 184, 0.1);
+    --low-fg: #94a3b8;
+    --low-bd: rgba(148, 163, 184, 0.25);
+
+    --radius: 12px;
+    --ease: cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: "Inter", system-ui, -apple-system, sans-serif;
+    font-size: 14px;
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+    font-feature-settings: "cv11", "ss01", "ss03";
+    min-height: 100vh;
+  }
+
+  /* Ambient background glow */
+  .ambient {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 0;
+    background:
+      radial-gradient(900px 420px at 18% -8%, rgba(244, 86, 78, 0.10), transparent 60%),
+      radial-gradient(800px 380px at 88% -4%, rgba(251, 146, 60, 0.08), transparent 60%),
+      radial-gradient(700px 340px at 50% 0%, rgba(250, 204, 21, 0.04), transparent 65%);
+  }
+
+  .wrap {
+    position: relative;
+    z-index: 1;
+    max-width: 880px;
+    margin: 0 auto;
+    padding: 0 28px 120px;
+  }
+
+  /* ---------- Hero ---------- */
+  .hero { padding: 72px 0 36px; }
+
+  .eyebrow {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--accent);
+    background: var(--accent-soft);
+    border: 1px solid rgba(251, 146, 60, 0.28);
+    padding: 5px 12px;
+    border-radius: 999px;
+    margin-bottom: 20px;
+  }
+  .eyebrow .dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--accent);
+    box-shadow: 0 0 8px var(--accent);
+    animation: pulse 2.4s ease-in-out infinite;
+  }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.35} }
+
+  h1 {
+    font-size: clamp(30px, 5vw, 42px);
+    font-weight: 800;
+    letter-spacing: -0.03em;
+    line-height: 1.12;
+    background: linear-gradient(135deg, #fff 25%, #ffd9a8 62%, #ff9d8a);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    margin-bottom: 14px;
+  }
+
+  .hero p.lede {
+    color: var(--text-mid);
+    font-size: 15.5px;
+    max-width: 62ch;
+  }
+  .hero p.lede strong { color: var(--text); font-weight: 600; }
+
+  .meta-row {
+    display: flex;
+    gap: 18px;
+    flex-wrap: wrap;
+    margin-top: 22px;
+    font-size: 12px;
+    color: var(--text-dim);
+  }
+  .meta-row span { display: inline-flex; align-items: center; gap: 6px; }
+  .meta-row svg { opacity: 0.7; }
+
+  /* ---------- Verdict card ---------- */
+  .verdict {
+    background: linear-gradient(180deg, var(--surface-2), var(--surface));
+    border: 1px solid var(--hairline);
+    border-radius: 16px;
+    padding: 22px 26px;
+    margin: 8px 0 40px;
+    position: relative;
+    overflow: hidden;
+  }
+  .verdict::before {
+    content: "";
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(251,146,60,.55), transparent);
+  }
+  .verdict h2 {
+    font-size: 13px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--accent);
+    margin-bottom: 10px;
+  }
+  .verdict p { color: var(--text-mid); font-size: 14px; max-width: 70ch; }
+  .verdict p + p { margin-top: 8px; }
+  .verdict strong { color: var(--text); font-weight: 600; }
+  .verdict .order {
+    margin-top: 14px;
+    padding-top: 14px;
+    border-top: 1px solid var(--hairline);
+    font-size: 13px;
+    color: var(--text-mid);
+  }
+  .verdict .order strong { color: var(--accent); }
+
+  /* ---------- Sticky progress header ---------- */
+  .progress-shell {
+    position: sticky;
+    top: 12px;
+    z-index: 50;
+    margin-bottom: 44px;
+  }
+  .progress-card {
+    background: rgba(22, 19, 16, 0.82);
+    backdrop-filter: blur(16px) saturate(1.4);
+    -webkit-backdrop-filter: blur(16px) saturate(1.4);
+    border: 1px solid var(--hairline-strong);
+    border-radius: 14px;
+    padding: 16px 20px;
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.45);
+  }
+  .progress-top {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    margin-bottom: 10px;
+  }
+  .progress-label {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--text-dim);
+  }
+  .progress-count {
+    font-family: "JetBrains Mono", monospace;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text);
+    font-variant-numeric: tabular-nums;
+  }
+  .progress-count .pct { color: var(--accent); margin-left: 10px; }
+  .progress-track {
+    height: 8px;
+    background: rgba(255, 255, 255, 0.06);
+    border-radius: 999px;
+    overflow: hidden;
+  }
+  .progress-fill {
+    height: 100%;
+    width: 0%;
+    border-radius: 999px;
+    background: linear-gradient(90deg, #f4564e, #fb923c, #facc15);
+    transition: width 0.6s var(--ease);
+    box-shadow: 0 0 14px rgba(251, 146, 60, 0.45);
+  }
+  .celebrate {
+    display: none;
+    margin-top: 10px;
+    font-size: 12.5px;
+    color: #34d399;
+    font-weight: 600;
+  }
+  .celebrate.show { display: block; animation: rise .5s var(--ease); }
+  @keyframes rise { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+
+  /* ---------- Category sections ---------- */
+  section.cat { margin-bottom: 52px; }
+
+  .cat-head {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin-bottom: 8px;
+  }
+  .cat-icon {
+    width: 40px; height: 40px;
+    border-radius: 11px;
+    display: grid;
+    place-items: center;
+    font-size: 19px;
+    background: color-mix(in srgb, var(--cat) 12%, transparent);
+    border: 1px solid color-mix(in srgb, var(--cat) 28%, transparent);
+    flex-shrink: 0;
+  }
+  .cat-titlebox { flex: 1; min-width: 0; }
+  .cat-titlebox h2 {
+    font-size: 19px;
+    font-weight: 700;
+    letter-spacing: -0.015em;
+  }
+  .cat-titlebox .cat-sub {
+    font-size: 12.5px;
+    color: var(--text-dim);
+    margin-top: 1px;
+  }
+  .cat-count {
+    font-family: "JetBrains Mono", monospace;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-dim);
+    background: var(--surface);
+    border: 1px solid var(--hairline);
+    padding: 4px 10px;
+    border-radius: 999px;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
+  .cat-count.done {
+    color: #34d399;
+    border-color: rgba(52, 211, 153, 0.35);
+    background: rgba(52, 211, 153, 0.08);
+  }
+
+  .cat-track {
+    height: 4px;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 999px;
+    overflow: hidden;
+    margin: 14px 0 18px;
+  }
+  .cat-fill {
+    height: 100%;
+    width: 0%;
+    background: var(--cat);
+    border-radius: 999px;
+    transition: width 0.5s var(--ease);
+  }
+
+  /* ---------- Items ---------- */
+  .items { display: flex; flex-direction: column; gap: 10px; }
+
+  .item {
+    position: relative;
+    display: flex;
+    gap: 16px;
+    align-items: flex-start;
+    background: var(--surface);
+    border: 1px solid var(--hairline);
+    border-radius: var(--radius);
+    padding: 16px 18px 16px 16px;
+    cursor: pointer;
+    transition: border-color 0.18s ease, background 0.18s ease,
+                transform 0.18s var(--ease), box-shadow 0.18s ease,
+                opacity 0.3s ease;
+    user-select: none;
+    overflow: hidden;
+  }
+  .item::before {
+    content: "";
+    position: absolute;
+    left: 0; top: 0; bottom: 0;
+    width: 3px;
+    background: var(--cat);
+    opacity: 0;
+    transition: opacity 0.18s ease;
+  }
+  .item:hover {
+    border-color: var(--hairline-strong);
+    background: var(--surface-2);
+    transform: translateY(-1px);
+    box-shadow: 0 6px 24px rgba(0, 0, 0, 0.3);
+  }
+  .item:hover::before { opacity: 0.85; }
+  .item:focus-visible {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(251, 146, 60, 0.25);
+  }
+
+  /* checkbox */
+  .box {
+    flex-shrink: 0;
+    width: 22px; height: 22px;
+    margin-top: 1px;
+    border-radius: 7px;
+    border: 1.5px solid rgba(255, 255, 255, 0.22);
+    background: rgba(255, 255, 255, 0.03);
+    display: grid;
+    place-items: center;
+    transition: background 0.22s var(--ease), border-color 0.22s var(--ease),
+                transform 0.22s var(--ease);
+  }
+  .item:hover .box { border-color: var(--cat); }
+  .box svg {
+    width: 13px; height: 13px;
+  }
+  .box svg path {
+    stroke: #0c0b0a;
+    stroke-width: 3;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    fill: none;
+    stroke-dasharray: 22;
+    stroke-dashoffset: 22;
+    transition: stroke-dashoffset 0.28s var(--ease) 0.05s;
+  }
+
+  .item-body { flex: 1; min-width: 0; }
+
+  .item-title-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-bottom: 4px;
+  }
+  .item-title {
+    font-size: 14px;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    position: relative;
+    transition: color 0.25s ease;
+  }
+  .item-title::after {
+    content: "";
+    position: absolute;
+    left: 0; top: 52%;
+    height: 1.5px;
+    width: 0%;
+    background: var(--text-dim);
+    transition: width 0.35s var(--ease);
+  }
+  .item-desc {
+    font-size: 13px;
+    color: var(--text-mid);
+    max-width: 64ch;
+    transition: color 0.25s ease;
+  }
+
+  .badge {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    padding: 3px 8px;
+    border-radius: 5px;
+    border: 1px solid;
+    line-height: 1;
+    flex-shrink: 0;
+    transition: opacity 0.25s ease;
+  }
+  .badge.critical { background: var(--crit-bg); color: var(--crit-fg); border-color: var(--crit-bd); box-shadow: 0 0 10px rgba(244, 63, 63, 0.18); }
+  .badge.high     { background: var(--high-bg); color: var(--high-fg); border-color: var(--high-bd); }
+  .badge.medium   { background: var(--med-bg);  color: var(--med-fg);  border-color: var(--med-bd); }
+  .badge.low      { background: var(--low-bg);  color: var(--low-fg);  border-color: var(--low-bd); }
+
+  /* checked state */
+  .item.checked { opacity: 0.55; }
+  .item.checked .box {
+    background: var(--cat);
+    border-color: var(--cat);
+    transform: scale(1.05);
+  }
+  .item.checked .box svg path { stroke-dashoffset: 0; }
+  .item.checked .item-title { color: var(--text-dim); }
+  .item.checked .item-title::after { width: 100%; }
+  .item.checked .item-desc { color: var(--text-dim); }
+  .item.checked .badge { opacity: 0.5; box-shadow: none; }
+
+  /* check pop */
+  @keyframes pop {
+    0% { transform: scale(0.85); }
+    55% { transform: scale(1.15); }
+    100% { transform: scale(1.05); }
+  }
+  .item.just-checked .box { animation: pop 0.32s var(--ease); }
+
+  /* ---------- Footer ---------- */
+  footer {
+    margin-top: 64px;
+    padding-top: 28px;
+    border-top: 1px solid var(--hairline);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    flex-wrap: wrap;
+    color: var(--text-dim);
+    font-size: 12.5px;
+  }
+  .reset-btn {
+    font-family: inherit;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-mid);
+    background: var(--surface);
+    border: 1px solid var(--hairline-strong);
+    border-radius: 8px;
+    padding: 7px 14px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+  }
+  .reset-btn:hover {
+    color: var(--crit-fg);
+    border-color: var(--crit-bd);
+    background: var(--crit-bg);
+  }
+
+  ::selection { background: rgba(251, 146, 60, 0.35); color: #fff; }
+
+  ::-webkit-scrollbar { width: 10px; }
+  ::-webkit-scrollbar-thumb {
+    background: rgba(255,255,255,0.12);
+    border-radius: 8px;
+    border: 3px solid var(--bg);
+    background-clip: padding-box;
+  }
+  ::-webkit-scrollbar-track { background: transparent; }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation: none !important; transition: none !important; }
+    html { scroll-behavior: auto; }
+  }
+
+  @media (max-width: 560px) {
+    .wrap { padding: 0 16px 100px; }
+    .hero { padding: 48px 0 28px; }
+    .item { padding: 14px; gap: 12px; }
+    .progress-shell { top: 8px; }
+  }
+</style>
+</head>
+<body>
+<div class="ambient"></div>
+<div class="wrap">
+
+  <!-- ============ HERO ============ -->
+  <header class="hero">
+    <div class="eyebrow"><span class="dot"></span>Code Review · June 2026</div>
+    <h1>BearingPro Fix-It Checklist</h1>
+    <p class="lede">Everything from the code review, translated into plain language — so you and your developer can work through it together without needing to decode the technical report. <strong>Check items off as they get fixed.</strong> Your progress saves automatically in this browser.</p>
+    <div class="meta-row">
+      <span><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>Reviewed June 11, 2026</span>
+      <span><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14.7 6.3a4.5 4.5 0 0 0-6 6L3 18v3h3l5.7-5.7a4.5 4.5 0 0 0 6-6L14 13l-3-3 3.7-3.7z"/></svg>Full codebase, focused on the newest features</span>
+      <span><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v18M3 12h18"/></svg>37 items across 6 areas</span>
+    </div>
+  </header>
+
+  <!-- ============ VERDICT ============ -->
+  <div class="verdict">
+    <h2>The big picture</h2>
+    <p><strong>First, the reassuring part: your most important protection is solid.</strong> The review verified that every customer's data is fully walled off from every other customer's — no gaps found anywhere. And a few fixes you'd planned were already confirmed done.</p>
+    <p>The problems cluster around two themes. <strong>One: the app fails silently.</strong> When a save doesn't go through — a payment, a dispatch, a quote — the screen looks exactly like it worked. <strong>Two: a few saves are done in a risky order</strong>, where a hiccup halfway through can permanently lose or duplicate data. Both are very fixable, and several fixes are one-time changes that protect the whole app at once.</p>
+    <p class="order"><strong>Suggested order of attack:</strong> start with the Critical Bugs section top to bottom (the first one is crashing pages right now), then Data Safety, then Permissions. The rest can be batched into normal work sessions — and many of the Quick Fixes are under an hour each.</p>
+  </div>
+
+  <!-- ============ STICKY PROGRESS ============ -->
+  <div class="progress-shell">
+    <div class="progress-card">
+      <div class="progress-top">
+        <span class="progress-label">Overall progress</span>
+        <span class="progress-count"><span id="total-done">0</span> / <span id="total-all">0</span><span class="pct" id="total-pct">0%</span></span>
+      </div>
+      <div class="progress-track"><div class="progress-fill" id="total-fill"></div></div>
+      <div class="celebrate" id="celebrate">Every item fixed — this codebase is in seriously good shape now. 🎉</div>
+    </div>
+  </div>
+
+  <!-- ============ CATEGORIES (rendered by JS) ============ -->
+  <main id="checklist"></main>
+
+  <footer>
+    <span>BearingPro · Internal code review companion · Progress is saved on this device only.</span>
+    <button class="reset-btn" id="reset">Reset all checkmarks</button>
+  </footer>
+</div>
+
+<script>
+const DATA = [
+  {
+    id: "critical",
+    icon: "🚨",
+    color: "var(--c-critical)",
+    title: "Critical Bugs",
+    sub: "Things that are broken or causing errors right now",
+    items: [
+      {
+        id: "cb-server-crash",
+        impact: "critical",
+        title: "Nine pages can crash the app while it's loading",
+        desc: "The Quotes, Invoices, Payments, Vendors, Stock, Purchase Orders, and Service Plans pages all connect to the database a moment too early — before the app has the credentials it needs. The error logs show this is already happening in development. The good news: the working pages already do this the right way, so it's a copy-the-pattern fix across nine files."
+      },
+      {
+        id: "cb-wo-parts",
+        impact: "critical",
+        title: "The Parts tab on work orders doesn't work at all",
+        desc: "The parts list on a work order is accidentally looking up parts using the wrong record, so it always shows empty — and trying to add a part fails every single time with no error message. The row just gets stuck. Anyone using this feature right now is losing their work."
+      },
+      {
+        id: "cb-cache-mixup",
+        impact: "critical",
+        title: "Two pages share the same memory slot for different data",
+        desc: "The Invoices page and the Purchase Orders page each keep a list of work orders in memory under the same label — but the lists are shaped differently. Visit Invoices first and then Purchase Orders, and the PO page gets handed the wrong version, breaking the linked-job display. This exact mistake has caused three crashes before; there's already a checking script that should be made stricter so it catches this variant too."
+      },
+      {
+        id: "cb-cursor-jump",
+        impact: "high",
+        title: "Typing in quote line items is broken — the cursor keeps jumping",
+        desc: "When editing a quantity or price on a quote, every keystroke makes the cursor leap to the end of the box, so fixing a digit in the middle of a number is nearly impossible. Also, pressing Escape saves your half-typed change instead of cancelling it. It's a known coding misstep with a standard fix — and the parts list elsewhere in the app already does it correctly."
+      },
+      {
+        id: "cb-stale-record",
+        impact: "high",
+        title: "Jumping between records shows the previous record's info",
+        desc: "If you go straight from one project to another (or one work order or company to another), the status badge and notes from the first record stick around on the second one's screen. Easy to misread a job's status because of it. One small reset line per page fixes it."
+      },
+      {
+        id: "cb-evening-dates",
+        impact: "medium",
+        title: "The schedule thinks it's tomorrow after about 7 PM",
+        desc: "The scheduling calendar figures out 'today' using universal world time instead of your local time. For anyone in US time zones, after early evening the 'today' highlight moves to the wrong day, the Today button jumps a day ahead, and the week view shifts. Dispatchers working evenings will see a wrong calendar."
+      }
+    ]
+  },
+  {
+    id: "data",
+    icon: "💾",
+    color: "var(--c-data)",
+    title: "Data Safety",
+    sub: "Risks of losing data, duplicating records, or corrupting saves",
+    items: [
+      {
+        id: "ds-quote-loss",
+        impact: "critical",
+        title: "Saving a quote can permanently erase its line items",
+        desc: "When you save a quote, the app first deletes all the old line items and then writes the new ones. If anything goes wrong between those two steps — a dropped connection, a hiccup — the quote's line items are gone for good, and the screen never tells you. The reverse failure duplicates every item instead. The save needs to happen as one all-or-nothing operation."
+      },
+      {
+        id: "ds-schedule-loss",
+        impact: "critical",
+        title: "A failed schedule save looks exactly like a successful one",
+        desc: "When you dispatch a job or edit a scheduled visit, the app never checks whether the save actually worked — and the panel closes instantly either way. A partial failure can silently wipe out which technicians were assigned to a job. A dispatcher could close their laptop thinking the day is scheduled when it isn't."
+      },
+      {
+        id: "ds-duplicate-numbers",
+        impact: "high",
+        title: "Two people saving at the same time get duplicate record numbers",
+        desc: "Quote, project, work order, and invoice numbers are generated by counting existing records and adding one. If two team members create something at the same moment, they both get the same number — and nothing in the database stops the duplicate from saving. Fine while it's just you testing; a real problem once a team is using it daily."
+      },
+      {
+        id: "ds-double-convert",
+        impact: "high",
+        title: "One deal can accidentally become two projects",
+        desc: "After a deal converts to a project, the Convert button is still right there — a double-click or a second visit creates a duplicate project from the same deal. Separately, if copying the quote's parts over fails, the project is quietly created with an empty parts list and no warning. The button should switch to 'View Project' once one exists."
+      },
+      {
+        id: "ds-cost-price",
+        impact: "high",
+        title: "Projects record your selling price as your cost",
+        desc: "When a quote becomes a project, the parts list copies the price you charge the customer into the field meant for what the parts cost you. Every project's 'Total Parts Cost' is inflated to revenue, which will make every future profit calculation look wrong. Worth fixing before more projects get converted."
+      },
+      {
+        id: "ds-invoice-totals",
+        impact: "high",
+        title: "Invoice totals can get out of sync — and paid invoices are still editable",
+        desc: "If someone edits an invoice's line items at the same moment someone else records a payment on it, one of those updates can be overwritten. And nothing stops you from adding line items to an invoice that's already marked Paid — the balance owed goes up but the status still says Paid. The math should live in the database so it's always right, and paid invoices should lock."
+      },
+      {
+        id: "ds-notes-race",
+        impact: "medium",
+        title: "Notes can quietly revert to an older version",
+        desc: "Notes on deals and leads save in the background when you click away, but the app doesn't wait for the save to finish before refreshing. In the wrong timing, your just-typed notes get overwritten by the old version on screen — or look saved but show stale text when you reopen the record."
+      }
+    ]
+  },
+  {
+    id: "perms",
+    icon: "🔐",
+    color: "var(--c-perms)",
+    title: "Permissions & Security",
+    sub: "Users being able to do things their role shouldn't allow",
+    items: [
+      {
+        id: "ps-write-gates",
+        impact: "critical",
+        title: "Read-only users can edit everything on the newest pages",
+        desc: "You did a careful pass making sure view-only team members can't change things — but every page built since then skipped it. Right now a read-only user can create and edit quotes, record payments, dispatch jobs, create projects and work orders, and edit parts lists. The role system itself works fine; these pages just never plugged into it."
+      },
+      {
+        id: "ps-payment-delete",
+        impact: "high",
+        title: "Payment records can be deleted, breaking the money trail",
+        desc: "Payments are designed to be a permanent, untouchable record — like a ledger. But a leftover database rule still allows any team member to delete one. If that happened, the invoice would still show the money as collected while the payment record itself vanished. One small database change closes the door."
+      }
+    ]
+  },
+  {
+    id: "stale",
+    icon: "🔄",
+    color: "var(--c-stale)",
+    title: "Stale & Inconsistent UI",
+    sub: "Screens showing wrong, outdated, or contradictory information",
+    items: [
+      {
+        id: "su-silent-saves",
+        impact: "high",
+        title: "Nothing anywhere in the app tells you when a save fails",
+        desc: "Across the whole app — moving a deal, collecting a payment, editing parts, dispatching a job — if the save is rejected, the screen just quietly stays as it was. There's a single central place where one setting can add a 'Something went wrong' message to every save in the app at once. Highest-leverage fix on this list."
+      },
+      {
+        id: "su-drawer-stale",
+        impact: "high",
+        title: "The deal panel keeps showing old info after you edit it",
+        desc: "When you edit a deal, move its stage, or update its quote from the side panel, the panel keeps displaying the snapshot from when you opened it. Your change went through — but it looks like it didn't until you close and reopen. The invoices page already solves this the right way; the deal panel should copy that approach."
+      },
+      {
+        id: "su-mark-sent",
+        impact: "medium",
+        title: "'Mark as Sent' behaves differently in two places",
+        desc: "Marking a quote as sent from the quote page automatically moves the deal forward to the negotiation stage. The identical button inside the deal panel doesn't. Whichever behavior you want, the two buttons should agree — they should share one piece of logic."
+      },
+      {
+        id: "su-revision-bump",
+        impact: "medium",
+        title: "Fixing a typo on a quote creates version 2, 3, 4…",
+        desc: "Every single save bumps the quote's version number, so correcting a typo turns v1 into v2. Versions were meant to track real revisions sent to the client during negotiation. Either only bump the version after a quote has been sent, or add an explicit 'New Revision' button."
+      },
+      {
+        id: "su-wrong-quote",
+        impact: "medium",
+        title: "Deals with multiple quotes might show — and accept — the wrong one",
+        desc: "The system allows a deal to have more than one quote, but the deal panel just grabs whichever one comes back first instead of the most recent. The linked quote shown, the deal's dollar value, and even the Accept Quote button could all be operating on an old quote. One line to sort by newest first."
+      }
+    ]
+  },
+  {
+    id: "hood",
+    icon: "⚙️",
+    color: "var(--c-hood)",
+    title: "Under the Hood",
+    sub: "Performance, database structure, and code quality",
+    items: [
+      {
+        id: "uh-indexes",
+        impact: "high",
+        title: "The database has no lookup shortcuts — it'll slow down as you grow",
+        desc: "None of the 23+ data tables have indexes — the database equivalent of a book's index page. Right now every lookup reads every row, on every table, on every page load. With test data you won't notice; with a year of real business data, pages will start crawling. It's one batch change that covers everything, best done before launch."
+      },
+      {
+        id: "uh-shared-fetch",
+        impact: "low",
+        title: "The team member list is fetched five different ways",
+        desc: "Five different screens each load the same simple list of team members under five different memory labels. Harmless, but it means five chances for the kind of memory-label mixups that have caused crashes before. Consolidating to one shared lookup removes the risk."
+      },
+      {
+        id: "uh-tenant-crash",
+        impact: "low",
+        title: "A rare timing issue can crash with a cryptic error",
+        desc: "A couple of pages assume your company info is already loaded into memory when creating a record. In a rare timing window it might not be — and the result is a confusing crash instead of a friendly message. A small shared safety check fixes all the spots at once."
+      },
+      {
+        id: "uh-swallowed-errors",
+        impact: "low",
+        title: "Some pages treat real errors as 'record not found'",
+        desc: "When loading a quote or project hits a genuine problem (like a network failure), a couple of loaders shrug and report 'nothing here' instead of letting the app retry. The user sees a blank record page instead of the app recovering on its own."
+      },
+      {
+        id: "uh-quote-sections",
+        impact: "low",
+        title: "Empty section headers on quotes vanish after saving",
+        desc: "If you add a section to a quote (like 'Theater Room') but haven't put items in it yet, that section disappears when the quote is saved and reopened — only sections containing items survive the round trip. Either save sections in their own right, or note it as intentional so nobody chases it as a bug later."
+      },
+      {
+        id: "uh-quotes-guardrails",
+        impact: "low",
+        title: "The quotes table is missing some database-level guardrails",
+        desc: "A few safety rails are absent at the database layer — like a rule restricting what kinds of line items are valid, and a precision setting on cost amounts. Nothing is broken today; just worth tightening next time someone touches that table."
+      }
+    ]
+  },
+  {
+    id: "quick",
+    icon: "✅",
+    color: "var(--c-quick)",
+    title: "Quick Fixes",
+    sub: "Small, fast improvements with a clear payoff",
+    items: [
+      {
+        id: "qf-residential",
+        impact: "medium",
+        title: "Every converted lead gets labeled as a business — even homeowners",
+        desc: "Converting a lead always marks the new contact as a commercial customer, with no way to choose. A homeowner like your Derek Paulson test scenario comes out tagged as a business. The convert pop-up needs a simple Residential / Commercial toggle."
+      },
+      {
+        id: "qf-job-status",
+        impact: "medium",
+        title: "Scheduled jobs can never be marked done",
+        desc: "Once a job is on the dispatch calendar, there's no control anywhere to mark it completed or cancelled — it stays 'scheduled' forever. Add a status picker to the job's edit panel."
+      },
+      {
+        id: "qf-expired-quotes",
+        impact: "low",
+        title: "Quotes never show as expired",
+        desc: "You can set an expiration date on a quote, but when that date passes nothing changes — the quote still looks live. The page should show 'Expired' whenever the date is in the past."
+      },
+      {
+        id: "qf-time-validation",
+        impact: "low",
+        title: "You can schedule a job that ends before it starts",
+        desc: "The dispatch form doesn't check that the end time comes after the start time, so a 2 PM–10 AM job saves without complaint. One validation rule."
+      },
+      {
+        id: "qf-fake-activity",
+        impact: "low",
+        title: "Fake activity shows on every real project",
+        desc: "Every project's Activity tab displays the same made-up history — 'Ravi Tate logged 8 hours' — even on real jobs. Until real activity tracking exists, label the tab 'coming soon' or hide it, so nobody mistakes demo theater for the truth."
+      },
+      {
+        id: "qf-outdated-message",
+        impact: "low",
+        title: "Company pages say features are coming that already shipped",
+        desc: "The company detail page still shows 'available after the Sales/Operations module' placeholders — but both modules have been live for a while. Wire up the real lists of that company's deals and projects."
+      },
+      {
+        id: "qf-lost-deals-dropdown",
+        impact: "low",
+        title: "The new-quote page lets you quote a deal you already lost",
+        desc: "The deal picker on the new quote page was built separately from the one used elsewhere and forgot to filter out closed-lost deals. Reuse the existing shared picker and the filter comes free."
+      },
+      {
+        id: "qf-orphan-fields",
+        impact: "low",
+        title: "Some fields on the new-quote page go nowhere",
+        desc: "The customer, contact, and issue-date fields on the new quote page collect your input and then quietly throw it away — they're never saved. Either save them properly or remove them so nobody types into a void."
+      },
+      {
+        id: "qf-branding",
+        impact: "low",
+        title: "Old demo company names are still in the code",
+        desc: "The quotes and scheduling pages still reference leftover names from early demos — 'Port City Sound & Security' and 'Crosscurrent.' Swap them for BearingPro."
+      },
+      {
+        id: "qf-dev-warning",
+        impact: "low",
+        title: "A misnamed file complains every time the dev server starts",
+        desc: "One shared quotes file is named in a way the routing system mistakes for a page, so it prints a warning on every startup. Renaming it (or moving it to the shared-components folder) silences the noise."
+      },
+      {
+        id: "qf-dead-code",
+        impact: "low",
+        title: "A small chunk of unreachable code to delete",
+        desc: "There's a branch of logic on the deals page that can never run — the condition guarding it makes it impossible to reach. Pure clutter; safe to remove."
+      }
+    ]
+  }
+];
+
+const STORAGE_KEY = "bearingpro-code-checklist-v1";
+
+function loadState() {
+  try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || {}; }
+  catch { return {}; }
+}
+function saveState(state) {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+}
+
+let state = loadState();
+
+const IMPACT_LABEL = { critical: "Critical", high: "High", medium: "Medium", low: "Low" };
+
+const main = document.getElementById("checklist");
+
+DATA.forEach(cat => {
+  const section = document.createElement("section");
+  section.className = "cat";
+  section.style.setProperty("--cat", cat.color);
+  section.id = "cat-" + cat.id;
+
+  section.innerHTML = `
+    <div class="cat-head">
+      <div class="cat-icon">${cat.icon}</div>
+      <div class="cat-titlebox">
+        <h2>${cat.title}</h2>
+        <div class="cat-sub">${cat.sub}</div>
+      </div>
+      <div class="cat-count" data-count></div>
+    </div>
+    <div class="cat-track"><div class="cat-fill" data-fill></div></div>
+    <div class="items"></div>
+  `;
+
+  const itemsEl = section.querySelector(".items");
+
+  cat.items.forEach(it => {
+    const el = document.createElement("div");
+    el.className = "item";
+    el.tabIndex = 0;
+    el.setAttribute("role", "checkbox");
+    el.setAttribute("aria-checked", !!state[it.id]);
+    el.dataset.id = it.id;
+    if (state[it.id]) el.classList.add("checked");
+
+    el.innerHTML = `
+      <div class="box">
+        <svg viewBox="0 0 24 24"><path d="M4.5 12.5l5 5 10-11"/></svg>
+      </div>
+      <div class="item-body">
+        <div class="item-title-row">
+          <span class="item-title">${it.title}</span>
+          <span class="badge ${it.impact}">${IMPACT_LABEL[it.impact]}</span>
+        </div>
+        <p class="item-desc">${it.desc}</p>
+      </div>
+    `;
+
+    function toggle() {
+      const nowChecked = !el.classList.contains("checked");
+      el.classList.toggle("checked", nowChecked);
+      el.setAttribute("aria-checked", nowChecked);
+      if (nowChecked) {
+        el.classList.add("just-checked");
+        setTimeout(() => el.classList.remove("just-checked"), 400);
+        state[it.id] = true;
+      } else {
+        delete state[it.id];
+      }
+      saveState(state);
+      updateProgress();
+    }
+
+    el.addEventListener("click", toggle);
+    el.addEventListener("keydown", e => {
+      if (e.key === " " || e.key === "Enter") { e.preventDefault(); toggle(); }
+    });
+
+    itemsEl.appendChild(el);
+  });
+
+  main.appendChild(section);
+});
+
+const totalAll = DATA.reduce((n, c) => n + c.items.length, 0);
+document.getElementById("total-all").textContent = totalAll;
+
+function updateProgress() {
+  let totalDone = 0;
+
+  DATA.forEach(cat => {
+    const section = document.getElementById("cat-" + cat.id);
+    const done = cat.items.filter(it => state[it.id]).length;
+    totalDone += done;
+
+    const pct = cat.items.length ? (done / cat.items.length) * 100 : 0;
+    section.querySelector("[data-fill]").style.width = pct + "%";
+
+    const countEl = section.querySelector("[data-count]");
+    countEl.textContent = done === cat.items.length
+      ? "✓ Complete"
+      : `${done} / ${cat.items.length}`;
+    countEl.classList.toggle("done", done === cat.items.length);
+  });
+
+  const totalPct = Math.round((totalDone / totalAll) * 100);
+  document.getElementById("total-done").textContent = totalDone;
+  document.getElementById("total-pct").textContent = totalPct + "%";
+  document.getElementById("total-fill").style.width = totalPct + "%";
+  document.getElementById("celebrate").classList.toggle("show", totalDone === totalAll);
+}
+
+document.getElementById("reset").addEventListener("click", () => {
+  if (!confirm("Clear all checkmarks and start over?")) return;
+  state = {};
+  saveState(state);
+  document.querySelectorAll(".item").forEach(el => {
+    el.classList.remove("checked");
+    el.setAttribute("aria-checked", "false");
+  });
+  updateProgress();
+});
+
+updateProgress();
+</script>
+</body>
+</html>

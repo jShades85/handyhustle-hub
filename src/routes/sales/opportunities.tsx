@@ -17,6 +17,7 @@ import {
 import { cn } from "@/lib/utils";
 import { FilterBar, SearchInput, FilterSelect } from "@/components/ui/page-components";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { DrawerHeader } from "@/components/ui/drawer-header";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 export const Route = createFileRoute("/sales/opportunities")({
@@ -827,10 +828,8 @@ function OpportunityDrawer({
 
   if (mode === "edit") {
     return (
-      <SheetContent className="sm:max-w-115 flex flex-col p-0 gap-0">
-        <SheetHeader className="border-b border-border px-5 py-4 pr-12">
-          <SheetTitle className="text-md font-semibold">Edit Opportunity</SheetTitle>
-        </SheetHeader>
+      <SheetContent hideClose className="sm:max-w-115 flex flex-col p-0 gap-0">
+        <DrawerHeader title="Edit Opportunity" />
         <form onSubmit={handleSave} className="flex flex-col flex-1 overflow-hidden">
           <div className="flex-1 overflow-y-auto px-5 py-5 space-y-3">
             <div>
@@ -904,17 +903,18 @@ function OpportunityDrawer({
   }
 
   return (
-    <SheetContent className="sm:max-w-115 flex flex-col p-0 gap-0">
-      <SheetHeader className="border-b border-border px-5 py-4 pr-12">
-        <SheetTitle className="text-md font-semibold leading-tight">{opp.title}</SheetTitle>
-        <p className="text-sm text-muted-foreground">{opp.company} · {opp.contact}</p>
-        <div className="flex flex-wrap items-center gap-1.5 mt-2">
+    <SheetContent hideClose className="sm:max-w-115 flex flex-col p-0 gap-0">
+      <DrawerHeader
+        title={opp.title}
+        subtitle={`${opp.company} · ${opp.contact}`}
+      >
+        <div className="flex flex-wrap items-center gap-1.5">
           <StageBadge stage={opp.stage} />
           <span className={cn("inline-flex items-center rounded px-1.5 py-0.5 text-2xs font-medium", priorityBadgeCls[opp.priority])}>
             {priorityLabel[opp.priority]}
           </span>
         </div>
-      </SheetHeader>
+      </DrawerHeader>
 
       <div className="flex-1 overflow-y-auto px-5 py-5 space-y-6">
         <section>

@@ -9,6 +9,7 @@ import {
   Pencil, Phone, ShoppingCart, Star, Truck, User, X,
 } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { DrawerHeader } from "@/components/ui/drawer-header";
 import { FormSelect } from "@/components/ui/form-select";
 import { StatBar, StatItem, FilterBar, SearchInput, FilterSelect } from "@/components/ui/page-components";
 import { createClient } from "@/lib/supabase/client";
@@ -195,21 +196,18 @@ function VendorDrawer({
 
   return (
     <Sheet open={open} onOpenChange={(v) => { if (!v) onClose(); }}>
-      <SheetContent side="right" className="w-full sm:max-w-120 flex flex-col p-0 gap-0">
-        <SheetHeader className="px-5 pt-5 pb-3 pr-12 border-b border-border shrink-0">
-          <div className="flex items-start gap-3 pr-6">
-            {vendor && <VendorAvatar name={vendor.name} />}
-            <div className="min-w-0 flex-1">
-              <SheetTitle className="text-md font-semibold leading-snug truncate">
-                {vendor?.name ?? "Vendor"}
-              </SheetTitle>
-              <div className="flex items-center gap-2 mt-1 flex-wrap">
-                {vendor && <CategoryBadge category={vendor.category} />}
-                {vendor && <StatusBadge status={vendor.status} />}
-              </div>
+      <SheetContent hideClose side="right" className="w-full sm:max-w-120 flex flex-col p-0 gap-0">
+        <DrawerHeader
+          leading={vendor ? <VendorAvatar name={vendor.name} /> : undefined}
+          title={vendor?.name ?? "Vendor"}
+        >
+          {vendor && (
+            <div className="flex items-center gap-2 flex-wrap">
+              <CategoryBadge category={vendor.category} />
+              <StatusBadge status={vendor.status} />
             </div>
-          </div>
-        </SheetHeader>
+          )}
+        </DrawerHeader>
 
         {vendor && mode === "view" && (
           <div className="flex flex-col flex-1 min-h-0">

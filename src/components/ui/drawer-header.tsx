@@ -15,6 +15,9 @@ const iconBtn =
 interface DrawerHeaderProps {
   /** Optional leading visual — an avatar or icon node. */
   leading?: React.ReactNode;
+  /** Optional eyebrow line above the title — e.g. a record code (SP-2026-001)
+   *  or a code + small badge. Rendered as-is, so the caller styles it. */
+  eyebrow?: React.ReactNode;
   /** Main title — rendered as the accessible SheetTitle. */
   title: React.ReactNode;
   /** Optional subtitle line under the title. */
@@ -32,6 +35,7 @@ interface DrawerHeaderProps {
 
 export function DrawerHeader({
   leading,
+  eyebrow,
   title,
   subtitle,
   onEdit,
@@ -46,6 +50,7 @@ export function DrawerHeader({
         <div className="flex min-w-0 items-start gap-3">
           {leading}
           <div className="min-w-0 flex-1">
+            {eyebrow ? <div className="mb-1">{eyebrow}</div> : null}
             <SheetTitle className="truncate text-md font-semibold leading-tight">{title}</SheetTitle>
             {subtitle ? <p className="mt-0.5 truncate text-sm text-muted-foreground">{subtitle}</p> : null}
           </div>

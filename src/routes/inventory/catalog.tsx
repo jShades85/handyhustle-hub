@@ -20,6 +20,7 @@ import { FilterBar, SearchInput, FilterSelect } from "@/components/ui/page-compo
 import {
   Sheet, SheetContent, SheetHeader, SheetTitle,
 } from "@/components/ui/sheet";
+import { DrawerHeader } from "@/components/ui/drawer-header";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
@@ -1198,12 +1199,8 @@ function ItemDrawer({
 
   return (
     <Sheet open={open} onOpenChange={(v) => !v && onClose()}>
-      <SheetContent side="right" className="w-120 flex flex-col p-0 gap-0">
-        <SheetHeader className="px-5 pt-5 pb-4 pr-12 border-b border-border shrink-0">
-          <SheetTitle className="text-md pr-8">
-            {mode === "view" && item ? item.name : item ? "Edit Item" : "New Catalog Item"}
-          </SheetTitle>
-        </SheetHeader>
+      <SheetContent hideClose side="right" className="w-120 flex flex-col p-0 gap-0">
+        <DrawerHeader title={mode === "view" && item ? item.name : item ? "Edit Item" : "New Catalog Item"} />
         {mode === "view" && item ? renderViewContent() : renderEditContent()}
       </SheetContent>
     </Sheet>

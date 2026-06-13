@@ -1,0 +1,910 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>BearingPro · Design Polish Checklist</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400;14..32,450;14..32,500;14..32,600;14..32,700;14..32,800&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --bg: #0b0c10;
+    --bg-soft: #101117;
+    --surface: #14151d;
+    --surface-2: #191a23;
+    --elevated: #1e1f2a;
+    --hairline: rgba(255, 255, 255, 0.07);
+    --hairline-strong: rgba(255, 255, 255, 0.12);
+    --text: #e8e9ee;
+    --text-mid: #a3a6b5;
+    --text-dim: #6b6e80;
+    --accent: #7c83ff;
+    --accent-soft: rgba(124, 131, 255, 0.12);
+
+    --c-feedback: #f59e0b;
+    --c-visual: #ec6bb4;
+    --c-speed: #38bdf8;
+    --c-nav: #a78bfa;
+    --c-mobile: #34d399;
+    --c-quick: #facc15;
+
+    --high-bg: rgba(244, 63, 94, 0.13);
+    --high-fg: #fb7185;
+    --high-bd: rgba(244, 63, 94, 0.32);
+    --med-bg: rgba(245, 158, 11, 0.12);
+    --med-fg: #fbbf24;
+    --med-bd: rgba(245, 158, 11, 0.3);
+    --low-bg: rgba(148, 163, 184, 0.1);
+    --low-fg: #94a3b8;
+    --low-bd: rgba(148, 163, 184, 0.25);
+
+    --radius: 12px;
+    --ease: cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: "Inter", system-ui, -apple-system, sans-serif;
+    font-size: 14px;
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+    font-feature-settings: "cv11", "ss01", "ss03";
+    min-height: 100vh;
+  }
+
+  /* Ambient background glow */
+  .ambient {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 0;
+    background:
+      radial-gradient(900px 420px at 18% -8%, rgba(124, 131, 255, 0.10), transparent 60%),
+      radial-gradient(800px 380px at 88% -4%, rgba(236, 107, 180, 0.06), transparent 60%);
+  }
+
+  .wrap {
+    position: relative;
+    z-index: 1;
+    max-width: 880px;
+    margin: 0 auto;
+    padding: 0 28px 120px;
+  }
+
+  /* ---------- Hero ---------- */
+  .hero { padding: 72px 0 36px; }
+
+  .eyebrow {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--accent);
+    background: var(--accent-soft);
+    border: 1px solid rgba(124, 131, 255, 0.25);
+    padding: 5px 12px;
+    border-radius: 999px;
+    margin-bottom: 20px;
+  }
+  .eyebrow .dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--accent);
+    box-shadow: 0 0 8px var(--accent);
+    animation: pulse 2.4s ease-in-out infinite;
+  }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.35} }
+
+  h1 {
+    font-size: clamp(30px, 5vw, 42px);
+    font-weight: 800;
+    letter-spacing: -0.03em;
+    line-height: 1.12;
+    background: linear-gradient(135deg, #fff 30%, #b6b9ff 75%, #e9a8d4);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    margin-bottom: 14px;
+  }
+
+  .hero p.lede {
+    color: var(--text-mid);
+    font-size: 15.5px;
+    max-width: 62ch;
+  }
+  .hero p.lede strong { color: var(--text); font-weight: 600; }
+
+  .meta-row {
+    display: flex;
+    gap: 18px;
+    flex-wrap: wrap;
+    margin-top: 22px;
+    font-size: 12px;
+    color: var(--text-dim);
+  }
+  .meta-row span { display: inline-flex; align-items: center; gap: 6px; }
+  .meta-row svg { opacity: 0.7; }
+
+  /* ---------- Verdict card ---------- */
+  .verdict {
+    background: linear-gradient(180deg, var(--surface-2), var(--surface));
+    border: 1px solid var(--hairline);
+    border-radius: 16px;
+    padding: 22px 26px;
+    margin: 8px 0 40px;
+    position: relative;
+    overflow: hidden;
+  }
+  .verdict::before {
+    content: "";
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(124,131,255,.5), transparent);
+  }
+  .verdict h2 {
+    font-size: 13px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--accent);
+    margin-bottom: 10px;
+  }
+  .verdict p { color: var(--text-mid); font-size: 14px; max-width: 70ch; }
+  .verdict p + p { margin-top: 8px; }
+  .verdict strong { color: var(--text); font-weight: 600; }
+
+  /* ---------- Sticky progress header ---------- */
+  .progress-shell {
+    position: sticky;
+    top: 12px;
+    z-index: 50;
+    margin-bottom: 44px;
+  }
+  .progress-card {
+    background: rgba(20, 21, 29, 0.82);
+    backdrop-filter: blur(16px) saturate(1.4);
+    -webkit-backdrop-filter: blur(16px) saturate(1.4);
+    border: 1px solid var(--hairline-strong);
+    border-radius: 14px;
+    padding: 16px 20px;
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.45);
+  }
+  .progress-top {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    margin-bottom: 10px;
+  }
+  .progress-label {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--text-dim);
+  }
+  .progress-count {
+    font-family: "JetBrains Mono", monospace;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text);
+    font-variant-numeric: tabular-nums;
+  }
+  .progress-count .pct { color: var(--accent); margin-left: 10px; }
+  .progress-track {
+    height: 8px;
+    background: rgba(255, 255, 255, 0.06);
+    border-radius: 999px;
+    overflow: hidden;
+  }
+  .progress-fill {
+    height: 100%;
+    width: 0%;
+    border-radius: 999px;
+    background: linear-gradient(90deg, #7c83ff, #b06ee8, #ec6bb4);
+    transition: width 0.6s var(--ease);
+    box-shadow: 0 0 14px rgba(124, 131, 255, 0.45);
+  }
+  .celebrate {
+    display: none;
+    margin-top: 10px;
+    font-size: 12.5px;
+    color: #34d399;
+    font-weight: 600;
+  }
+  .celebrate.show { display: block; animation: rise .5s var(--ease); }
+  @keyframes rise { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+
+  /* ---------- Category sections ---------- */
+  section.cat { margin-bottom: 52px; }
+
+  .cat-head {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin-bottom: 8px;
+  }
+  .cat-icon {
+    width: 40px; height: 40px;
+    border-radius: 11px;
+    display: grid;
+    place-items: center;
+    font-size: 19px;
+    background: color-mix(in srgb, var(--cat) 12%, transparent);
+    border: 1px solid color-mix(in srgb, var(--cat) 28%, transparent);
+    flex-shrink: 0;
+  }
+  .cat-titlebox { flex: 1; min-width: 0; }
+  .cat-titlebox h2 {
+    font-size: 19px;
+    font-weight: 700;
+    letter-spacing: -0.015em;
+  }
+  .cat-titlebox .cat-sub {
+    font-size: 12.5px;
+    color: var(--text-dim);
+    margin-top: 1px;
+  }
+  .cat-count {
+    font-family: "JetBrains Mono", monospace;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-dim);
+    background: var(--surface);
+    border: 1px solid var(--hairline);
+    padding: 4px 10px;
+    border-radius: 999px;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
+  .cat-count.done {
+    color: #34d399;
+    border-color: rgba(52, 211, 153, 0.35);
+    background: rgba(52, 211, 153, 0.08);
+  }
+
+  .cat-track {
+    height: 4px;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 999px;
+    overflow: hidden;
+    margin: 14px 0 18px;
+  }
+  .cat-fill {
+    height: 100%;
+    width: 0%;
+    background: var(--cat);
+    border-radius: 999px;
+    transition: width 0.5s var(--ease);
+  }
+
+  /* ---------- Items ---------- */
+  .items { display: flex; flex-direction: column; gap: 10px; }
+
+  .item {
+    position: relative;
+    display: flex;
+    gap: 16px;
+    align-items: flex-start;
+    background: var(--surface);
+    border: 1px solid var(--hairline);
+    border-radius: var(--radius);
+    padding: 16px 18px 16px 16px;
+    cursor: pointer;
+    transition: border-color 0.18s ease, background 0.18s ease,
+                transform 0.18s var(--ease), box-shadow 0.18s ease,
+                opacity 0.3s ease;
+    user-select: none;
+    overflow: hidden;
+  }
+  .item::before {
+    content: "";
+    position: absolute;
+    left: 0; top: 0; bottom: 0;
+    width: 3px;
+    background: var(--cat);
+    opacity: 0;
+    transition: opacity 0.18s ease;
+  }
+  .item:hover {
+    border-color: var(--hairline-strong);
+    background: var(--surface-2);
+    transform: translateY(-1px);
+    box-shadow: 0 6px 24px rgba(0, 0, 0, 0.3);
+  }
+  .item:hover::before { opacity: 0.85; }
+  .item:focus-visible {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(124, 131, 255, 0.25);
+  }
+
+  /* checkbox */
+  .box {
+    flex-shrink: 0;
+    width: 22px; height: 22px;
+    margin-top: 1px;
+    border-radius: 7px;
+    border: 1.5px solid rgba(255, 255, 255, 0.22);
+    background: rgba(255, 255, 255, 0.03);
+    display: grid;
+    place-items: center;
+    transition: background 0.22s var(--ease), border-color 0.22s var(--ease),
+                transform 0.22s var(--ease);
+  }
+  .item:hover .box { border-color: var(--cat); }
+  .box svg {
+    width: 13px; height: 13px;
+  }
+  .box svg path {
+    stroke: #0b0c10;
+    stroke-width: 3;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    fill: none;
+    stroke-dasharray: 22;
+    stroke-dashoffset: 22;
+    transition: stroke-dashoffset 0.28s var(--ease) 0.05s;
+  }
+
+  .item-body { flex: 1; min-width: 0; }
+
+  .item-title-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-bottom: 4px;
+  }
+  .item-title {
+    font-size: 14px;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    position: relative;
+    transition: color 0.25s ease;
+  }
+  .item-title::after {
+    content: "";
+    position: absolute;
+    left: 0; top: 52%;
+    height: 1.5px;
+    width: 0%;
+    background: var(--text-dim);
+    transition: width 0.35s var(--ease);
+  }
+  .item-desc {
+    font-size: 13px;
+    color: var(--text-mid);
+    max-width: 64ch;
+    transition: color 0.25s ease;
+  }
+
+  .badge {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    padding: 3px 8px;
+    border-radius: 5px;
+    border: 1px solid;
+    line-height: 1;
+    flex-shrink: 0;
+    transition: opacity 0.25s ease;
+  }
+  .badge.high   { background: var(--high-bg); color: var(--high-fg); border-color: var(--high-bd); }
+  .badge.medium { background: var(--med-bg);  color: var(--med-fg);  border-color: var(--med-bd); }
+  .badge.low    { background: var(--low-bg);  color: var(--low-fg);  border-color: var(--low-bd); }
+
+  /* checked state */
+  .item.checked { opacity: 0.55; }
+  .item.checked .box {
+    background: var(--cat);
+    border-color: var(--cat);
+    transform: scale(1.05);
+  }
+  .item.checked .box svg path { stroke-dashoffset: 0; }
+  .item.checked .item-title { color: var(--text-dim); }
+  .item.checked .item-title::after { width: 100%; }
+  .item.checked .item-desc { color: var(--text-dim); }
+  .item.checked .badge { opacity: 0.5; }
+
+  /* check pop */
+  @keyframes pop {
+    0% { transform: scale(0.85); }
+    55% { transform: scale(1.15); }
+    100% { transform: scale(1.05); }
+  }
+  .item.just-checked .box { animation: pop 0.32s var(--ease); }
+
+  /* ---------- Footer ---------- */
+  footer {
+    margin-top: 64px;
+    padding-top: 28px;
+    border-top: 1px solid var(--hairline);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    flex-wrap: wrap;
+    color: var(--text-dim);
+    font-size: 12.5px;
+  }
+  .reset-btn {
+    font-family: inherit;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-mid);
+    background: var(--surface);
+    border: 1px solid var(--hairline-strong);
+    border-radius: 8px;
+    padding: 7px 14px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+  }
+  .reset-btn:hover {
+    color: var(--high-fg);
+    border-color: var(--high-bd);
+    background: var(--high-bg);
+  }
+
+  ::selection { background: rgba(124, 131, 255, 0.35); color: #fff; }
+
+  ::-webkit-scrollbar { width: 10px; }
+  ::-webkit-scrollbar-thumb {
+    background: rgba(255,255,255,0.12);
+    border-radius: 8px;
+    border: 3px solid var(--bg);
+    background-clip: padding-box;
+  }
+  ::-webkit-scrollbar-track { background: transparent; }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation: none !important; transition: none !important; }
+    html { scroll-behavior: auto; }
+  }
+
+  @media (max-width: 560px) {
+    .wrap { padding: 0 16px 100px; }
+    .hero { padding: 48px 0 28px; }
+    .item { padding: 14px; gap: 12px; }
+    .progress-shell { top: 8px; }
+  }
+</style>
+</head>
+<body>
+<div class="ambient"></div>
+<div class="wrap">
+
+  <!-- ============ HERO ============ -->
+  <header class="hero">
+    <div class="eyebrow"><span class="dot"></span>Design Review · June 2026</div>
+    <h1>BearingPro Polish Checklist</h1>
+    <p class="lede">A friendly walkthrough of everything found in the design review — reworded so anyone on the team can follow along. <strong>Check items off as you and your developer knock them out.</strong> Your progress saves automatically in this browser.</p>
+    <div class="meta-row">
+      <span><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>Reviewed June 11, 2026</span>
+      <span><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 12l2 2 4-4"/><circle cx="12" cy="12" r="9"/></svg>Benchmarked against Linear, Stripe &amp; Notion</span>
+      <span><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v18M3 12h18"/></svg>31 items across 6 areas</span>
+    </div>
+  </header>
+
+  <!-- ============ VERDICT ============ -->
+  <div class="verdict">
+    <h2>The big picture</h2>
+    <p><strong>The good news: the bones of this app are genuinely excellent.</strong> The layout system, color foundation, and page structure are better than most apps at this stage — the reviewer compared the skeleton to Linear, one of the best-designed tools in the industry.</p>
+    <p>What's missing comes down to two themes: <strong>feedback</strong> (the app rarely tells you when something worked, failed, or is still loading) and <strong>consistency</strong> (a few places use their own one-off colors, sizes, and controls instead of the shared system). Close those two gaps and this goes from "well-built prototype" to "premium product." Most of it can be fixed in shared files, so one fix improves every page at once.</p>
+  </div>
+
+  <!-- ============ STICKY PROGRESS ============ -->
+  <div class="progress-shell">
+    <div class="progress-card">
+      <div class="progress-top">
+        <span class="progress-label">Overall progress</span>
+        <span class="progress-count"><span id="total-done">0</span> / <span id="total-all">0</span><span class="pct" id="total-pct">0%</span></span>
+      </div>
+      <div class="progress-track"><div class="progress-fill" id="total-fill"></div></div>
+      <div class="celebrate" id="celebrate">All done — your app just leveled up. Time to celebrate. 🎉</div>
+    </div>
+  </div>
+
+  <!-- ============ CATEGORIES (rendered by JS) ============ -->
+  <main id="checklist"></main>
+
+  <footer>
+    <span>BearingPro · Internal design review companion · Progress is saved on this device only.</span>
+    <button class="reset-btn" id="reset">Reset all checkmarks</button>
+  </footer>
+</div>
+
+<script>
+const DATA = [
+  {
+    id: "feedback",
+    icon: "🔔",
+    color: "var(--c-feedback)",
+    title: "Feedback & Notifications",
+    sub: "Making the app tell you when things work, fail, or are still loading",
+    items: [
+      {
+        id: "fb-silent-failures",
+        impact: "high",
+        title: "The app stays silent when a save fails",
+        desc: "Right now, if something goes wrong while saving — recording a payment, dispatching a tech — the app just sits there. No error message, no warning. You'd think it worked when it didn't. A small pop-up message system is already installed in the code; it just needs to be switched on. This is the single highest-value fix in the whole review."
+      },
+      {
+        id: "fb-loading-skeletons",
+        impact: "high",
+        title: "Loading looks like the app is broken",
+        desc: "While pages fetch data, they either dim out or show a plain \"Loading…\" word, then everything jumps into place. Premium apps show a gray placeholder version of the page (like Facebook or LinkedIn while loading) so it feels instant and nothing shifts around. The placeholder component already exists in the project — it's just never used."
+      },
+      {
+        id: "fb-saved-check",
+        impact: "medium",
+        title: "Auto-saving fields give zero acknowledgment",
+        desc: "Notes boxes and parts-list cells save automatically when you click away — but nothing confirms it happened. A small \"Saved ✓\" that appears for a second next to the field would close the loop. Build it once, use it everywhere notes exist."
+      },
+      {
+        id: "fb-new-row-flash",
+        impact: "low",
+        title: "New records are hard to spot after you create them",
+        desc: "When you add a new invoice or work order from a pop-up, it just appears somewhere in the list. A brief gentle highlight on the new row would help your eye find what you just made."
+      }
+    ]
+  },
+  {
+    id: "visual",
+    icon: "🎨",
+    color: "var(--c-visual)",
+    title: "Visual Polish",
+    sub: "Colors, type, empty screens, and the details that make it feel premium",
+    items: [
+      {
+        id: "vp-dashboard-fake",
+        impact: "high",
+        title: "The dashboard still shows fake numbers",
+        desc: "Every other part of the app now shows your real business data — but the dashboard, the first screen everyone sees, is still showing made-up demo figures. It's become the least trustworthy screen in the app. The real numbers already exist elsewhere; the dashboard just needs to use them."
+      },
+      {
+        id: "vp-status-colors",
+        impact: "high",
+        title: "Status labels use two competing color systems",
+        desc: "Some pages pull status colors (like \"In Progress\" blue or \"Paid\" green) from the app's shared palette; others have their own hand-picked colors written directly into the page. Over time these will drift apart and statuses will look different page to page. Pick one shared set of about 8 label styles and use it everywhere."
+      },
+      {
+        id: "vp-empty-states",
+        impact: "medium",
+        title: "Empty screens look unfinished",
+        desc: "When a list has nothing in it yet, some pages show a nice friendly message with a button to create your first item — others just show the word \"Empty\" or a blank row. New customers spend their entire first week looking at empty screens, so these matter a lot. The nice version already exists; it just needs to be used everywhere."
+      },
+      {
+        id: "vp-native-selects",
+        impact: "medium",
+        title: "Filter dropdowns look like old Windows menus",
+        desc: "The dropdown filters above each list use the browser's built-in menu style, which clashes with the app's sleek look — especially in dark mode on Windows. Nicely-styled dropdown components are already installed; the filters just aren't using them yet. Bonus: make it obvious when a filter is active."
+      },
+      {
+        id: "vp-light-mode",
+        impact: "medium",
+        title: "Light mode looks washed out",
+        desc: "Dark mode is clearly the star, and it shows — in light mode, cards and input boxes nearly disappear into the white background. Slightly deeper card colors or soft shadows would give light mode the same crispness."
+      },
+      {
+        id: "vp-text-sizes",
+        impact: "medium",
+        title: "Too many slightly-different text sizes",
+        desc: "There are at least 15 different text sizes in use, including odd in-between sizes that can render blurry on some screens. Top-tier apps use about 5–6. Trimming the list down to a named set makes everything feel more orderly — and page titles on detail screens could use one comfortably larger size so headings stand out by size, not just boldness."
+      },
+      {
+        id: "vp-stray-reds",
+        impact: "low",
+        title: "A few colors are hand-picked instead of using the shared palette",
+        desc: "The sign-out button, the inbox count badge, and the red \"now\" line on the schedule each use their own shade of red rather than the app's official one. Small thing, but it's how inconsistencies creep in."
+      },
+      {
+        id: "vp-line-length",
+        impact: "low",
+        title: "Long text stretches uncomfortably wide",
+        desc: "Notes and descriptions in wide side panels stretch the full width of the panel, making long paragraphs hard to read. Capping text at a comfortable reading width (about a sentence and a half per line) fixes it."
+      },
+      {
+        id: "vp-charts",
+        impact: "low",
+        title: "The dashboard bars are heavy — and real charts are ready to go",
+        desc: "The chart library is installed and chart colors are defined, but no actual charts exist yet. Meanwhile the dashboard's solid bars feel visually heavy — softening all but the most recent bar would lighten it up nicely."
+      }
+    ]
+  },
+  {
+    id: "speed",
+    icon: "⚡",
+    color: "var(--c-speed)",
+    title: "Speed & Feel",
+    sub: "Motion, animation, and the little touches that make software feel alive",
+    items: [
+      {
+        id: "sf-kanban-drag",
+        impact: "high",
+        title: "You can't drag cards on the sales pipeline board",
+        desc: "Moving a deal between stages takes three clicks through a menu instead of just grabbing the card and dropping it in the next column. Every comparable tool treats drag-and-drop as table stakes — without it, the board reads as a prototype. (Keep the menu option too, for keyboard users.)"
+      },
+      {
+        id: "sf-drawer-speed",
+        impact: "medium",
+        title: "Side panels open slowly with a heavy dark overlay",
+        desc: "The slide-out panels take about half a second to open — noticeably sluggish next to the app's snappy feel — and they dim the rest of the screen almost to black. Speeding the slide up and lightening the dim layer would instantly make the whole app feel quicker."
+      },
+      {
+        id: "sf-motion-scale",
+        impact: "low",
+        title: "Animations don't share a consistent rhythm",
+        desc: "Different parts of the app animate at different speeds chosen ad hoc (some fast, some slow). Settling on three standard speeds — quick for hovers, medium for panels, slower for full pages — makes everything feel like one coherent product."
+      },
+      {
+        id: "sf-number-animation",
+        impact: "low",
+        title: "Dashboard numbers should glide, not snap",
+        desc: "When you collect a payment and the \"Outstanding\" total drops, the number just instantly changes. A quick count-down animation (like Stripe uses) makes the cause-and-effect feel satisfying and real."
+      },
+      {
+        id: "sf-card-grab",
+        impact: "low",
+        title: "Pipeline cards don't look grabbable",
+        desc: "Cards on the board only change their border on hover. Once drag-and-drop lands, adding a faint lift-and-shadow on hover signals \"you can pick me up.\""
+      }
+    ]
+  },
+  {
+    id: "nav",
+    icon: "🧭",
+    color: "var(--c-nav)",
+    title: "Navigation & Layout",
+    sub: "Sidebar, top bar, search, and knowing where you are",
+    items: [
+      {
+        id: "nav-cmdk-stale",
+        impact: "high",
+        title: "The quick-search shows companies that don't exist",
+        desc: "Pressing Ctrl+K opens the app-wide search — a signature feature — but it's still searching the old fake demo data. It shows companies that aren't in your account and clicking them leads to dead pages. A search that lies is worse than no search. It needs to look up your real companies, projects, contacts, and invoices."
+      },
+      {
+        id: "nav-collapsed-tooltips",
+        impact: "medium",
+        title: "The collapsed sidebar is a guessing game",
+        desc: "When you shrink the sidebar down to just icons, there are no labels when you hover over them — you have to guess what each icon means. Hover labels are a quick add (the component is already installed)."
+      },
+      {
+        id: "nav-topbar-breadcrumbs",
+        impact: "medium",
+        title: "The top bar wastes space and loses your place",
+        desc: "The page title floats alone in the center of the top bar, and on detail pages (a specific project or work order) there's no trail showing where you are — like \"Operations / Projects / Paulson Residence.\" Moving the title left and adding that trail fixes both. The trail component already exists, unused."
+      },
+      {
+        id: "nav-active-indicator",
+        impact: "low",
+        title: "The sidebar doesn't clearly mark the current page",
+        desc: "The page you're on only gets a subtle background tint in the sidebar. A small colored bar on the left edge of the active item — the visual signature of tools like Linear — makes it unmistakable at a glance."
+      },
+      {
+        id: "nav-locked-modules",
+        impact: "low",
+        title: "Locked sections don't explain themselves",
+        desc: "When a team member doesn't have access to a section, it just appears disabled with no explanation. A small lock icon and a hover note like \"No access — ask an admin\" prevents confusion (and support questions)."
+      }
+    ]
+  },
+  {
+    id: "mobile",
+    icon: "📱",
+    color: "var(--c-mobile)",
+    title: "Mobile & Accessibility",
+    sub: "Phones in the field, keyboards, and making the app usable for everyone",
+    items: [
+      {
+        id: "ma-sidebar-mobile",
+        impact: "high",
+        title: "On a phone, the sidebar eats most of the screen",
+        desc: "The app was built desktop-first (reasonable!), but right now on a phone the sidebar takes up well over half the screen width and doesn't tuck away. At minimum it should collapse into a slide-out menu on small screens so the app doesn't embarrass itself when someone opens it on the go."
+      },
+      {
+        id: "ma-field-tech-view",
+        impact: "high",
+        title: "Field techs need one truly great phone view",
+        desc: "Your technicians are a core user — they'll check their assigned work orders and schedules from their trucks. Rather than reworking every page for mobile, build one excellent phone-friendly \"My Day\" view: today's jobs, addresses, and status updates. Everything else can simply not break."
+      },
+      {
+        id: "ma-keyboard-nav",
+        impact: "medium",
+        title: "Keyboard users can't operate key parts of the app",
+        desc: "Sorting a table column or opening a row currently requires a mouse — the keyboard can't reach them, and screen readers can't announce them. This matters for accessibility and for power users who live on the keyboard."
+      },
+      {
+        id: "ma-touch-targets",
+        impact: "medium",
+        title: "Buttons are too small for fingers",
+        desc: "The small icon buttons in table rows are sized for a precise mouse pointer. On a touchscreen they're frustrating to hit — industry guidance says tap targets should be roughly the size of a fingertip (about 44 pixels). Matters most on whichever screens techs use in the field."
+      },
+      {
+        id: "ma-reduced-motion",
+        impact: "low",
+        title: "Respect the \"reduce motion\" accessibility setting",
+        desc: "Some people enable a system setting that asks apps to minimize animation (it can cause dizziness or distraction). The app should honor it by turning animations off when that setting is detected — a small, standard courtesy."
+      }
+    ]
+  },
+  {
+    id: "quick",
+    icon: "🛠",
+    color: "var(--c-quick)",
+    title: "Quick Wins",
+    sub: "Small fixes — each under an hour — that punch above their weight",
+    items: [
+      {
+        id: "qw-brand-names",
+        impact: "medium",
+        title: "Old company names are leaking into browser tabs",
+        desc: "Two pages still have leftover names from early demos — the dashboard's browser tab says \"Port City Sound & Security\" and the scheduling page says \"Crosscurrent.\" Anyone who bookmarks those pages sees the wrong brand. Standardize every page to \"Page Name · BearingPro.\""
+      },
+      {
+        id: "qw-double-plus",
+        impact: "low",
+        title: "The New Invoice button shows a doubled plus sign",
+        desc: "The button already displays a plus icon automatically, but the label text also starts with \"+\" — so it reads \"+ + New Invoice.\" One character to delete."
+      },
+      {
+        id: "qw-focus-flash",
+        impact: "low",
+        title: "Buttons flash an outline ring when clicked with a mouse",
+        desc: "A highlight ring meant to help keyboard users find their place also flashes on every ordinary mouse click, which looks glitchy. A one-line change makes it appear only for keyboard navigation — exactly when it's useful."
+      },
+      {
+        id: "qw-real-role",
+        impact: "low",
+        title: "The sidebar says everyone is \"Admin\"",
+        desc: "The little user card at the bottom of the sidebar is hardcoded to say \"Admin · Workspace\" no matter who's logged in. The app already knows each person's real role — just display it."
+      },
+      {
+        id: "qw-glow-effect",
+        impact: "low",
+        title: "There's a fancy glow effect used exactly once",
+        desc: "A nice glow style exists in the design system but only appears on the logo. Either make it a signature touch (on primary buttons, for instance) or remove it — a defined-but-unused effect is just clutter."
+      }
+    ]
+  }
+];
+
+const STORAGE_KEY = "bearingpro-design-checklist-v1";
+
+function loadState() {
+  try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || {}; }
+  catch { return {}; }
+}
+function saveState(state) {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+}
+
+let state = loadState();
+
+const IMPACT_LABEL = { high: "High impact", medium: "Medium", low: "Low" };
+
+const main = document.getElementById("checklist");
+
+DATA.forEach(cat => {
+  const section = document.createElement("section");
+  section.className = "cat";
+  section.style.setProperty("--cat", cat.color);
+  section.id = "cat-" + cat.id;
+
+  section.innerHTML = `
+    <div class="cat-head">
+      <div class="cat-icon">${cat.icon}</div>
+      <div class="cat-titlebox">
+        <h2>${cat.title}</h2>
+        <div class="cat-sub">${cat.sub}</div>
+      </div>
+      <div class="cat-count" data-count></div>
+    </div>
+    <div class="cat-track"><div class="cat-fill" data-fill></div></div>
+    <div class="items"></div>
+  `;
+
+  const itemsEl = section.querySelector(".items");
+
+  cat.items.forEach(it => {
+    const el = document.createElement("div");
+    el.className = "item";
+    el.tabIndex = 0;
+    el.setAttribute("role", "checkbox");
+    el.setAttribute("aria-checked", !!state[it.id]);
+    el.dataset.id = it.id;
+    if (state[it.id]) el.classList.add("checked");
+
+    el.innerHTML = `
+      <div class="box">
+        <svg viewBox="0 0 24 24"><path d="M4.5 12.5l5 5 10-11"/></svg>
+      </div>
+      <div class="item-body">
+        <div class="item-title-row">
+          <span class="item-title">${it.title}</span>
+          <span class="badge ${it.impact}">${IMPACT_LABEL[it.impact]}</span>
+        </div>
+        <p class="item-desc">${it.desc}</p>
+      </div>
+    `;
+
+    function toggle() {
+      const nowChecked = !el.classList.contains("checked");
+      el.classList.toggle("checked", nowChecked);
+      el.setAttribute("aria-checked", nowChecked);
+      if (nowChecked) {
+        el.classList.add("just-checked");
+        setTimeout(() => el.classList.remove("just-checked"), 400);
+        state[it.id] = true;
+      } else {
+        delete state[it.id];
+      }
+      saveState(state);
+      updateProgress();
+    }
+
+    el.addEventListener("click", toggle);
+    el.addEventListener("keydown", e => {
+      if (e.key === " " || e.key === "Enter") { e.preventDefault(); toggle(); }
+    });
+
+    itemsEl.appendChild(el);
+  });
+
+  main.appendChild(section);
+});
+
+const totalAll = DATA.reduce((n, c) => n + c.items.length, 0);
+document.getElementById("total-all").textContent = totalAll;
+
+function updateProgress() {
+  let totalDone = 0;
+
+  DATA.forEach(cat => {
+    const section = document.getElementById("cat-" + cat.id);
+    const done = cat.items.filter(it => state[it.id]).length;
+    totalDone += done;
+
+    const pct = cat.items.length ? (done / cat.items.length) * 100 : 0;
+    section.querySelector("[data-fill]").style.width = pct + "%";
+
+    const countEl = section.querySelector("[data-count]");
+    countEl.textContent = done === cat.items.length
+      ? "✓ Complete"
+      : `${done} / ${cat.items.length}`;
+    countEl.classList.toggle("done", done === cat.items.length);
+  });
+
+  const totalPct = Math.round((totalDone / totalAll) * 100);
+  document.getElementById("total-done").textContent = totalDone;
+  document.getElementById("total-pct").textContent = totalPct + "%";
+  document.getElementById("total-fill").style.width = totalPct + "%";
+  document.getElementById("celebrate").classList.toggle("show", totalDone === totalAll);
+}
+
+document.getElementById("reset").addEventListener("click", () => {
+  if (!confirm("Clear all checkmarks and start over?")) return;
+  state = {};
+  saveState(state);
+  document.querySelectorAll(".item").forEach(el => {
+    el.classList.remove("checked");
+    el.setAttribute("aria-checked", "false");
+  });
+  updateProgress();
+});
+
+updateProgress();
+</script>
+</body>
+</html>
