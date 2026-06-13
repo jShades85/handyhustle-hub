@@ -5,7 +5,9 @@ import { cn } from "@/lib/utils";
 import {
   Select,
   SelectContent,
+  SelectGroup,
   SelectItem,
+  SelectLabel,
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
@@ -100,15 +102,43 @@ interface FilterSelectProps {
   className?: string;
 }
 
-export function FilterSelect({ value, onChange, children, className }: FilterSelectProps) {
-  const options = Children.toArray(children)
-    .filter(isValidElement)
-    .map((child) => {
-      const el = child as ReactElement<{ value: string; children: ReactNode }>;
-      return { value: String(el.props.value ?? ""), label: el.props.children };
-    });
+// Renders a native-style <option> as a Radix SelectItem. Empty-value options
+// are skipped — Radix forbids value="" (that's reserved for "cleared").
+function renderFilterOption(el: ReactElement<{ value?: string | number; children: ReactNode; disabled?: boolean }>) {
+  const v = String(el.props.value ?? "");
+  if (v === "") return null;
+  return (
+    <SelectItem key={v} value={v} disabled={el.props.disabled} className="text-sm">
+      {el.props.children}
+    </SelectItem>
+  );
+}
 
+export function FilterSelect({ value, onChange, children, className }: FilterSelectProps) {
   const isActive = value !== "" && value !== "all";
+
+  // Flatten children: support <optgroup> (→ SelectGroup + label) and <option>.
+  // Native <select> allowed optgroups; the Radix port must handle them too,
+  // otherwise an optgroup (no value) becomes an illegal value="" SelectItem.
+  const items = Children.toArray(children)
+    .filter(isValidElement)
+    .map((child, i) => {
+      const el = child as ReactElement<{ label?: string; value?: string | number; children?: ReactNode; disabled?: boolean }>;
+      if (el.type === "optgroup") {
+        const opts = Children.toArray(el.props.children).filter(isValidElement) as ReactElement<{ value?: string | number; children: ReactNode; disabled?: boolean }>[];
+        return (
+          <SelectGroup key={`group-${i}-${el.props.label ?? ""}`}>
+            {el.props.label ? (
+              <SelectLabel className="text-2xs font-medium uppercase tracking-wider text-muted-foreground">
+                {el.props.label}
+              </SelectLabel>
+            ) : null}
+            {opts.map(renderFilterOption)}
+          </SelectGroup>
+        );
+      }
+      return renderFilterOption(el as ReactElement<{ value?: string | number; children: ReactNode; disabled?: boolean }>);
+    });
 
   return (
     <Select value={value} onValueChange={onChange}>
@@ -124,11 +154,7 @@ export function FilterSelect({ value, onChange, children, className }: FilterSel
         <SelectValue />
       </SelectTrigger>
       <SelectContent>
-        {options.map((opt) => (
-          <SelectItem key={opt.value} value={opt.value} className="text-sm">
-            {opt.label}
-          </SelectItem>
-        ))}
+        {items}
       </SelectContent>
     </Select>
   );
