@@ -1,5 +1,5 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Avatar } from "@/components/ui-bits";
 import { useMeta } from "@/contexts/PageMetaContext";
 import { cn } from "@/lib/utils";
@@ -17,6 +17,9 @@ import { FormSelect } from "@/components/ui/form-select";
 
 export const Route = createFileRoute("/crm/contacts")({
   head: () => ({ meta: [{ title: "Contacts · BearingPro" }] }),
+  validateSearch: (search: Record<string, unknown>): { contact?: string } => ({
+    contact: typeof search.contact === "string" ? search.contact : undefined,
+  }),
   component: ContactsPage,
 });
 
@@ -179,6 +182,21 @@ function ContactsPage() {
     setSelected(c);
     setDrawerMode(mode);
   }, []);
+
+  // Deep-link: ?contact=<id> (e.g. from the command palette) opens that contact's
+  // drawer once the list has loaded, then strips the param. Ref guard fires once.
+  const navigate = useNavigate();
+  const { contact: contactParam } = Route.useSearch();
+  const deepLinkedRef = useRef(false);
+  useEffect(() => {
+    if (deepLinkedRef.current || !contactParam || contacts.length === 0) return;
+    const found = contacts.find((c) => c.id === contactParam);
+    if (found) {
+      deepLinkedRef.current = true;
+      openDrawer(found, "view");
+      navigate({ to: "/crm/contacts", replace: true });
+    }
+  }, [contactParam, contacts, navigate, openDrawer]);
 
   if (isLoading) {
     return <div className="flex items-center justify-center py-16 text-sm text-muted-foreground">Loading…</div>;

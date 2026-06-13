@@ -9,9 +9,12 @@ import {
   BarChart2, Plus, ClipboardList, Headphones, ShieldCheck, ShoppingCart,
   GanttChart, Layers, Puzzle, Settings,
 } from "lucide-react";
-import { COMPANIES } from "@/data/companies";
-import { PROJECTS } from "@/data/projects";
-import { contacts } from "@/lib/demo-data";
+import { useQuery } from "@tanstack/react-query";
+import { createClient } from "@/lib/supabase/client";
+
+interface PaletteCompany { id: string; name: string; industry: string | null }
+interface PaletteProject { id: string; code: string; name: string; companies: { name: string } | null }
+interface PaletteContact { id: string; full_name: string; title: string | null; companies: { name: string } | null }
 
 // ─── Nav entries ──────────────────────────────────────────────────────────────
 
@@ -60,11 +63,46 @@ const ACTIONS: { label: string; to: string; icon: typeof Plus }[] = [
 
 export function CommandPalette({ open, onOpenChange }: { open: boolean; onOpenChange: (o: boolean) => void }) {
   const navigate = useNavigate();
+  const supabase = createClient();
 
   const go = (to: string) => {
     onOpenChange(false);
     navigate({ to });
   };
+
+  const goContact = (id: string) => {
+    onOpenChange(false);
+    navigate({ to: "/crm/contacts", search: { contact: id } });
+  };
+
+  // Live records — fetched lazily the first time the palette opens, then cached.
+  const { data: companies = [] } = useQuery({
+    queryKey: ["palette-companies"],
+    enabled: open,
+    staleTime: 30_000,
+    queryFn: async () => {
+      const { data } = await supabase.from("companies").select("id, name, industry").order("name");
+      return (data ?? []) as PaletteCompany[];
+    },
+  });
+  const { data: projects = [] } = useQuery({
+    queryKey: ["palette-projects"],
+    enabled: open,
+    staleTime: 30_000,
+    queryFn: async () => {
+      const { data } = await supabase.from("projects").select("id, code, name, companies(name)").order("name");
+      return (data ?? []) as unknown as PaletteProject[];
+    },
+  });
+  const { data: contacts = [] } = useQuery({
+    queryKey: ["palette-contacts"],
+    enabled: open,
+    staleTime: 30_000,
+    queryFn: async () => {
+      const { data } = await supabase.from("contacts").select("id, full_name, title, companies(name)").order("full_name");
+      return (data ?? []) as unknown as PaletteContact[];
+    },
+  });
 
   return (
     <CommandDialog open={open} onOpenChange={onOpenChange}>
@@ -100,15 +138,15 @@ export function CommandPalette({ open, onOpenChange }: { open: boolean; onOpenCh
 
           {/* Companies */}
           <CommandGroup heading="Companies">
-            {COMPANIES.map((c) => (
+            {companies.map((c) => (
               <CommandItem
                 key={c.id}
-                value={`${c.name} ${c.industry}`}
+                value={`${c.name} ${c.industry ?? ""}`}
                 onSelect={() => go(`/crm/companies/${c.id}`)}
               >
                 <Building2 className="mr-2 h-3.5 w-3.5 text-muted-foreground" />
                 <span>{c.name}</span>
-                <span className="ml-auto text-2xs text-muted-foreground">{c.industry}</span>
+                {c.industry && <span className="ml-auto text-2xs text-muted-foreground">{c.industry}</span>}
               </CommandItem>
             ))}
           </CommandGroup>
@@ -117,10 +155,10 @@ export function CommandPalette({ open, onOpenChange }: { open: boolean; onOpenCh
 
           {/* Projects */}
           <CommandGroup heading="Projects">
-            {PROJECTS.map((p) => (
+            {projects.map((p) => (
               <CommandItem
                 key={p.id}
-                value={`${p.name} ${p.code} ${p.customer}`}
+                value={`${p.name} ${p.code} ${p.companies?.name ?? ""}`}
                 onSelect={() => go(`/operations/projects/${p.id}`)}
               >
                 <Briefcase className="mr-2 h-3.5 w-3.5 text-muted-foreground" />
@@ -137,12 +175,12 @@ export function CommandPalette({ open, onOpenChange }: { open: boolean; onOpenCh
             {contacts.map((c) => (
               <CommandItem
                 key={c.id}
-                value={`${c.name} ${c.company ?? ""} ${c.title ?? ""}`}
-                onSelect={() => go("/crm/contacts")}
+                value={`${c.full_name} ${c.companies?.name ?? ""} ${c.title ?? ""}`}
+                onSelect={() => goContact(c.id)}
               >
                 <Users className="mr-2 h-3.5 w-3.5 text-muted-foreground" />
-                <span>{c.name}</span>
-                <span className="ml-auto text-2xs text-muted-foreground">{c.company}</span>
+                <span>{c.full_name}</span>
+                {c.companies?.name && <span className="ml-auto text-2xs text-muted-foreground">{c.companies.name}</span>}
               </CommandItem>
             ))}
           </CommandGroup>
