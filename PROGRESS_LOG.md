@@ -407,6 +407,23 @@ Worked through the Fable design checklist + drawer standardization. All changes 
 
 **Spec'd (not built):** Per-phase project billing model — see the **Planned Feature** section above (blocked on the catalog/inventory phase attribute).
 
+### Quick-search (command palette) fully wired — Tiers 1–3
+
+The ⌘K palette previously navigated to pages and showed **static demo data** for Companies/Projects/Contacts (and nothing else). Now fully live:
+
+- **Tier 1 — live data + contact deep-link:** Companies/Projects/Contacts groups query Supabase (RLS-scoped, lazy on first open, cached 30s) via unique `palette-*` keys. Contacts deep-link to the specific person (added `?contact=<id>` to the contacts route, mirroring `?opp`).
+- **Tier 2 — breadth + autofocus:** added Opportunities, Work Orders, Invoices, Service Tickets, Vendors. Drawer entities got `?invoice` / `?ticket` / `?vendor` deep-links (work orders use their detail route; opportunities reuse `?opp`). `CommandInput` now `autoFocus`es on open — start typing immediately.
+- **Tier 3 — New actions open create modals:** new shared hook `src/hooks/use-new-intent.ts` — visiting a page with `?create=1` opens its New modal then strips the param. Palette "New …" actions navigate with `?create=1`; wired into lead-inbox, projects, work-orders, purchase-orders, opportunities, invoices, service-tickets.
+- **Deep-link re-open bug fixed:** the `?contact` / `?opp` deep-link used a one-shot `deepLinkedRef` guard that disabled it after firing once — so selecting a record from the palette did nothing if you were *already* on that page. Removed the ref guard; stripping the URL param is what prevents re-opens, and it now works on repeat/same-page selections.
+
+**Deep-link pattern (reusable):** `validateSearch` adds the param → ref-free effect finds the record once the list loads, opens the drawer, then `navigate({ replace: true })` strips the param. Used by contacts, invoices, service-tickets, vendors (+ opportunities `?opp`).
+
+**Deferred:** federated-search RPC (UNION across tables, debounced) — load-all + client filter is fine at current record volumes; only needed at scale.
+
+### Sidebar active indicator — attempted + reverted (`nav-active-indicator` still open)
+
+Tried a primary left-bar active indicator (on-item, then floating in the gutter); neither looked right against the rounded highlight, so reverted to the background tint + primary icon. Checklist item left open for a future alternative (stronger tint / flat-left highlight / accent label).
+
 ---
 
 ## Session 038 — Opportunities Page Done: Quote Auto-Advance + Kanban Drag-and-Drop
