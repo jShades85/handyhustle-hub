@@ -11,6 +11,12 @@ const Toaster = ({ ...props }: ToasterProps) => {
         "--normal-bg": "var(--elevated)",
         "--normal-border": "var(--hairline)",
         "--normal-text": "var(--foreground)",
+        "--error-bg": "oklch(0.22 0.04 25)",
+        "--error-border": "oklch(0.55 0.18 25 / 0.4)",
+        "--error-text": "oklch(0.82 0.1 25)",
+        "--success-bg": "oklch(0.22 0.04 145)",
+        "--success-border": "oklch(0.55 0.15 145 / 0.4)",
+        "--success-text": "oklch(0.82 0.1 145)",
       } as React.CSSProperties}
       toastOptions={{
         classNames: {
