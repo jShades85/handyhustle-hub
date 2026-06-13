@@ -7,7 +7,7 @@ import {
   Inbox, LayoutDashboard, Target, Building2, Users, FileText, Package,
   Briefcase, CalendarDays, Receipt, HardHat, Boxes, Truck, CreditCard, BarChart2,
   Search, Plus, Settings, PanelLeft, ClipboardList, Headphones, ShieldCheck, ShoppingCart,
-  GanttChart, LogOut,
+  GanttChart, LogOut, Lock,
 } from "lucide-react";
 import { cn, avatarGradient, avatarInitials } from "@/lib/utils";
 import { CommandPalette } from "./command-palette";
@@ -241,17 +241,20 @@ function AppShellContent() {
                             {pendingRequestCount}
                           </span>
                         )}
+                        {!collapsed && locked && <Lock className="ml-auto h-3 w-3 shrink-0 opacity-70" />}
                       </>
                     );
                     const navItem = locked
                       ? <span className={itemCls}>{content}</span>
                       : <Link to={item.to} className={itemCls}>{content}</Link>;
+                    // Locked modules explain themselves on hover; collapsed items show their label.
+                    const tipText = locked ? "No access — ask an admin" : collapsed ? item.label : null;
                     return (
                       <li key={item.to}>
-                        {collapsed ? (
+                        {tipText ? (
                           <Tooltip>
                             <TooltipTrigger asChild>{navItem}</TooltipTrigger>
-                            <TooltipContent side="right">{item.label}</TooltipContent>
+                            <TooltipContent side="right">{tipText}</TooltipContent>
                           </Tooltip>
                         ) : navItem}
                       </li>
