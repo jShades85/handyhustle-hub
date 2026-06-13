@@ -219,11 +219,11 @@ function AppShellContent() {
                     const active = !locked && (item.to === "/" ? pathname === "/" : pathname.startsWith(item.to));
                     const Icon = item.icon;
                     const itemCls = cn(
-                      "group flex h-7 items-center gap-2.5 rounded-md px-2 text-base transition-colors",
+                      "group relative flex h-7 items-center gap-2.5 rounded-md px-2 text-base transition-colors",
                       locked
                         ? "cursor-not-allowed text-sidebar-foreground/30"
                         : active
-                          ? "bg-sidebar-accent text-sidebar-accent-foreground"
+                          ? "bg-sidebar-accent text-sidebar-accent-foreground before:absolute before:left-0 before:top-1/2 before:h-4 before:w-0.75 before:-translate-y-1/2 before:rounded-r-full before:bg-primary"
                           : "text-sidebar-foreground/80 hover:bg-sidebar-accent/60 hover:text-sidebar-foreground",
                       collapsed && "justify-center px-0",
                     );
