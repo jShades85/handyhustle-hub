@@ -1,4 +1,5 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { useNewIntent } from "@/hooks/use-new-intent";
 import { useEffect, useMemo, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { createClient } from "@/lib/supabase/client";
@@ -22,8 +23,9 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 
 export const Route = createFileRoute("/sales/opportunities")({
   head: () => ({ meta: [{ title: "Opportunities · BearingPro" }] }),
-  validateSearch: (search: Record<string, unknown>): { opp?: string } => ({
+  validateSearch: (search: Record<string, unknown>): { opp?: string; create?: string } => ({
     opp: typeof search.opp === "string" ? search.opp : undefined,
+    create: typeof search.create === "string" ? search.create : undefined,
   }),
   component: Opportunities,
 });
@@ -334,6 +336,7 @@ function Opportunities() {
   const [assignedFilter, setAssignedFilter] = useState<string>("all");
   const [selected, setSelected] = useState<Opportunity | null>(null);
   const [newOpen, setNewOpen] = useState(false);
+  useNewIntent(() => setNewOpen(true));
 
   const { data: dbOpps } = useQuery({ queryKey: ["opportunities"], queryFn: fetchOpportunities });
   const { data: team = [] } = useQuery({ queryKey: ["team-members"], queryFn: fetchTeamMembers });

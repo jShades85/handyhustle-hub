@@ -80,6 +80,12 @@ export function CommandPalette({ open, onOpenChange }: { open: boolean; onOpenCh
     navigate({ to: "/crm/contacts", search: { contact: id } });
   };
 
+  // Quick action → navigate to the page with ?create=1, which opens its New modal.
+  const goNew = (to: string) => {
+    onOpenChange(false);
+    navigate({ to, search: { create: "1" } });
+  };
+
   // Live records — fetched lazily the first time the palette opens, then cached.
   const { data: companies = [] } = useQuery({
     queryKey: ["palette-companies"],
@@ -182,7 +188,7 @@ export function CommandPalette({ open, onOpenChange }: { open: boolean; onOpenCh
           {/* Quick actions */}
           <CommandGroup heading="Quick actions">
             {ACTIONS.map((a) => (
-              <CommandItem key={a.label} value={a.label} onSelect={() => go(a.to)}>
+              <CommandItem key={a.label} value={a.label} onSelect={() => goNew(a.to)}>
                 <a.icon className="mr-2 h-3.5 w-3.5 text-primary" />
                 {a.label}
               </CommandItem>

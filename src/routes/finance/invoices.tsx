@@ -1,4 +1,5 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { useNewIntent } from "@/hooks/use-new-intent";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useMeta } from "@/contexts/PageMetaContext";
@@ -25,8 +26,9 @@ import { SC } from "@/lib/status-colors";
 
 export const Route = createFileRoute("/finance/invoices")({
   head: () => ({ meta: [{ title: "Invoices · BearingPro" }] }),
-  validateSearch: (search: Record<string, unknown>): { invoice?: string } => ({
+  validateSearch: (search: Record<string, unknown>): { invoice?: string; create?: string } => ({
     invoice: typeof search.invoice === "string" ? search.invoice : undefined,
+    create: typeof search.create === "string" ? search.create : undefined,
   }),
   component: InvoicesPage,
 });
@@ -997,6 +999,7 @@ function InvoicesPage() {
   const [search, setSearch] = useState("");
   const [customerFilter, setCustomerFilter] = useState("all");
   const [newOpen, setNewOpen] = useState(false);
+  useNewIntent(() => setNewOpen(true));
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [drawerMode, setDrawerMode] = useState<DrawerMode>("view");
 

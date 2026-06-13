@@ -1,4 +1,5 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { useNewIntent } from "@/hooks/use-new-intent";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { createClient } from "@/lib/supabase/client";
@@ -123,6 +124,7 @@ function WorkOrdersListPage() {
   const navigate = useNavigate();
   const qc = useQueryClient();
   const [newOpen, setNewOpen] = useState(false);
+  useNewIntent(() => setNewOpen(true));
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<WOStatus | "all">("all");
 

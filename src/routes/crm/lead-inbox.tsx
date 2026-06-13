@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { useNewIntent } from "@/hooks/use-new-intent";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -213,6 +214,7 @@ function LeadInbox() {
   const qc = useQueryClient();
   const [selectedLead, setSelectedLead] = useState<DbLead | null>(null);
   const [newLeadOpen, setNewLeadOpen] = useState(false);
+  useNewIntent(() => setNewLeadOpen(true));
   const [convertModalLead, setConvertModalLead] = useState<DbLead | null>(null);
   const [statusFilter, setStatusFilter] = useState<LeadStatus | "all">("all");
   const [sourceFilter, setSourceFilter] = useState<LeadSource | "all">("all");

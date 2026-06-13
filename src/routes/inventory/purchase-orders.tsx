@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { useNewIntent } from "@/hooks/use-new-intent";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -1380,6 +1381,7 @@ function PurchaseOrdersPage() {
     setDrawerMode("new");
     setDrawerOpen(true);
   }, []);
+  useNewIntent(openNew);
 
   function handleView(po: PO) { setDrawerPO(po); setDrawerMode("view"); setDrawerOpen(true); }
   function handleEdit(po: PO) { setDrawerPO(po); setDrawerMode("edit"); setDrawerOpen(true); }

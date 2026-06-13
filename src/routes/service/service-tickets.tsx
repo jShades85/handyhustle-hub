@@ -1,4 +1,5 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { useNewIntent } from "@/hooks/use-new-intent";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { createClient } from "@/lib/supabase/client";
@@ -25,8 +26,9 @@ import {
 
 export const Route = createFileRoute("/service/service-tickets")({
   head: () => ({ meta: [{ title: "Service Tickets · BearingPro" }] }),
-  validateSearch: (search: Record<string, unknown>): { ticket?: string } => ({
+  validateSearch: (search: Record<string, unknown>): { ticket?: string; create?: string } => ({
     ticket: typeof search.ticket === "string" ? search.ticket : undefined,
+    create: typeof search.create === "string" ? search.create : undefined,
   }),
   component: ServiceTicketsPage,
 });
@@ -169,6 +171,7 @@ function ServiceTicketsPage() {
   const qc = useQueryClient();
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [newOpen, setNewOpen] = useState(false);
+  useNewIntent(() => setNewOpen(true));
   const [statusFilter, setStatusFilter] = useState<TicketStatus | "all">("all");
   const [priorityFilter, setPriorityFilter] = useState<TicketPriority | "all">("all");
   const [categoryFilter, setCategoryFilter] = useState<TicketCategory | "all">("all");

@@ -1,4 +1,5 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { useNewIntent } from "@/hooks/use-new-intent";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { createClient } from "@/lib/supabase/client";
@@ -103,6 +104,7 @@ function ProjectsListPage() {
   const navigate = useNavigate();
   const qc = useQueryClient();
   const [newOpen, setNewOpen] = useState(false);
+  useNewIntent(() => setNewOpen(true));
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<ProjectStatus | "all">("all");
 
