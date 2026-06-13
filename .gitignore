@@ -33,6 +33,6 @@ dist-ssr
 .vercel
 .env*
 
-# local dev server logs
-dev-err.txt
-dev-out.txt
+# local dev server logs (hyphen + underscore strays)
+dev-*.txt
+dev_*.txt
