@@ -1,5 +1,5 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Avatar } from "@/components/ui-bits";
 import { useMeta } from "@/contexts/PageMetaContext";
 import { cn } from "@/lib/utils";
@@ -184,15 +184,14 @@ function ContactsPage() {
   }, []);
 
   // Deep-link: ?contact=<id> (e.g. from the command palette) opens that contact's
-  // drawer once the list has loaded, then strips the param. Ref guard fires once.
+  // drawer, then strips the param. Stripping (not a one-shot ref) is what prevents
+  // re-opening, so it works even when you're already on the contacts page.
   const navigate = useNavigate();
   const { contact: contactParam } = Route.useSearch();
-  const deepLinkedRef = useRef(false);
   useEffect(() => {
-    if (deepLinkedRef.current || !contactParam || contacts.length === 0) return;
+    if (!contactParam || contacts.length === 0) return;
     const found = contacts.find((c) => c.id === contactParam);
     if (found) {
-      deepLinkedRef.current = true;
       openDrawer(found, "view");
       navigate({ to: "/crm/contacts", replace: true });
     }

@@ -1,5 +1,5 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { createClient } from "@/lib/supabase/client";
 import { SC } from "@/lib/status-colors";
@@ -342,17 +342,15 @@ function Opportunities() {
   // every render, which fires the setMeta effect, which re-renders, causing React error #185.
   const opps = useMemo(() => (dbOpps ?? []).map(toUiOpp), [dbOpps]);
 
-  // Deep-link: ?opp=<id> (e.g. from a company page) opens that opportunity's panel once
-  // the board has loaded, then strips the param so it doesn't re-open on refresh/back.
-  // Ref guard ensures it fires exactly once — a refetch (new `opps` ref) won't re-trigger it.
+  // Deep-link: ?opp=<id> (e.g. from a company page) opens that opportunity's panel,
+  // then strips the param. Stripping (not a one-shot ref) prevents re-opening, so it
+  // works even when you're already on the opportunities page.
   const { opp: oppParam } = Route.useSearch();
   const navigate = useNavigate();
-  const deepLinkedRef = useRef(false);
   useEffect(() => {
-    if (deepLinkedRef.current || !oppParam || opps.length === 0) return;
+    if (!oppParam || opps.length === 0) return;
     const found = opps.find((o) => o.id === oppParam);
     if (found) {
-      deepLinkedRef.current = true;
       setSelected(found);
       navigate({ to: "/sales/opportunities", replace: true });
     }
